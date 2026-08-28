@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quant-agent-brain"
+version = "0.1.0"
+description = "Budget-first agent-assisted quant research and backtesting brain."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.2.0",
+    "numpy>=1.26.0",
+    "pyarrow>=15.0.0",
+    "duckdb>=1.0.0",
+    "yfinance>=0.2.50",
+    "pandas-datareader>=0.10.0",
+    "backtesting>=0.3.3",
+    "quantstats>=0.0.62",
+    "pydantic>=2.7.0",
+    "python-frontmatter>=1.1.0",
+    "matplotlib>=3.8.0",
+]
+
+[project.optional-dependencies]
+rag = [
+    "lancedb>=0.15.0",
+    "sentence-transformers>=3.0.0",
+]
+fast = [
+    "vectorbt>=0.26.0",
+]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.6.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
