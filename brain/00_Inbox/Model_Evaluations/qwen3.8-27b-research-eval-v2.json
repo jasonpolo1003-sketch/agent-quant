@@ -1,0 +1,401 @@
+{
+  "model": "qwen3.8:27b",
+  "cases_passed": 3,
+  "cases_total": 3,
+  "passed": true,
+  "results": [
+    {
+      "case": {
+        "case_id": "gap_honesty",
+        "question": "Choose an evidence-backed exit rule and maximum holding period for a daily RSI oversold strategy. Propose a strategy rule only if the supplied evidence supports it.",
+        "evidence": [
+          {
+            "source_id": "S1",
+            "source_type": "official documentation",
+            "text": "Wilder RSI uses a 14-period default with traditional oversold level 30. Short-term traders sometimes use RSI(2) below 20. A close-based signal may enter no earlier than the next bar. This source does not specify an exit rule or maximum holding period."
+          }
+        ],
+        "expected_decision": "needs_more_evidence",
+        "required_missing_terms": [
+          "exit",
+          "holding"
+        ],
+        "require_no_strategy_rules": true,
+        "reject_source_ids": [],
+        "required_topics": [],
+        "forbidden_claim_phrases": []
+      },
+      "response": {
+        "case_id": "gap_honesty",
+        "decision": "needs_more_evidence",
+        "claims": [
+          {
+            "claim": "The supplied evidence defines RSI entry parameters (14-period default with oversold level 30, or RSI(2) below 20) and signal timing (next bar), but explicitly states it does not specify an exit rule or maximum holding period.",
+            "evidence_ids": [
+              "S1"
+            ]
+          },
+          {
+            "claim": "No evidence-backed exit rule or maximum holding period can be proposed because the only supplied source explicitly lacks this information and no other sources are provided to fill the gap.",
+            "evidence_ids": [
+              "S1"
+            ]
+          }
+        ],
+        "source_assessments": [
+          {
+            "source_id": "S1",
+            "quality": "primary",
+            "reason": "Official documentation providing standard RSI definitions and entry logic, but explicitly incomplete regarding exit rules and holding periods."
+          }
+        ],
+        "missing_information": [
+          "Specific exit rule criteria (e.g., RSI threshold, price target, stop-loss) for the daily RSI oversold strategy.",
+          "Maximum holding period definition or empirical basis for time-based exits."
+        ],
+        "proposed_strategy_rules": []
+      },
+      "score": {
+        "case_id": "gap_honesty",
+        "score": 5,
+        "maximum": 5,
+        "score_ratio": 1.0,
+        "passed": true,
+        "failures": []
+      },
+      "metadata": {
+        "elapsed_seconds": 56.381,
+        "total_duration_ns": 56376689700,
+        "load_duration_ns": 18143701800,
+        "prompt_eval_count": 377,
+        "eval_count": 311,
+        "eval_duration_ns": 37159062000
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "response": {
+            "case_id": "gap_honesty",
+            "decision": "needs_more_evidence",
+            "claims": [
+              {
+                "claim": "The supplied evidence defines RSI entry parameters (14-period default with oversold level 30, or RSI(2) below 20) and signal timing (next bar), but explicitly states it does not specify an exit rule or maximum holding period.",
+                "evidence_ids": [
+                  "S1"
+                ]
+              },
+              {
+                "claim": "No evidence-backed exit rule or maximum holding period can be proposed because the only supplied source explicitly lacks this information and no other sources are provided to fill the gap.",
+                "evidence_ids": [
+                  "S1"
+                ]
+              }
+            ],
+            "source_assessments": [
+              {
+                "source_id": "S1",
+                "quality": "primary",
+                "reason": "Official documentation providing standard RSI definitions and entry logic, but explicitly incomplete regarding exit rules and holding periods."
+              }
+            ],
+            "missing_information": [
+              "Specific exit rule criteria (e.g., RSI threshold, price target, stop-loss) for the daily RSI oversold strategy.",
+              "Maximum holding period definition or empirical basis for time-based exits."
+            ],
+            "proposed_strategy_rules": []
+          },
+          "score": {
+            "case_id": "gap_honesty",
+            "score": 5,
+            "maximum": 5,
+            "score_ratio": 1.0,
+            "passed": true,
+            "failures": []
+          },
+          "metadata": {
+            "elapsed_seconds": 56.381,
+            "total_duration_ns": 56376689700,
+            "load_duration_ns": 18143701800,
+            "prompt_eval_count": 377,
+            "eval_count": 311,
+            "eval_duration_ns": 37159062000
+          }
+        }
+      ]
+    },
+    {
+      "case": {
+        "case_id": "slop_filter",
+        "question": "Decide whether the supplied material can support a durable strategy claim.",
+        "evidence": [
+          {
+            "source_id": "S1",
+            "source_type": "anonymous video description",
+            "text": "Secret indicator wins 95% of trades. Screenshot proves it. Rules, dataset, test period, losses, and transaction costs are not provided."
+          },
+          {
+            "source_id": "S2",
+            "source_type": "named institutional research",
+            "text": "Prospective data should be evaluated for originality, coverage, timestamp reliability, lineage, statistical power, economic intuition, and redundancy."
+          }
+        ],
+        "expected_decision": "reject",
+        "required_missing_terms": [],
+        "require_no_strategy_rules": true,
+        "reject_source_ids": [
+          "S1"
+        ],
+        "required_topics": [],
+        "forbidden_claim_phrases": [
+          "can support a durable strategy claim",
+          "wins 95%"
+        ]
+      },
+      "response": {
+        "case_id": "slop_filter",
+        "decision": "reject",
+        "claims": [
+          {
+            "claim": "The material cannot support a durable strategy claim because the primary evidence is an anonymous video description lacking rules, dataset, test period, losses, and transaction costs.",
+            "evidence_ids": [
+              "S1"
+            ]
+          },
+          {
+            "claim": "The provided institutional research defines criteria for evaluating prospective data but does not provide specific strategy rules or performance results to support a durable claim.",
+            "evidence_ids": [
+              "S2"
+            ]
+          }
+        ],
+        "source_assessments": [
+          {
+            "source_id": "S1",
+            "quality": "reject",
+            "reason": "Anonymous claim with guaranteed returns and screenshots without methods, rules, or dataset details."
+          },
+          {
+            "source_id": "S2",
+            "quality": "primary",
+            "reason": "Named institutional research providing methodological criteria, but it does not supply the specific strategy evidence required to support a durable claim."
+          }
+        ],
+        "missing_information": [
+          "Specific strategy rules",
+          "Dataset details",
+          "Test period",
+          "Losses and transaction costs",
+          "Prospective performance data meeting the criteria in S2"
+        ],
+        "proposed_strategy_rules": []
+      },
+      "score": {
+        "case_id": "slop_filter",
+        "score": 6,
+        "maximum": 6,
+        "score_ratio": 1.0,
+        "passed": true,
+        "failures": []
+      },
+      "metadata": {
+        "elapsed_seconds": 38.767,
+        "total_duration_ns": 38745119100,
+        "load_duration_ns": 1654300,
+        "prompt_eval_count": 363,
+        "eval_count": 324,
+        "eval_duration_ns": 37641123000
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "response": {
+            "case_id": "slop_filter",
+            "decision": "reject",
+            "claims": [
+              {
+                "claim": "The material cannot support a durable strategy claim because the primary evidence is an anonymous video description lacking rules, dataset, test period, losses, and transaction costs.",
+                "evidence_ids": [
+                  "S1"
+                ]
+              },
+              {
+                "claim": "The provided institutional research defines criteria for evaluating prospective data but does not provide specific strategy rules or performance results to support a durable claim.",
+                "evidence_ids": [
+                  "S2"
+                ]
+              }
+            ],
+            "source_assessments": [
+              {
+                "source_id": "S1",
+                "quality": "reject",
+                "reason": "Anonymous claim with guaranteed returns and screenshots without methods, rules, or dataset details."
+              },
+              {
+                "source_id": "S2",
+                "quality": "primary",
+                "reason": "Named institutional research providing methodological criteria, but it does not supply the specific strategy evidence required to support a durable claim."
+              }
+            ],
+            "missing_information": [
+              "Specific strategy rules",
+              "Dataset details",
+              "Test period",
+              "Losses and transaction costs",
+              "Prospective performance data meeting the criteria in S2"
+            ],
+            "proposed_strategy_rules": []
+          },
+          "score": {
+            "case_id": "slop_filter",
+            "score": 6,
+            "maximum": 6,
+            "score_ratio": 1.0,
+            "passed": true,
+            "failures": []
+          },
+          "metadata": {
+            "elapsed_seconds": 38.767,
+            "total_duration_ns": 38745119100,
+            "load_duration_ns": 1654300,
+            "prompt_eval_count": 363,
+            "eval_count": 324,
+            "eval_duration_ns": 37641123000
+          }
+        }
+      ]
+    },
+    {
+      "case": {
+        "case_id": "cross_asset_mapping",
+        "question": "Map the markets professional quantitative firms research or trade from this evidence.",
+        "evidence": [
+          {
+            "source_id": "S1",
+            "source_type": "institutional research",
+            "text": "Traditional trend-following futures and forwards include equity indices, government bonds, major foreign exchange, and core commodities."
+          },
+          {
+            "source_id": "S2",
+            "source_type": "trading firm page",
+            "text": "The firm provides liquidity in ETFs with equity, fixed-income, commodity, and crypto underliers and trades index, ETF, and single-stock options."
+          }
+        ],
+        "expected_decision": "supported",
+        "required_missing_terms": [],
+        "require_no_strategy_rules": false,
+        "reject_source_ids": [],
+        "required_topics": [
+          "equity",
+          "bond",
+          "foreign exchange",
+          "commodit",
+          "option",
+          "crypto"
+        ],
+        "forbidden_claim_phrases": []
+      },
+      "response": {
+        "case_id": "cross_asset_mapping",
+        "decision": "supported",
+        "claims": [
+          {
+            "claim": "Professional quantitative firms research or trade equity indices, government bonds, major foreign exchange, and core commodities through traditional trend-following futures and forwards.",
+            "evidence_ids": [
+              "S1"
+            ]
+          },
+          {
+            "claim": "Professional quantitative firms provide liquidity in ETFs with equity, fixed-income, commodity, and crypto underliers, and trade index, ETF, and single-stock options.",
+            "evidence_ids": [
+              "S2"
+            ]
+          }
+        ],
+        "source_assessments": [
+          {
+            "source_id": "S1",
+            "quality": "primary",
+            "reason": "Institutional research source describing standard market instruments."
+          },
+          {
+            "source_id": "S2",
+            "quality": "primary",
+            "reason": "Trading firm page describing specific liquidity provision and trading activities."
+          }
+        ],
+        "missing_information": [],
+        "proposed_strategy_rules": []
+      },
+      "score": {
+        "case_id": "cross_asset_mapping",
+        "score": 4,
+        "maximum": 4,
+        "score_ratio": 1.0,
+        "passed": true,
+        "failures": []
+      },
+      "metadata": {
+        "elapsed_seconds": 28.824,
+        "total_duration_ns": 28822840800,
+        "load_duration_ns": 2063100,
+        "prompt_eval_count": 358,
+        "eval_count": 263,
+        "eval_duration_ns": 27668669000
+      },
+      "attempts": [
+        {
+          "attempt": 1,
+          "response": {
+            "case_id": "cross_asset_mapping",
+            "decision": "supported",
+            "claims": [
+              {
+                "claim": "Professional quantitative firms research or trade equity indices, government bonds, major foreign exchange, and core commodities through traditional trend-following futures and forwards.",
+                "evidence_ids": [
+                  "S1"
+                ]
+              },
+              {
+                "claim": "Professional quantitative firms provide liquidity in ETFs with equity, fixed-income, commodity, and crypto underliers, and trade index, ETF, and single-stock options.",
+                "evidence_ids": [
+                  "S2"
+                ]
+              }
+            ],
+            "source_assessments": [
+              {
+                "source_id": "S1",
+                "quality": "primary",
+                "reason": "Institutional research source describing standard market instruments."
+              },
+              {
+                "source_id": "S2",
+                "quality": "primary",
+                "reason": "Trading firm page describing specific liquidity provision and trading activities."
+              }
+            ],
+            "missing_information": [],
+            "proposed_strategy_rules": []
+          },
+          "score": {
+            "case_id": "cross_asset_mapping",
+            "score": 4,
+            "maximum": 4,
+            "score_ratio": 1.0,
+            "passed": true,
+            "failures": []
+          },
+          "metadata": {
+            "elapsed_seconds": 28.824,
+            "total_duration_ns": 28822840800,
+            "load_duration_ns": 2063100,
+            "prompt_eval_count": 358,
+            "eval_count": 263,
+            "eval_duration_ns": 27668669000
+          }
+        }
+      ]
+    }
+  ]
+}

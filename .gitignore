@@ -1,0 +1,13 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+data/raw/
+data/processed/
+data/parquet/
+db/*.sqlite
+db/*.duckdb
+db/lancedb/
+reports/generated/

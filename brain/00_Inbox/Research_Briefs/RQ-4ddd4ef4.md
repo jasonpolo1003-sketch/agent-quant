@@ -1,0 +1,48 @@
+---
+id: RQ-4ddd4ef4
+type: research_brief
+status: queued
+method_family: mean_reversion
+priority: 1
+assigned_agent: research_scout
+---
+
+# Research Brief — RQ-4ddd4ef4
+
+## Research Question
+
+Find useful sources for ETF mean reversion strategies and summarize only methods that can be tested with daily SPY QQQ IWM data
+
+## Agent Task
+
+Find useful sources that help answer this question. Extract concrete claims, strategy rules, risks, and limitations. Save messy notes here first; do not create strategy cards unless the method is clearly testable.
+
+## Allowed Write Locations
+
+- Raw notes: `brain/00_Inbox/`
+- Research briefs: `brain/00_Inbox/Research_Briefs/`
+- Source notes after curation: `brain/01_Sources/`
+- Method doors after curation: `brain/02_Strategy_Doors/`
+
+## Required Output Format
+
+For each useful source:
+
+```text
+Source URL / citation:
+Source type: paper | book | blog | repo | docs | other
+Main claim:
+Evidence quote or exact passage:
+Possible strategy rule:
+Risks / caveats:
+Confidence: low | medium | high
+```
+
+## Rules
+
+- Do not download copyrighted books illegally.
+- Use high-quality sources, public papers, official docs, public repos, previews, or user-provided files.
+- Cite every source.
+- Label uncertain claims as `unverified`.
+- Prefer fewer high-quality sources over many weak sources.
+- Do not paper trade or live trade anything.

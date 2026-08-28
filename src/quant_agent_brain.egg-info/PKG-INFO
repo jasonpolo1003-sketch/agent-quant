@@ -1,0 +1,41 @@
+Metadata-Version: 2.4
+Name: quant-agent-brain
+Version: 0.1.0
+Summary: Budget-first agent-assisted quant research and backtesting brain.
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: pandas>=2.2.0
+Requires-Dist: numpy>=1.26.0
+Requires-Dist: pyarrow>=15.0.0
+Requires-Dist: duckdb>=1.0.0
+Requires-Dist: yfinance>=0.2.50
+Requires-Dist: pandas-datareader>=0.10.0
+Requires-Dist: backtesting>=0.3.3
+Requires-Dist: quantstats>=0.0.62
+Requires-Dist: pydantic>=2.7.0
+Requires-Dist: python-frontmatter>=1.1.0
+Requires-Dist: matplotlib>=3.8.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: ruff>=0.6.0; extra == "dev"
+Provides-Extra: rag
+Requires-Dist: lancedb>=0.15.0; extra == "rag"
+Requires-Dist: sentence-transformers>=3.0.0; extra == "rag"
+Provides-Extra: fast
+Requires-Dist: vectorbt>=0.26.0; extra == "fast"
+
+# Quant Agent Brain
+
+Budget-first agent-assisted quantitative research, second-brain, and backtesting system.
+
+## MVP Scope
+
+- US ETFs only: SPY, QQQ, IWM
+- Daily bars only
+- Research before strategy creation
+- Backtesting before paper trading
+- No live trading
+
+## Core Loop
+
+Research queue -> raw brief -> source note -> method door -> strategy card -> backtest -> review -> paper candidate later.

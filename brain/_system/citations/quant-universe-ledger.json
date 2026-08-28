@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": 1,
+      "url": "https://www.aqr.com/Insights/Research/Journal-Article/Understanding-Style-Premia",
+      "title": "AQR - Understanding Style Premia",
+      "accessed": "2026-08-27",
+      "quotes": [
+        {
+          "text": "Value, Momentum, Carry and Defensive",
+          "added": "2026-08-27"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "url": "https://www.man.com/insights/trend-following-optimal-market-mix",
+      "title": "Man Group - Optimal Market Mix for Trend Following",
+      "accessed": "2026-08-27",
+      "quotes": [
+        {
+          "text": "Traditional markets can proxy the key macro risk factors present in the global economy.",
+          "added": "2026-08-27"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "url": "https://www.twosigma.com/articles/revisiting-the-two-sigma-factor-lens",
+      "title": "Two Sigma - Revisiting the Factor Lens",
+      "accessed": "2026-08-27",
+      "quotes": [
+        {
+          "text": "The Two Sigma Factor Lens debuted with a set of eight factors",
+          "added": "2026-08-27"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "url": "https://www.hudsonrivertrading.com/liquidity",
+      "title": "Hudson River Trading - Liquidity",
+      "accessed": "2026-08-27",
+      "quotes": [
+        {
+          "text": "As a liquidity provider, HRT develops automated trading algorithms designed to provide the best prices to our clients.",
+          "added": "2026-08-27"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "url": "https://www.janestreet.com/what-we-do/client-offering",
+      "title": "Jane Street - Client Offering",
+      "accessed": "2026-08-27",
+      "quotes": [
+        {
+          "text": "This expertise informs our liquidity provision across a wide variety of ETPs with equity, fixed income, commodities, and crypto asset underliers.",
+          "added": "2026-08-27"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "url": "https://www.wintermute.com",
+      "title": "Wintermute - Digital Asset Markets",
+      "accessed": "2026-08-27",
+      "quotes": [
+        {
+          "text": "Wintermute makes digital asset markets liquid and efficient",
+          "added": "2026-08-27"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "url": "https://www.blackrock.com/institutions/en-global/institutional-insights/thought-leadership/investment-actions/alt-data-for-systematic-investing",
+      "title": "BlackRock - Alternative Data for Systematic Investing",
+      "accessed": "2026-08-27",
+      "quotes": [
+        {
+          "text": "Every dataset selected in our systematic process undergoes rigorous evaluation to ensure it adds real, incremental value.",
+          "added": "2026-08-27"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "url": "https://www.youtube.com/watch?v=ha0vIX3QKgw",
+      "title": "Top Traders Unplugged - Russell Korgaonkar of Man AHL",
+      "accessed": "2026-08-27",
+      "quotes": [
+        {
+          "text": "across markets there are small opportunities and small inefficiencies",
+          "added": "2026-08-27"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "url": "https://www.youtube.com/watch?v=RuJD_YWeoQY",
+      "title": "J.P. Morgan - Aspect Capital Systematic Investing Interview",
+      "accessed": "2026-08-27",
+      "quotes": [
+        {
+          "text": "Through trading the futures markets, we're indifferent to whether a market is rising or falling.",
+          "added": "2026-08-27"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "url": "https://www.youtube.com/watch?v=rmS9INWqJrg",
+      "title": "J.P. Morgan Asset Management - Quantitative Investing Explained",
+      "accessed": "2026-08-27",
+      "quotes": [
+        {
+          "text": "quantitative investing, simplistically, is just a strategy that is systematic in nature, rule based.",
+          "added": "2026-08-27"
+        }
+      ]
+    }
+  ]
+}
