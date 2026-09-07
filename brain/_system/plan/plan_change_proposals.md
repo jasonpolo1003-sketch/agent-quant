@@ -51,7 +51,16 @@ This exists because the project's core design rule is *move slowly, one verified
 
 ## Proposals
 
-*(none yet — plan written 2026-08-28)*
+### PROP-001 — Canonical snapshot folder is Source_Snapshots
+- **Date:** 2026-09-07
+- **Proposed by:** scout reconciliation R1–R3
+- **Affects:** PLAN.md Phase 4 deliverables line; phase table is unchanged
+- **Current plan says:** snapshots to `brain/00_Inbox/Snapshots/`
+- **Problem:** Jason approved `brain/00_Inbox/Source_Snapshots/` as the canonical snapshot folder. The registry, live snapshot writer, and tests now use that path. PLAN.md still names `Snapshots/`.
+- **Proposed change:** When PLAN.md is next edited, replace `brain/00_Inbox/Snapshots/` with `brain/00_Inbox/Source_Snapshots/` in the Phase 4 deliverables sentence. Do not reorder phases or change exit gates.
+- **Cost of not changing:** the master plan disagrees with the approved canonical path and with `agents/research_scout.md`.
+- **Status:** proposed
+- **Jason's decision:** path itself is already approved via `scout_reconciliation_plan.md`; PLAN.md wording still needs a human edit.
 
 ---
 

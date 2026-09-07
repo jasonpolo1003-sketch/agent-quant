@@ -8,6 +8,7 @@ from typing import Any
 from quant_brain.config import PROJECT_ROOT
 from quant_brain.db.init_db import DEFAULT_DB_PATH, connect, init_database
 from quant_brain.research.intake import update_research_status
+from quant_brain.research.schema import validate_raw_research_payload
 
 # Minimal starter catalog: enough to execute the first loop without building a web crawler yet.
 # This is intentionally small. A real quant workflow values provenance and review over volume.
@@ -26,6 +27,9 @@ STARTER_SOURCES: list[dict[str, Any]] = [
         ],
         "confidence": "medium",
         "source_quality": "practitioner",
+        "asset_classes": ["equity", "etf"],
+        "data_required": ["daily adjusted close for SPY, QQQ, IWM"],
+        "data_access": "available-now",
         "mvp_testable": True,
     },
     {
@@ -39,6 +43,9 @@ STARTER_SOURCES: list[dict[str, Any]] = [
         "risks": ["If this is ignored, a strategy can appear profitable only because it cheats with future data."],
         "confidence": "high",
         "source_quality": "primary",
+        "asset_classes": ["equity", "etf", "futures"],
+        "data_required": ["timestamped bars available at decision time"],
+        "data_access": "available-now",
         "mvp_testable": True,
     },
     {
@@ -52,6 +59,9 @@ STARTER_SOURCES: list[dict[str, Any]] = [
         "risks": ["Stock-picking strategies need survivorship-bias-aware datasets later."],
         "confidence": "high",
         "source_quality": "primary",
+        "asset_classes": ["equity", "etf"],
+        "data_required": ["survivorship-aware or fixed-universe daily prices"],
+        "data_access": "available-now",
         "mvp_testable": True,
     },
     {
@@ -65,6 +75,9 @@ STARTER_SOURCES: list[dict[str, Any]] = [
         "risks": ["Framework convenience does not prevent bad signal timing, bad data, or overfitting."],
         "confidence": "medium",
         "source_quality": "primary",
+        "asset_classes": ["equity", "etf"],
+        "data_required": ["daily OHLCV plus commission assumptions"],
+        "data_access": "available-now",
         "mvp_testable": True,
     },
     {
@@ -81,6 +94,9 @@ STARTER_SOURCES: list[dict[str, Any]] = [
         ],
         "confidence": "medium",
         "source_quality": "primary",
+        "asset_classes": ["equity", "etf"],
+        "data_required": ["pandas/NumPy price series for parameter sweeps"],
+        "data_access": "available-now",
         "mvp_testable": True,
     },
     {
@@ -94,6 +110,9 @@ STARTER_SOURCES: list[dict[str, Any]] = [
         "risks": ["Do not treat book reputation as evidence for a specific ETF strategy without a sourced passage and backtest."],
         "confidence": "medium",
         "source_quality": "practitioner",
+        "asset_classes": ["equity", "etf", "futures"],
+        "data_required": ["user-owned copy or legal preview for exact quotes"],
+        "data_access": "available-later",
         "mvp_testable": False,
     },
 ]
@@ -143,6 +162,13 @@ def format_findings_markdown(task: dict[str, Any], sources: list[dict[str, Any]]
             ]
         )
 
+    payload = build_raw_research_payload(task, sources)
+    lines.extend(["## Required JSON Block", "", "```json", json.dumps(payload, indent=2), "```", ""])
+    return "\n".join(lines)
+
+
+def build_raw_research_payload(task: dict[str, Any], sources: list[dict[str, Any]]) -> dict[str, Any]:
+    """Assemble and validate the JSON contract the curator later parses."""
     payload = {
         "research_id": task["research_id"],
         "status": "raw_saved",
@@ -154,8 +180,7 @@ def format_findings_markdown(task: dict[str, Any], sources: list[dict[str, Any]]
         ],
         "curator_recommendation": "promote_source",
     }
-    lines.extend(["## Required JSON Block", "", "```json", json.dumps(payload, indent=2), "```", ""])
-    return "\n".join(lines)
+    return validate_raw_research_payload(payload)
 
 
 def _get_research_task(db_path: str | Path, research_id: str) -> dict[str, Any]:
@@ -169,20 +194,44 @@ def _get_research_task(db_path: str | Path, research_id: str) -> dict[str, Any]:
     return dict(row)
 
 
-def execute_research_task(
+def _resolve_note_path(project_root: Path, raw_note_path: str | None) -> Path | None:
+    if not raw_note_path:
+        return None
+    note_path = Path(raw_note_path)
+    if note_path.exists():
+        return note_path
+    relative = project_root / str(raw_note_path)
+    return relative if relative.exists() else None
+
+
+def execute_discovery_task(
     project_root: str | Path = PROJECT_ROOT,
     db_path: str | Path = DEFAULT_DB_PATH,
     research_id: str | None = None,
+    *,
+    backend: Any | None = None,
+    resolve_write: Any | None = None,
+    prepare_if_missing: bool = True,
+    max_sources: int = 5,
 ) -> dict[str, Any]:
-    """Fill a prepared raw research note with a conservative starter source set."""
+    """Run one discovery backend and write a schema-valid raw research note.
+
+    Does not run the curator. Callers (the scout handler) return a recommendation
+    so the harness can decide whether curation runs next.
+    """
+    from quant_brain.discovery.live_discovery import SeededDiscoveryBackend
+    from quant_brain.research.scout_runner import build_scout_prompt, create_raw_research_note
+
     root = Path(project_root)
+    searcher = backend or SeededDiscoveryBackend()
     if research_id is None:
         with connect(db_path) as conn:
             row = conn.execute(
                 """
                 SELECT * FROM research_questions
-                WHERE status = 'researching'
-                ORDER BY priority ASC, updated_at ASC
+                WHERE status IN ('researching', 'queued')
+                ORDER BY CASE status WHEN 'researching' THEN 0 ELSE 1 END,
+                         priority ASC, updated_at ASC
                 LIMIT 1
                 """
             ).fetchone()
@@ -192,17 +241,25 @@ def execute_research_task(
     else:
         task = _get_research_task(db_path, research_id)
 
-    raw_note_path = task.get("raw_note_path")
-    if not raw_note_path:
-        raise ValueError("research task has no raw note path; prepare the task before executing")
-    note_path = Path(raw_note_path)
-    if not note_path.exists():
-        # Support relative paths if stored that way.
-        note_path = root / str(raw_note_path)
-    if not note_path.exists():
-        raise ValueError(f"raw note does not exist: {raw_note_path}")
+    note_path = _resolve_note_path(root, task.get("raw_note_path"))
+    if note_path is None:
+        if not prepare_if_missing:
+            if not task.get("raw_note_path"):
+                raise ValueError("research task has no raw note path; prepare the task before executing")
+            raise ValueError(f"raw note does not exist: {task.get('raw_note_path')}")
+        prompt = build_scout_prompt(task)
+        created = create_raw_research_note(root, db_path, task, prompt)
+        note_path = Path(created)
+        task = _get_research_task(db_path, task["research_id"])
 
-    sources = select_candidate_sources(task.get("method_family"), task["question"])
+    discovered = searcher.discover(
+        task["question"],
+        task.get("method_family"),
+        limit=max_sources,
+        project_root=root,
+        resolve_write=resolve_write,
+    )
+    sources = list(discovered.sources)
     if not sources:
         raise ValueError("no candidate sources found for this research task")
 
@@ -213,6 +270,8 @@ def execute_research_task(
     else:
         text = text.rstrip() + "\n\n" + findings
     text = text.replace("status: researching", "status: raw_saved", 1)
+    if resolve_write is not None:
+        note_path = resolve_write(note_path)
     note_path.write_text(text, encoding="utf-8")
 
     update_research_status(db_path, task["research_id"], "raw_saved", raw_note_path=str(note_path))
@@ -221,7 +280,27 @@ def execute_research_task(
         "status": "raw_saved",
         "raw_note_path": str(note_path),
         "sources_count": len(sources),
+        "snapshots": list(discovered.snapshots),
+        "backend": discovered.backend,
+        "recommendation": "curation",
     }
+
+
+def execute_research_task(
+    project_root: str | Path = PROJECT_ROOT,
+    db_path: str | Path = DEFAULT_DB_PATH,
+    research_id: str | None = None,
+) -> dict[str, Any]:
+    """Fill a prepared raw research note with the seeded starter catalog."""
+    from quant_brain.discovery.live_discovery import SeededDiscoveryBackend
+
+    return execute_discovery_task(
+        project_root,
+        db_path,
+        research_id,
+        backend=SeededDiscoveryBackend(),
+        prepare_if_missing=False,
+    )
 
 
 def main() -> None:

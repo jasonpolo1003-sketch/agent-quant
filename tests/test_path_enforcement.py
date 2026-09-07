@@ -9,7 +9,7 @@ from quant_brain.harness.paths import (
     resolve_write_target,
 )
 
-ALLOWED = ("brain/00_Inbox/Raw_Research/", "brain/00_Inbox/Snapshots/")
+ALLOWED = ("brain/00_Inbox/Raw_Research/", "brain/00_Inbox/Source_Snapshots/")
 
 
 def test_write_inside_allowed_directory_is_permitted(tmp_path):
@@ -22,7 +22,7 @@ def test_write_inside_allowed_directory_is_permitted(tmp_path):
 
 def test_nested_write_inside_allowed_directory_is_permitted(tmp_path):
     assert is_write_allowed(
-        tmp_path, "brain/00_Inbox/Snapshots/2026-08-28/abc.md", ALLOWED
+        tmp_path, "brain/00_Inbox/Source_Snapshots/2026-08-28/abc.md", ALLOWED
     )
 
 

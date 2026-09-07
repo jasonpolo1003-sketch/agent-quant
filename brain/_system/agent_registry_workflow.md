@@ -31,7 +31,7 @@ Allowed models come from `PLAN.md` section 9. Anything else is rejected.
 
 | Agent | handles | model | writes |
 |---|---|---|---|
-| `research_scout` | `discovery` | `qwen3:14b` | `00_Inbox/Raw_Research/`, `00_Inbox/Snapshots/`, `00_Inbox/Failed_Runs/` |
+| `research_scout` | `discovery` | `qwen3:14b` | `00_Inbox/Raw_Research/`, `00_Inbox/Source_Snapshots/`, `00_Inbox/Failed_Runs/` |
 | `knowledge_curator` | `curation` | deterministic | `00_Inbox/Curator_Reviews/`, `01_Sources/`, `02_Strategy_Doors/` |
 
 Note the curator does **not** hold `brain/03_Strategy_Cards/` write access, even though its prose mentions strategy cards. No strategy card is created before the human gate in Phase 8.

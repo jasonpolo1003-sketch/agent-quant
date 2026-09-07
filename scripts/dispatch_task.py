@@ -28,6 +28,16 @@ def main() -> None:
         help="Explain the routing decision without executing the handler.",
     )
     parser.add_argument("--json", action="store_true")
+    parser.add_argument(
+        "--stub",
+        action="store_true",
+        help="Use the seeded starter-source catalog (offline / CI). Default is live discovery.",
+    )
+    parser.add_argument(
+        "--backend",
+        default=None,
+        help="Discovery backend for --type discovery: live (default) or seeded.",
+    )
     args = parser.parse_args()
 
     register_default_handlers()
@@ -35,6 +45,11 @@ def main() -> None:
     payload = {}
     if args.research_id:
         payload["research_id"] = args.research_id
+    if args.task_type == "discovery":
+        if args.stub:
+            payload["backend"] = "seeded"
+        elif args.backend:
+            payload["backend"] = args.backend
 
     task = Task(
         task_id=args.task_id or f"TASK-{uuid4().hex[:10]}",

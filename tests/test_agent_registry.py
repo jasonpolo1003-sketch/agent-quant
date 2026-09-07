@@ -192,6 +192,8 @@ def test_real_project_agents_load(tmp_path):
     assert "knowledge_curator" in registry
     assert registry["research_scout"].handles_task("discovery")
     assert registry["knowledge_curator"].handles_task("curation")
+    assert "brain/00_Inbox/Source_Snapshots/" in registry["research_scout"].allowed_write_paths
+    assert "brain/00_Inbox/Snapshots/" not in registry["research_scout"].allowed_write_paths
     # Curator must not be able to write strategy cards: that needs a human gate (PLAN.md Phase 8).
     assert not any(
         "03_Strategy_Cards" in path for path in registry["knowledge_curator"].allowed_write_paths

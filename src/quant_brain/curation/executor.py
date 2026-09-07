@@ -12,6 +12,7 @@ from quant_brain.config import PROJECT_ROOT
 from quant_brain.curation.promotion import CuratedSource, promote_source_note, slugify
 from quant_brain.db.init_db import DEFAULT_DB_PATH, connect, init_database
 from quant_brain.research.intake import update_research_status
+from quant_brain.research.schema import validate_raw_research_payload
 
 JSON_BLOCK_RE = re.compile(r"```json\s*(\{.*?\})\s*```", re.DOTALL)
 PROMOTABLE_SOURCE_QUALITIES = {"primary", "practitioner"}
@@ -178,7 +179,7 @@ def execute_curator_task(
     if not raw_note_path:
         raise ValueError("research task has no raw note path")
 
-    payload = extract_scout_json(raw_note_path)
+    payload = validate_raw_research_payload(extract_scout_json(raw_note_path))
     if payload.get("research_id") != task["research_id"]:
         raise ValueError("raw note JSON research_id does not match database task")
 

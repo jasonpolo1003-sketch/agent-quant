@@ -67,10 +67,12 @@ def handler(task, agent, context) -> HandlerResult:
 
 | task type | agent | implementation |
 |---|---|---|
-| `discovery` | `research_scout` | deterministic starter sources (**Phase 6 swaps this**) |
+| `discovery` | `research_scout` | live Agent Reach / Jina discovery; seeded starter catalog is a test double behind the same handler |
 | `curation` | `knowledge_curator` | deterministic curator executor |
 
 Phase 6 replaces the discovery implementation behind the same registration. **If that requires changing the dispatcher, Phase 2 was designed wrong.**
+
+The seeded catalog (`STARTER_SOURCES`) remains reachable as `backend=seeded` / `--stub` so pytest stays offline. It is not a second `assigned_agent`.
 
 ## Events
 

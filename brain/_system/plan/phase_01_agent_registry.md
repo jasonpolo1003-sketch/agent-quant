@@ -53,7 +53,7 @@ allowed_read_paths:
   - brain/02_Strategy_Doors/
 allowed_write_paths:
   - brain/00_Inbox/Raw_Research/
-  - brain/00_Inbox/Snapshots/
+  - brain/00_Inbox/Source_Snapshots/
   - brain/00_Inbox/Failed_Runs/
 output_contract: raw_research_note_v1
 max_sources: 5
