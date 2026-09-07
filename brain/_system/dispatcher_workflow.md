@@ -27,16 +27,24 @@ Before this existed, running an agent meant running a specific script in an orde
 ## Commands
 
 ```bash
+# Confirm Agent Reach is healthy (required for live discovery; not needed for --stub).
+uv run python scripts/agent_reach_check.py
+
 # Explain the routing decision without executing -- most of the debugging value.
 uv run python scripts/dispatch_task.py --type discovery --research-id RQ-x --dry-run
 
-# Execute.
+# Production live Scout run. No Python search_fn injection. Requires Agent Reach.
 uv run python scripts/dispatch_task.py --type discovery --research-id RQ-x
+
+# Offline stub: seeded starter catalog, zero network.
+uv run python scripts/dispatch_task.py --type discovery --research-id RQ-x --stub
 
 # Reconstruct the run.
 uv run python -m quant_brain.ops.events tail --run-id RUN-xxxx
 uv run python -m quant_brain.ops.events summary --run-id RUN-xxxx
 ```
+
+Live discovery details: [agent_reach_adapter_workflow.md](agent_reach_adapter_workflow.md).
 
 ## Path enforcement
 
@@ -67,16 +75,22 @@ def handler(task, agent, context) -> HandlerResult:
 
 | task type | agent | implementation |
 |---|---|---|
-| `discovery` | `research_scout` | deterministic starter sources (**Phase 6 swaps this**) |
+| `discovery` | `research_scout` | live Agent Reach / Jina discovery; seeded starter catalog is a test double behind the same handler |
 | `curation` | `knowledge_curator` | deterministic curator executor |
 
 Phase 6 replaces the discovery implementation behind the same registration. **If that requires changing the dispatcher, Phase 2 was designed wrong.**
+
+The seeded catalog (`STARTER_SOURCES`) remains reachable as `backend=seeded` / `--stub` so pytest stays offline. It is not a second `assigned_agent`.
 
 ## Events
 
 | event_type | stage | when |
 |---|---|---|
 | `dispatch_started` | `dispatch` | routing resolved, handler about to run |
+| `discovery_started` | `discovery` | scout backend about to search (scout layer) |
+| `discovery_completed` | `discovery` | raw note + snapshots written |
+| `discovery_failed` | `discovery` | live search/fetch/write failed |
+| `failed_run_written` | `discovery` | `Failed_Runs/{run_id}.md` receipt written |
 | `handler_completed` | task type | handler returned |
 | `handler_failed` | task type | handler raised |
 | `path_violation` | `dispatch` | write attempted outside declared paths |

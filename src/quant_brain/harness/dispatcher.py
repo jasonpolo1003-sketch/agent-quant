@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 from uuid import uuid4
 
 from quant_brain.config import PROJECT_ROOT
@@ -61,7 +62,7 @@ class Task:
     payload: dict[str, Any] = field(default_factory=dict)
     run_id: str = ""
 
-    def with_defaults(self) -> "Task":
+    def with_defaults(self) -> Task:
         return self if self.run_id else Task(
             task_id=self.task_id,
             task_type=self.task_type,

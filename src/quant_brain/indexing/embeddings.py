@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from quant_brain.db.init_db import DEFAULT_DB_PATH, connect, init_database
-from quant_brain.llm.ollama_client import DEFAULT_EMBED_MODEL, embed as ollama_embed
+from quant_brain.llm.ollama_client import DEFAULT_EMBED_MODEL
+from quant_brain.llm.ollama_client import embed as ollama_embed
 
 # The hash backend is lexical, not semantic: it matches only on shared literal
 # tokens. It stays registered because pytest must never require Ollama, but it

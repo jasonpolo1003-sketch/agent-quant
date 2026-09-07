@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -36,36 +37,89 @@ def _relative_output(context: WorkPacketContext, path: str) -> str:
     return resolved.relative_to(root).as_posix()
 
 
-def run_discovery(task: Task, agent: AgentSpec, context: WorkPacketContext) -> HandlerResult:
-    """Discovery handler.
+def _discovery_backend_name(task: Task) -> str:
+    payload_name = task.payload.get("backend") or task.payload.get("discovery_backend")
+    if payload_name:
+        return str(payload_name)
+    return os.environ.get("QUANT_BRAIN_DISCOVERY") or "live"
 
-    Currently backed by the deterministic starter-source executor. Phase 6
-    replaces the implementation behind this same registration with live Agent
-    Reach discovery plus Qwen extraction -- the dispatcher must not change.
+
+def _positive_int(value: Any, *, field: str) -> int:
+    if isinstance(value, bool) or isinstance(value, float):
+        raise TypeError(f"{field} must be a positive integer, got {value!r}")
+    try:
+        number = int(value)
+    except (TypeError, ValueError) as exc:
+        raise TypeError(f"{field} must be a positive integer, got {value!r}") from exc
+    if isinstance(value, str) and str(number) != value.strip():
+        raise TypeError(f"{field} must be a positive integer, got {value!r}")
+    if number < 1:
+        raise ValueError(f"{field} must be a positive integer, got {value!r}")
+    return number
+
+
+def resolve_max_sources(agent_limit: Any, requested: Any) -> int:
+    """Return the effective source cap: callers may narrow, never widen."""
+    agent_n = _positive_int(agent_limit if agent_limit is not None else 5, field="agent max_sources")
+    if requested is None or requested == "":
+        return agent_n
+    requested_n = _positive_int(requested, field="task max_sources")
+    return min(agent_n, requested_n)
+
+
+def run_discovery(task: Task, agent: AgentSpec, context: WorkPacketContext) -> HandlerResult:
+    """Research Scout discovery handler.
+
+    Live Agent Reach / Jina discovery is the production backend. The seeded
+    starter catalog is a test double selected with ``backend=seeded`` or
+    ``QUANT_BRAIN_DISCOVERY=seeded``. This handler never runs the curator; it
+    returns ``recommendation="curation"`` so the harness decides what is next.
     """
-    from quant_brain.research.executor import execute_research_task
+    from quant_brain.discovery.live_discovery import get_discovery_backend
+    from quant_brain.research.executor import execute_discovery_task
+
+    backend_name = _discovery_backend_name(task)
+    allow_network = backend_name == "live" and task.payload.get("allow_network", True)
+    backend_kwargs: dict[str, Any] = {}
+    if backend_name in {"live", "agent-reach", "jina"}:
+        backend_kwargs["allow_network"] = bool(allow_network)
+        if task.payload.get("search_fn") is not None:
+            backend_kwargs["search_fn"] = task.payload["search_fn"]
+        if task.payload.get("fetch_fn") is not None:
+            backend_kwargs["fetch_fn"] = task.payload["fetch_fn"]
+        if task.payload.get("adapter") is not None:
+            backend_kwargs["adapter"] = task.payload["adapter"]
+    backend = get_discovery_backend(backend_name, **backend_kwargs)
 
     research_id = task.payload.get("research_id")
-    result: dict[str, Any] = execute_research_task(
+    max_sources = resolve_max_sources(agent.extras.get("max_sources"), task.payload.get("max_sources"))
+    result: dict[str, Any] = execute_discovery_task(
         project_root=context.project_root,
         db_path=context.db_path,
         research_id=research_id,
+        backend=backend,
+        resolve_write=context.resolve_write,
+        max_sources=max_sources,
+        run_id=task.run_id,
+        task_id=task.task_id,
     )
 
-    output = _relative_output(context, result["raw_note_path"])
+    outputs = [_relative_output(context, result["raw_note_path"])]
+    outputs.extend(_relative_output(context, path) for path in result.get("snapshots") or [])
     return HandlerResult(
         status="completed",
-        outputs=(output,),
+        outputs=tuple(outputs),
         recommendation="curation",
         detail={
             "research_id": result["research_id"],
             "sources_count": result.get("sources_count"),
-            "implementation": "deterministic-starter-sources",
+            "backend": result.get("backend"),
+            "snapshots": list(result.get("snapshots") or []),
         },
     )
 
 
-def run_curation(task: Task, agent: AgentSpec, context: WorkPacketContext) -> HandlerResult:
+def run_curation(task: Task, _agent: AgentSpec, context: WorkPacketContext) -> HandlerResult:
     """Curation handler backed by the existing deterministic curator executor."""
     from quant_brain.curation.executor import execute_curator_task
 
@@ -93,6 +147,6 @@ def run_curation(task: Task, agent: AgentSpec, context: WorkPacketContext) -> Ha
 
 
 def register_default_handlers() -> None:
-    """Bind the shipped deterministic handlers to their task types."""
+    """Bind the shipped handlers to their registered task types."""
     register_handler("discovery", "research_scout", run_discovery)
     register_handler("curation", "knowledge_curator", run_curation)

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sqlite3
 from pathlib import Path
 from uuid import uuid4
 
@@ -90,6 +89,24 @@ def update_research_status(
             WHERE research_id = ?
             """,
             (status, raw_note_path, source_note_path, curator_note_path, research_id),
+        )
+        if cur.rowcount != 1:
+            raise KeyError(f"research_id not found: {research_id}")
+        conn.commit()
+
+
+def reset_research_for_retry(db_path: str | Path, research_id: str) -> None:
+    """Return a research question to queued and clear the incomplete raw-note path."""
+    with connect(db_path) as conn:
+        cur = conn.execute(
+            """
+            UPDATE research_questions
+            SET status = 'queued',
+                raw_note_path = NULL,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE research_id = ?
+            """,
+            (research_id,),
         )
         if cur.rowcount != 1:
             raise KeyError(f"research_id not found: {research_id}")

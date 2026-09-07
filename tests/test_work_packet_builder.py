@@ -22,7 +22,7 @@ allowed_read_paths:
   - brain/01_Sources/
 allowed_write_paths:
   - brain/00_Inbox/Raw_Research/
-  - brain/00_Inbox/Snapshots/
+  - brain/00_Inbox/Source_Snapshots/
 output_contract: raw_research_note_v1
 ---
 
@@ -144,7 +144,7 @@ def test_declared_agent_paths_are_used_when_caller_passes_none(tmp_path):
 
     assert packet.allowed_write_paths == [
         "brain/00_Inbox/Raw_Research/",
-        "brain/00_Inbox/Snapshots/",
+        "brain/00_Inbox/Source_Snapshots/",
     ]
     assert packet.allowed_read_paths == ["brain/01_Sources/"]
     # The agent's declared contract wins over the generic default.

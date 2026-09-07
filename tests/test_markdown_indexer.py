@@ -1,4 +1,3 @@
-from pathlib import Path
 
 from quant_brain.db.init_db import connect, init_database
 from quant_brain.indexing.markdown_indexer import (

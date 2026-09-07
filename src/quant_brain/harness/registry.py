@@ -3,8 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import dataclass, field
-from pathlib import PurePosixPath
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import frontmatter

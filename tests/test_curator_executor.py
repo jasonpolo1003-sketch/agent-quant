@@ -49,6 +49,9 @@ def sample_payload(research_id="RQ-test"):
                 "risks": ["Cheating with future data inflates performance."],
                 "confidence": "high",
                 "source_quality": "primary",
+                "asset_classes": ["equity", "etf"],
+                "data_required": ["daily bars with next-bar execution"],
+                "data_access": "available-now",
                 "mvp_testable": True,
             },
             {
@@ -61,11 +64,14 @@ def sample_payload(research_id="RQ-test"):
                 "risks": ["Background only."],
                 "confidence": "medium",
                 "source_quality": "practitioner",
+                "asset_classes": ["equity"],
+                "data_required": ["user-owned copy"],
+                "data_access": "available-later",
                 "mvp_testable": False,
             },
             {
                 "title": "Unsourced Video Claim",
-                "source_type": "video",
+                "source_type": "other",
                 "url_or_citation": "https://example.com/video",
                 "main_claim": "A screenshot says the strategy always wins.",
                 "evidence": "No reproducible evidence.",
@@ -73,6 +79,9 @@ def sample_payload(research_id="RQ-test"):
                 "risks": ["Discovery lead only."],
                 "confidence": "low",
                 "source_quality": "discovery-only",
+                "asset_classes": [],
+                "data_required": [],
+                "data_access": "not-realistic",
                 "mvp_testable": True,
             },
         ],
@@ -153,3 +162,34 @@ def test_execute_curator_task_rejects_missing_json(tmp_path):
         assert "json" in str(exc).lower()
     else:
         raise AssertionError("Expected missing JSON block to be rejected")
+
+
+def test_execute_curator_task_rejects_illegal_data_access_and_does_not_promote(tmp_path):
+    from quant_brain.research.schema import RawResearchSchemaError
+
+    db_path = tmp_path / "brain.sqlite"
+    init_database(db_path)
+    task = add_research_question(db_path, "Research ETF mean reversion", "mean_reversion")
+    payload = sample_payload(task["research_id"])
+    payload["sources"][0]["data_access"] = "partial"
+    raw_note = tmp_path / "brain" / "00_Inbox" / "Raw_Research" / f"{task['research_id']}.md"
+    write_raw_note(raw_note, task["research_id"], payload)
+    update_research_status(db_path, task["research_id"], "raw_saved", raw_note_path=str(raw_note))
+
+    try:
+        execute_curator_task(tmp_path, db_path, task["research_id"])
+    except RawResearchSchemaError as exc:
+        assert "data_access" in str(exc)
+    else:
+        raise AssertionError("Expected illegal data_access to fail closed")
+
+    sources_dir = tmp_path / "brain" / "01_Sources"
+    assert not sources_dir.exists() or not any(sources_dir.rglob("*.md"))
+    with connect(db_path) as conn:
+        row = conn.execute(
+            "select status from research_questions where research_id = ?",
+            (task["research_id"],),
+        ).fetchone()
+        findings = conn.execute("select count(*) from research_findings").fetchone()[0]
+    assert row["status"] == "raw_saved"
+    assert findings == 0

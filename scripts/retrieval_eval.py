@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -136,7 +136,7 @@ def main() -> None:
             print(f"\nSemantic minus lexical on {key}: {delta:+.2f}")
 
     if args.save:
-        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        stamp = datetime.now(UTC).strftime("%Y-%m-%d")
         out_dir = Path(BRAIN_DIR) / "00_Inbox" / "Model_Evaluations"
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / f"retrieval-eval-{stamp}.json"

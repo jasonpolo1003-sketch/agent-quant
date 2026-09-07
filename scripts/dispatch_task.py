@@ -1,4 +1,12 @@
-"""Dispatch one typed task to the agent qualified to run it."""
+"""Dispatch one typed task to the agent qualified to run it.
+
+Discovery defaults to live Agent Reach search. No Python function injection is
+required. Use --stub for the offline seeded catalog.
+
+    uv run python scripts/agent_reach_check.py
+    uv run python scripts/dispatch_task.py --type discovery --research-id RQ-x --dry-run
+    uv run python scripts/dispatch_task.py --type discovery --research-id RQ-x
+"""
 
 from __future__ import annotations
 
@@ -28,6 +36,16 @@ def main() -> None:
         help="Explain the routing decision without executing the handler.",
     )
     parser.add_argument("--json", action="store_true")
+    parser.add_argument(
+        "--stub",
+        action="store_true",
+        help="Use the seeded starter-source catalog (offline / CI). Default is live discovery.",
+    )
+    parser.add_argument(
+        "--backend",
+        default=None,
+        help="Discovery backend for --type discovery: live (default) or seeded.",
+    )
     args = parser.parse_args()
 
     register_default_handlers()
@@ -35,6 +53,11 @@ def main() -> None:
     payload = {}
     if args.research_id:
         payload["research_id"] = args.research_id
+    if args.task_type == "discovery":
+        if args.stub:
+            payload["backend"] = "seeded"
+        elif args.backend:
+            payload["backend"] = args.backend
 
     task = Task(
         task_id=args.task_id or f"TASK-{uuid4().hex[:10]}",

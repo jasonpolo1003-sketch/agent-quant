@@ -113,7 +113,7 @@ Functions:
 - `check_health(exe=..., timeout=60) -> dict[str, ChannelHealth]`
 - `is_channel_usable(health, channel) -> bool` — enabled ∧ (status ok ∨ zero-config-with-tool-present)
 - `fetch_web(url, ...) -> FetchedSource` — via Jina Reader
-- `snapshot(content, url, root) -> str` — writes to `brain/00_Inbox/Snapshots/YYYY-MM-DD/{sha256[:16]}.md`
+- `snapshot(content, url, root) -> str` — writes to `brain/00_Inbox/Source_Snapshots/YYYY-MM-DD/{sha256[:16]}.md`
 
 ### Hard boundaries (enforce in code, not just docs)
 
@@ -180,7 +180,7 @@ uv run pytest -q
 
 - [ ] `check_health()` parses real doctor JSON into `ChannelHealth`
 - [ ] `fetch_web()` returns content + hash + captured_at + snapshot path
-- [ ] Snapshots land in `brain/00_Inbox/Snapshots/YYYY-MM-DD/`
+- [ ] Snapshots land in `brain/00_Inbox/Source_Snapshots/YYYY-MM-DD/`
 - [ ] Forbidden subcommands raise
 - [ ] Login-backed channels are off by default
 - [ ] Tests pass with no network access

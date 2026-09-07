@@ -7,7 +7,7 @@ from quant_brain.research.executor import (
     select_candidate_sources,
 )
 from quant_brain.research.intake import add_research_question, update_research_status
-from quant_brain.research.scout_runner import create_raw_research_note, build_scout_prompt
+from quant_brain.research.scout_runner import build_scout_prompt, create_raw_research_note
 
 
 def test_select_candidate_sources_matches_method_family():
@@ -48,6 +48,7 @@ def test_execute_research_task_fills_raw_note_and_marks_raw_saved(tmp_path):
     text = Path(raw_path).read_text(encoding="utf-8")
     assert "## Scout Findings" in text
     assert "curator_recommendation" in text
+    assert '"data_access"' in text
     assert "Scout findings go here." not in text
 
     with connect(db_path) as conn:
