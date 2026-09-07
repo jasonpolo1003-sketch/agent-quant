@@ -2,8 +2,8 @@
 
 from quant_brain.discovery.live_discovery import (
     SNAPSHOT_DIR,
-    DiscoveryBackend,
     DiscoverResult,
+    DiscoveryBackend,
     LiveDiscoveryBackend,
     LiveDiscoveryError,
     SeededDiscoveryBackend,
@@ -13,8 +13,8 @@ from quant_brain.discovery.live_discovery import (
 
 __all__ = [
     "SNAPSHOT_DIR",
-    "DiscoveryBackend",
     "DiscoverResult",
+    "DiscoveryBackend",
     "LiveDiscoveryBackend",
     "LiveDiscoveryError",
     "SeededDiscoveryBackend",

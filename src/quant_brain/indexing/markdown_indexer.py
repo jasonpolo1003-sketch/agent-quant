@@ -6,7 +6,7 @@ import json
 import re
 from pathlib import Path
 from typing import Any
-from uuid import uuid5, NAMESPACE_URL
+from uuid import NAMESPACE_URL, uuid5
 
 from quant_brain.config import BRAIN_DIR, PROJECT_ROOT
 from quant_brain.db.init_db import DEFAULT_DB_PATH, connect, init_database

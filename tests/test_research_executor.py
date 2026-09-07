@@ -7,7 +7,7 @@ from quant_brain.research.executor import (
     select_candidate_sources,
 )
 from quant_brain.research.intake import add_research_question, update_research_status
-from quant_brain.research.scout_runner import create_raw_research_note, build_scout_prompt
+from quant_brain.research.scout_runner import build_scout_prompt, create_raw_research_note
 
 
 def test_select_candidate_sources_matches_method_family():

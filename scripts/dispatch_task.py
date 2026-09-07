@@ -1,4 +1,12 @@
-"""Dispatch one typed task to the agent qualified to run it."""
+"""Dispatch one typed task to the agent qualified to run it.
+
+Discovery defaults to live Agent Reach search. No Python function injection is
+required. Use --stub for the offline seeded catalog.
+
+    uv run python scripts/agent_reach_check.py
+    uv run python scripts/dispatch_task.py --type discovery --research-id RQ-x --dry-run
+    uv run python scripts/dispatch_task.py --type discovery --research-id RQ-x
+"""
 
 from __future__ import annotations
 

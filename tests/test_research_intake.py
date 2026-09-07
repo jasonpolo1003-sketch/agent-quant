@@ -5,6 +5,7 @@ from quant_brain.research.intake import (
     add_research_question,
     create_research_brief,
     list_research_questions,
+    reset_research_for_retry,
     update_research_status,
 )
 
@@ -80,3 +81,25 @@ def test_create_research_brief_writes_markdown_with_agent_instructions(tmp_path)
     assert "Allowed Write Locations" in text
     assert "Do not download copyrighted books illegally" in text
     assert "Find legal public sources" in text
+
+
+def test_reset_research_for_retry_returns_queued_and_clears_raw_note(tmp_path):
+    db_path = tmp_path / "brain.sqlite"
+    init_database(db_path)
+    task = add_research_question(db_path, "What is RSI mean reversion?", "mean_reversion")
+    update_research_status(
+        db_path,
+        task["research_id"],
+        "researching",
+        raw_note_path="brain/00_Inbox/Raw_Research/partial.md",
+    )
+
+    reset_research_for_retry(db_path, task["research_id"])
+
+    with connect(db_path) as conn:
+        row = conn.execute(
+            "SELECT status, raw_note_path FROM research_questions WHERE research_id = ?",
+            (task["research_id"],),
+        ).fetchone()
+    assert row["status"] == "queued"
+    assert row["raw_note_path"] is None

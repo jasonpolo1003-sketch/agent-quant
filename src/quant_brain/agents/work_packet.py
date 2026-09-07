@@ -12,7 +12,6 @@ from quant_brain.harness.registry import RegistryError, has_declaration, load_ag
 from quant_brain.indexing.embeddings import DEFAULT_MODEL as _EMBED_DEFAULT_MODEL
 from quant_brain.retrieval.context_builder import build_retrieval_context
 
-
 # Fallback only for agent files that carry no registry frontmatter yet. A declared
 # agent's own allowed paths always win -- the agent states its boundary, the
 # harness enforces it. See PLAN.md section 2.

@@ -1,14 +1,20 @@
+from pathlib import Path
+
 import pytest
 
-from quant_brain.db.init_db import init_database
-from quant_brain.discovery.live_discovery import SNAPSHOT_DIR, LiveDiscoveryBackend
+from quant_brain.db.init_db import connect, init_database
+from quant_brain.discovery.live_discovery import SNAPSHOT_DIR
 from quant_brain.harness.dispatcher import (
     ReentrantDispatch,
     Task,
     dispatch,
     unregister_handler,
 )
-from quant_brain.harness.handlers import register_default_handlers, run_discovery
+from quant_brain.harness.handlers import (
+    register_default_handlers,
+    resolve_max_sources,
+    run_discovery,
+)
 from quant_brain.harness.paths import PathViolation
 from quant_brain.harness.registry import load_registry
 from quant_brain.research.intake import add_research_question
@@ -138,7 +144,7 @@ def test_scout_handler_does_not_run_curator(project, monkeypatch):
     task_row = add_research_question(db_path, "Research ETF RSI mean reversion", "mean_reversion")
     register_default_handlers()
 
-    def boom(*args, **kwargs):
+    def boom(*_args, **_kwargs):
         raise AssertionError("scout must not call the curator")
 
     monkeypatch.setattr("quant_brain.curation.executor.execute_curator_task", boom)
@@ -182,7 +188,7 @@ def test_scout_cannot_reenter_curation_dispatch(project):
 
 
 def test_scout_snapshot_path_is_enforced_and_curated_shelf_is_blocked(project):
-    root, db_path = project
+    root, _db_path = project
     registry = load_registry(root)
     spec = registry["research_scout"]
 
@@ -237,3 +243,168 @@ def test_dispatched_live_path_writes_snapshots_without_curation(project):
     assert not (root / "brain" / "01_Sources").exists()
     reviews = root / "brain" / "00_Inbox" / "Curator_Reviews"
     assert not any(reviews.glob("*.md"))
+
+
+def test_dispatched_live_uses_adapter_without_search_fn(project):
+    from quant_brain.discovery.agent_reach import AgentReachAdapter
+
+    root, db_path = project
+    task_row = add_research_question(db_path, "Research ETF RSI mean reversion", "mean_reversion")
+    register_default_handlers()
+    fixtures = Path(__file__).parent / "fixtures"
+    doctor = (fixtures / "agent_reach_doctor.json").read_text(encoding="utf-8")
+    search = (fixtures / "agent_reach_search.json").read_text(encoding="utf-8")
+    page = (fixtures / "jina_web_page.md").read_text(encoding="utf-8")
+
+    def runner(argv, timeout=60):
+        del timeout
+        joined = " ".join(argv)
+        if "doctor" in argv:
+            return 0, doctor, ""
+        if "exa.web_search_exa" in joined:
+            return 0, search, ""
+        if argv and argv[0] == "gh":
+            return 0, "[]", ""
+        return 1, "", f"unexpected argv: {argv}"
+
+    adapter = AgentReachAdapter(runner=runner, fetch_impl=lambda _url: page, skip_exe_check=True)
+    result = dispatch(
+        Task(
+            task_id="T-adapter",
+            task_type="discovery",
+            payload={
+                "research_id": task_row["research_id"],
+                "backend": "live",
+                "allow_network": True,
+                "adapter": adapter,
+            },
+        ),
+        project_root=root,
+        db_path=db_path,
+    )
+
+    assert result.recommendation == "curation"
+    assert result.detail["backend"] == "live"
+    assert result.detail["sources_count"] >= 1
+    assert result.detail["snapshots"]
+    assert not (root / "brain" / "01_Sources").exists()
+
+
+def test_live_discovery_failure_is_retryable_and_leaves_no_orphan_note(project):
+    from quant_brain.ops.events import list_events
+
+    root, db_path = project
+    task_row = add_research_question(db_path, "Research ETF RSI mean reversion", "mean_reversion")
+    register_default_handlers()
+
+    def search_fn(question, method_family, *, limit):
+        raise RuntimeError("upstream search down")
+
+    with pytest.raises(RuntimeError, match="upstream search down"):
+        dispatch(
+            Task(
+                task_id="T-fail",
+                task_type="discovery",
+                payload={
+                    "research_id": task_row["research_id"],
+                    "backend": "live",
+                    "allow_network": False,
+                    "search_fn": search_fn,
+                    "fetch_fn": lambda url: {"url": url, "content": "x"},
+                },
+                run_id="RUN-fail1",
+            ),
+            project_root=root,
+            db_path=db_path,
+        )
+
+    with connect(db_path) as conn:
+        row = conn.execute(
+            "SELECT status, raw_note_path FROM research_questions WHERE research_id = ?",
+            (task_row["research_id"],),
+        ).fetchone()
+    assert row["status"] == "queued"
+    assert row["raw_note_path"] is None
+    note = root / "brain" / "00_Inbox" / "Raw_Research" / f"{task_row['research_id']}.md"
+    assert not note.exists()
+    failed = root / "brain" / "00_Inbox" / "Failed_Runs" / "RUN-fail1.md"
+    assert failed.exists()
+    text = failed.read_text(encoding="utf-8")
+    assert "retryable: true" in text
+    assert task_row["research_id"] in text
+    events = list_events(db_path, run_id="RUN-fail1")
+    types = [event["event_type"] for event in events]
+    assert "discovery_started" in types
+    assert "discovery_failed" in types
+    assert "failed_run_written" in types
+    assert "handler_failed" in types
+    assert "dispatch_failed" in types
+
+
+def test_task_max_sources_narrows_but_never_widens(project):
+    root, db_path = project
+    task_row = add_research_question(db_path, "Research ETF RSI mean reversion", "mean_reversion")
+    register_default_handlers()
+    seen: list[int] = []
+
+    def search_fn(question, method_family, *, limit):
+        seen.append(limit)
+        return [
+            {"title": f"src-{idx}", "url": f"https://example.com/{idx}", "source_type": "docs"}
+            for idx in range(limit)
+        ]
+
+    def fetch_fn(url):
+        return {"url": url, "content": f"body for {url}", "channel": "web", "backend": "fixture"}
+
+    dispatch(
+        Task(
+            task_id="T-narrow",
+            task_type="discovery",
+            payload={
+                "research_id": task_row["research_id"],
+                "backend": "live",
+                "allow_network": False,
+                "search_fn": search_fn,
+                "fetch_fn": fetch_fn,
+                "max_sources": 2,
+            },
+        ),
+        project_root=root,
+        db_path=db_path,
+    )
+    assert seen == [2]
+
+    task_row_wide = add_research_question(db_path, "Research look-ahead bias", "mean_reversion")
+    dispatch(
+        Task(
+            task_id="T-wide",
+            task_type="discovery",
+            payload={
+                "research_id": task_row_wide["research_id"],
+                "backend": "live",
+                "allow_network": False,
+                "search_fn": search_fn,
+                "fetch_fn": fetch_fn,
+                "max_sources": 9,
+            },
+        ),
+        project_root=root,
+        db_path=db_path,
+    )
+    assert seen == [2, 5]
+
+
+def test_resolve_max_sources_validates_and_takes_the_minimum():
+    assert resolve_max_sources(5, 2) == 2
+    assert resolve_max_sources(5, 9) == 5
+    assert resolve_max_sources(5, None) == 5
+    assert resolve_max_sources(None, 3) == 3
+    with pytest.raises(ValueError, match="positive integer"):
+        resolve_max_sources(0, 2)
+    with pytest.raises(ValueError, match="positive integer"):
+        resolve_max_sources(5, -1)
+    with pytest.raises(TypeError, match="positive integer"):
+        resolve_max_sources(5, True)
+    with pytest.raises(TypeError, match="positive integer"):
+        resolve_max_sources(True, 2)

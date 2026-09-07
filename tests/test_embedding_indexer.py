@@ -1,10 +1,10 @@
 from quant_brain.db.init_db import connect, init_database
 from quant_brain.indexing.embeddings import (
+    HASH_MODEL,
     cosine_similarity,
     embed_pending_chunks,
     hash_embed_text,
     search_similar_chunks,
-    HASH_MODEL,
 )
 
 

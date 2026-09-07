@@ -4,6 +4,6 @@ from __future__ import annotations
 
 import os
 
-# Default live discovery is fail-closed without Agent Reach. Tests that need the
-# live path pass backend="live" plus injected search_fn/fetch_fn.
+# Default production discovery is live Agent Reach. Tests that need the live
+# path pass backend="live" plus an injected adapter runner or search_fn/fetch_fn.
 os.environ.setdefault("QUANT_BRAIN_DISCOVERY", "seeded")

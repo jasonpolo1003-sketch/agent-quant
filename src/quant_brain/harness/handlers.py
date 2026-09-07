@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any
 
 from quant_brain.harness.dispatcher import (
@@ -20,8 +21,6 @@ def _relative_output(context: WorkPacketContext, path: str) -> str:
     onto this run's root before enforcement rather than trusting the stored
     string.
     """
-    from pathlib import Path
-
     root = context.project_root.resolve()
     candidate = Path(str(path).replace("\\", "/"))
     if candidate.is_absolute():
@@ -45,6 +44,29 @@ def _discovery_backend_name(task: Task) -> str:
     return os.environ.get("QUANT_BRAIN_DISCOVERY") or "live"
 
 
+def _positive_int(value: Any, *, field: str) -> int:
+    if isinstance(value, bool) or isinstance(value, float):
+        raise TypeError(f"{field} must be a positive integer, got {value!r}")
+    try:
+        number = int(value)
+    except (TypeError, ValueError) as exc:
+        raise TypeError(f"{field} must be a positive integer, got {value!r}") from exc
+    if isinstance(value, str) and str(number) != value.strip():
+        raise TypeError(f"{field} must be a positive integer, got {value!r}")
+    if number < 1:
+        raise ValueError(f"{field} must be a positive integer, got {value!r}")
+    return number
+
+
+def resolve_max_sources(agent_limit: Any, requested: Any) -> int:
+    """Return the effective source cap: callers may narrow, never widen."""
+    agent_n = _positive_int(agent_limit if agent_limit is not None else 5, field="agent max_sources")
+    if requested is None or requested == "":
+        return agent_n
+    requested_n = _positive_int(requested, field="task max_sources")
+    return min(agent_n, requested_n)
+
+
 def run_discovery(task: Task, agent: AgentSpec, context: WorkPacketContext) -> HandlerResult:
     """Research Scout discovery handler.
 
@@ -65,10 +87,12 @@ def run_discovery(task: Task, agent: AgentSpec, context: WorkPacketContext) -> H
             backend_kwargs["search_fn"] = task.payload["search_fn"]
         if task.payload.get("fetch_fn") is not None:
             backend_kwargs["fetch_fn"] = task.payload["fetch_fn"]
+        if task.payload.get("adapter") is not None:
+            backend_kwargs["adapter"] = task.payload["adapter"]
     backend = get_discovery_backend(backend_name, **backend_kwargs)
 
     research_id = task.payload.get("research_id")
-    max_sources = int(agent.extras.get("max_sources") or task.payload.get("max_sources") or 5)
+    max_sources = resolve_max_sources(agent.extras.get("max_sources"), task.payload.get("max_sources"))
     result: dict[str, Any] = execute_discovery_task(
         project_root=context.project_root,
         db_path=context.db_path,
@@ -76,6 +100,8 @@ def run_discovery(task: Task, agent: AgentSpec, context: WorkPacketContext) -> H
         backend=backend,
         resolve_write=context.resolve_write,
         max_sources=max_sources,
+        run_id=task.run_id,
+        task_id=task.task_id,
     )
 
     outputs = [_relative_output(context, result["raw_note_path"])]
@@ -93,7 +119,7 @@ def run_discovery(task: Task, agent: AgentSpec, context: WorkPacketContext) -> H
     )
 
 
-def run_curation(task: Task, agent: AgentSpec, context: WorkPacketContext) -> HandlerResult:
+def run_curation(task: Task, _agent: AgentSpec, context: WorkPacketContext) -> HandlerResult:
     """Curation handler backed by the existing deterministic curator executor."""
     from quant_brain.curation.executor import execute_curator_task
 

@@ -2,18 +2,20 @@
 
 Production discovery is the live Agent Reach / Jina path. The seeded starter
 catalog is a test double behind the same interface, not a second assigned
-agent. Pytest must inject search/fetch callables or select the seeded backend;
-the default live fetch is never invoked from unit tests.
+agent. Pytest never calls the default live fetch: tests inject an adapter
+runner or select the seeded backend.
 """
 
 from __future__ import annotations
 
 import hashlib
 import os
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Protocol
+from typing import Any, Protocol
+from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 from quant_brain.config import PROJECT_ROOT
@@ -52,11 +54,23 @@ class DiscoveryBackend(Protocol):
     ) -> DiscoverResult: ...
 
 
-def snapshot_relative_path(content: str, captured_at: datetime | None = None) -> str:
-    """Return the canonical relative path for a source snapshot."""
-    digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
-    day = (captured_at or datetime.now(timezone.utc)).strftime("%Y-%m-%d")
-    return f"{SNAPSHOT_DIR}/{day}/{digest[:16]}.md"
+def normalize_snapshot_url(url: str) -> str:
+    """Canonicalize a URL so equivalent forms share one identity hash."""
+    parts = urlsplit(url.strip())
+    path = parts.path.rstrip("/") or "/"
+    return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), path, parts.query, ""))
+
+
+def snapshot_relative_path(
+    content: str,
+    url: str,
+    captured_at: datetime | None = None,
+) -> str:
+    """Return a provenance path unique to both content and upstream URL."""
+    content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+    url_hash = hashlib.sha256(normalize_snapshot_url(url).encode("utf-8")).hexdigest()
+    day = (captured_at or datetime.now(UTC)).strftime("%Y-%m-%d")
+    return f"{SNAPSHOT_DIR}/{day}/{content_hash[:12]}-{url_hash[:8]}.md"
 
 
 def save_source_snapshot(
@@ -72,21 +86,22 @@ def save_source_snapshot(
 ) -> str:
     """Write a provenance snapshot under ``brain/00_Inbox/Source_Snapshots/``.
 
-    ``resolve_write`` should be the scout handler's path-enforced resolver when
-    called from dispatch. Direct callers (tests, CLIs) write relative to
-    ``project_root``.
+    Filenames include both a content hash and a URL hash so two different
+    upstreams that happen to return identical body text cannot overwrite each
+    other's identity metadata.
     """
     if not url.strip():
         raise ValueError("snapshot url cannot be empty")
     if not content:
         raise ValueError("snapshot content cannot be empty")
 
-    captured = captured_at or datetime.now(timezone.utc)
-    relative = snapshot_relative_path(content, captured)
+    captured = captured_at or datetime.now(UTC)
+    relative = snapshot_relative_path(content, url, captured)
     dest = resolve_write(relative) if resolve_write else Path(project_root) / relative
     dest.parent.mkdir(parents=True, exist_ok=True)
 
     content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
+    url_hash = hashlib.sha256(normalize_snapshot_url(url).encode("utf-8")).hexdigest()
     text = (
         "---\n"
         f"url: {url}\n"
@@ -95,6 +110,7 @@ def save_source_snapshot(
         f"backend: {backend}\n"
         f"captured_at: {captured.isoformat()}\n"
         f"content_hash: {content_hash}\n"
+        f"url_hash: {url_hash}\n"
         "---\n\n"
         f"{content.rstrip()}\n"
     )
@@ -115,7 +131,7 @@ def jina_fetch(url: str, *, timeout: int = 30) -> dict[str, Any]:
         headers={"User-Agent": "quant-agent-brain/research-scout"},
         method="GET",
     )
-    with urlopen(request, timeout=timeout) as response:  # noqa: S310 - caller supplied URL
+    with urlopen(request, timeout=timeout) as response:
         body = response.read().decode("utf-8", errors="replace")
     return {
         "url": url,
@@ -178,7 +194,12 @@ class SeededDiscoveryBackend:
 
 
 class LiveDiscoveryBackend:
-    """Agent Reach / Jina live path with injectable I/O for hermetic tests."""
+    """Agent Reach / Jina live path.
+
+    Production CLI constructs this with ``allow_network=True`` and no injected
+    callables; search/fetch then go through ``AgentReachAdapter``. Tests may
+    still inject ``search_fn``/``fetch_fn`` or a fake adapter runner.
+    """
 
     name = "live"
 
@@ -188,10 +209,39 @@ class LiveDiscoveryBackend:
         search_fn: SearchFn | None = None,
         fetch_fn: FetchFn | None = None,
         allow_network: bool = False,
+        adapter: Any | None = None,
     ) -> None:
         self.search_fn = search_fn
         self.fetch_fn = fetch_fn
         self.allow_network = allow_network
+        self.adapter = adapter
+
+    def _adapter(self) -> Any:
+        if self.adapter is None:
+            from quant_brain.discovery.agent_reach import AgentReachAdapter
+
+            self.adapter = AgentReachAdapter()
+        return self.adapter
+
+    def _resolve_search_fn(self) -> SearchFn:
+        if self.search_fn is not None:
+            return self.search_fn
+        if not self.allow_network:
+            raise LiveDiscoveryError(
+                "live discovery has no search function and network is disabled; "
+                "inject search_fn/adapter or pass allow_network=True"
+            )
+        return self._adapter().search_for_question
+
+    def _resolve_fetch_fn(self) -> FetchFn:
+        if self.fetch_fn is not None:
+            return self.fetch_fn
+        if not self.allow_network:
+            raise LiveDiscoveryError(
+                "live discovery has no fetch_fn and network is disabled; "
+                "inject a fetch fixture or pass allow_network=True"
+            )
+        return self._adapter().fetch_web
 
     def discover(
         self,
@@ -202,23 +252,12 @@ class LiveDiscoveryBackend:
         project_root: str | Path = PROJECT_ROOT,
         resolve_write: ResolveWriteFn | None = None,
     ) -> DiscoverResult:
-        if self.search_fn is None:
-            raise LiveDiscoveryError(
-                "live discovery has no search function; Agent Reach is not available. "
-                "Inject search_fn/fetch_fn or use the seeded backend in tests. "
-                "Refusing to invent a scraper."
-            )
-        fetch_fn = self.fetch_fn
-        if fetch_fn is None:
-            if not self.allow_network:
-                raise LiveDiscoveryError(
-                    "live discovery has no fetch_fn and network is disabled; "
-                    "inject a fetch fixture or pass allow_network=True"
-                )
-            fetch_fn = jina_fetch
-
-        raw_candidates = self.search_fn(question, method_family, limit=limit)
+        search_fn = self._resolve_search_fn()
+        fetch_fn = self._resolve_fetch_fn()
+        raw_candidates = search_fn(question, method_family, limit=limit)
         candidates = list(raw_candidates)[:limit]
+        if not candidates:
+            raise LiveDiscoveryError("live discovery search returned no candidates")
         sources: list[dict[str, Any]] = []
         snapshots: list[str] = []
         for candidate in candidates:

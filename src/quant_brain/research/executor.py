@@ -204,6 +204,159 @@ def _resolve_note_path(project_root: Path, raw_note_path: str | None) -> Path | 
     return relative if relative.exists() else None
 
 
+def _discard_incomplete_raw_note(note_path: Path | None) -> None:
+    """Remove a scaffold that never received real findings."""
+    if note_path is None or not note_path.exists():
+        return
+    text = note_path.read_text(encoding="utf-8")
+    if "Scout findings go here." in text or "status: researching" in text:
+        note_path.unlink()
+
+
+def _write_failed_run_note(
+    project_root: Path,
+    *,
+    run_id: str,
+    research_id: str,
+    stage: str,
+    error: BaseException,
+    resolve_write: Any | None,
+    extra: dict[str, Any] | None = None,
+) -> str:
+    relative = f"brain/00_Inbox/Failed_Runs/{run_id}.md"
+    dest = resolve_write(relative) if resolve_write else project_root / relative
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    payload = extra or {}
+    text = f"""---
+id: {run_id}
+type: failed_run
+research_id: {research_id}
+stage: {stage}
+agent_role: research_scout
+retryable: true
+---
+
+# Failed Scout Run — {run_id}
+
+## Research ID
+
+{research_id}
+
+## Stage Reached
+
+{stage}
+
+## Error
+
+`{type(error).__name__}`: {error}
+
+## Detail
+
+```json
+{json.dumps(payload, indent=2, default=str)}
+```
+
+## Retry
+
+The research question was returned to `queued`. Re-run:
+
+```bash
+uv run python scripts/dispatch_task.py --type discovery --research-id {research_id}
+```
+"""
+    dest.write_text(text, encoding="utf-8")
+    try:
+        return dest.resolve().relative_to(project_root.resolve()).as_posix()
+    except ValueError:
+        return dest.as_posix()
+
+
+def _record_scout_event(
+    db_path: str | Path,
+    *,
+    run_id: str | None,
+    task_id: str | None,
+    event_type: str,
+    status: str,
+    message: str,
+    payload: dict[str, Any] | None = None,
+) -> None:
+    if not run_id:
+        return
+    from quant_brain.ops.events import record_event
+
+    record_event(
+        db_path,
+        run_id=run_id,
+        task_id=task_id,
+        agent_role="research_scout",
+        stage="discovery",
+        status=status,
+        event_type=event_type,
+        message=message,
+        payload=payload or {},
+    )
+
+
+def _fail_closed_discovery(
+    *,
+    project_root: Path,
+    db_path: str | Path,
+    research_id: str | None,
+    run_id: str | None,
+    task_id: str | None,
+    note_path: Path | None,
+    created_scaffold: bool,
+    stage: str,
+    error: BaseException,
+    resolve_write: Any | None,
+) -> str | None:
+    """Restore retryable state, drop incomplete notes, write a Failed_Runs receipt."""
+    from uuid import uuid4
+
+    from quant_brain.research.intake import reset_research_for_retry
+
+    failed_run_id = run_id or f"FAIL-{uuid4().hex[:10]}"
+    failed_path = None
+    try:
+        failed_path = _write_failed_run_note(
+            project_root,
+            run_id=failed_run_id,
+            research_id=research_id or "unknown",
+            stage=stage,
+            error=error,
+            resolve_write=resolve_write,
+            extra={"task_id": task_id, "created_scaffold": created_scaffold},
+        )
+        _record_scout_event(
+            db_path,
+            run_id=failed_run_id if run_id else None,
+            task_id=task_id,
+            event_type="failed_run_written",
+            status="failed",
+            message=f"Wrote Failed_Runs receipt {failed_path}",
+            payload={"path": failed_path, "stage": stage},
+        )
+    except OSError:
+        failed_path = None
+    if created_scaffold or (note_path is not None and note_path.exists()):
+        try:
+            _discard_incomplete_raw_note(note_path)
+        except OSError:
+            _record_scout_event(
+                db_path,
+                run_id=run_id,
+                task_id=task_id,
+                event_type="discovery_cleanup_failed",
+                status="failed",
+                message=f"Could not discard incomplete raw note {note_path}",
+                payload={"stage": stage},
+            )
+    if research_id:
+        reset_research_for_retry(db_path, research_id)
+    return failed_path
+
+
 def execute_discovery_task(
     project_root: str | Path = PROJECT_ROOT,
     db_path: str | Path = DEFAULT_DB_PATH,
@@ -213,77 +366,132 @@ def execute_discovery_task(
     resolve_write: Any | None = None,
     prepare_if_missing: bool = True,
     max_sources: int = 5,
+    run_id: str | None = None,
+    task_id: str | None = None,
 ) -> dict[str, Any]:
     """Run one discovery backend and write a schema-valid raw research note.
 
     Does not run the curator. Callers (the scout handler) return a recommendation
-    so the harness can decide whether curation runs next.
+    so the harness can decide whether curation runs next. Live failures restore
+    the research question to ``queued``, write ``Failed_Runs``, and drop any
+    incomplete raw-note scaffold.
     """
     from quant_brain.discovery.live_discovery import SeededDiscoveryBackend
     from quant_brain.research.scout_runner import build_scout_prompt, create_raw_research_note
 
     root = Path(project_root)
     searcher = backend or SeededDiscoveryBackend()
-    if research_id is None:
-        with connect(db_path) as conn:
-            row = conn.execute(
-                """
-                SELECT * FROM research_questions
-                WHERE status IN ('researching', 'queued')
-                ORDER BY CASE status WHEN 'researching' THEN 0 ELSE 1 END,
-                         priority ASC, updated_at ASC
-                LIMIT 1
-                """
-            ).fetchone()
-        if row is None:
-            raise ValueError("no researching task found; run research_scout_runner.py prepare first")
-        task = dict(row)
-    else:
-        task = _get_research_task(db_path, research_id)
+    task: dict[str, Any] | None = None
+    note_path: Path | None = None
+    created_scaffold = False
+    stage = "load_task"
+    try:
+        if research_id is None:
+            with connect(db_path) as conn:
+                row = conn.execute(
+                    """
+                    SELECT * FROM research_questions
+                    WHERE status IN ('researching', 'queued')
+                    ORDER BY CASE status WHEN 'researching' THEN 0 ELSE 1 END,
+                             priority ASC, updated_at ASC
+                    LIMIT 1
+                    """
+                ).fetchone()
+            if row is None:
+                raise ValueError("no researching task found; run research_scout_runner.py prepare first")
+            task = dict(row)
+        else:
+            task = _get_research_task(db_path, research_id)
 
-    note_path = _resolve_note_path(root, task.get("raw_note_path"))
-    if note_path is None:
-        if not prepare_if_missing:
-            if not task.get("raw_note_path"):
-                raise ValueError("research task has no raw note path; prepare the task before executing")
-            raise ValueError(f"raw note does not exist: {task.get('raw_note_path')}")
-        prompt = build_scout_prompt(task)
-        created = create_raw_research_note(root, db_path, task, prompt)
-        note_path = Path(created)
-        task = _get_research_task(db_path, task["research_id"])
+        note_path = _resolve_note_path(root, task.get("raw_note_path"))
+        if note_path is None:
+            if not prepare_if_missing:
+                if not task.get("raw_note_path"):
+                    raise ValueError("research task has no raw note path; prepare the task before executing")
+                raise ValueError(f"raw note does not exist: {task.get('raw_note_path')}")
+            stage = "prepare_note"
+            prompt = build_scout_prompt(task)
+            created = create_raw_research_note(root, db_path, task, prompt)
+            note_path = Path(created)
+            created_scaffold = True
+            task = _get_research_task(db_path, task["research_id"])
 
-    discovered = searcher.discover(
-        task["question"],
-        task.get("method_family"),
-        limit=max_sources,
-        project_root=root,
-        resolve_write=resolve_write,
-    )
-    sources = list(discovered.sources)
-    if not sources:
-        raise ValueError("no candidate sources found for this research task")
+        stage = "discover"
+        _record_scout_event(
+            db_path,
+            run_id=run_id,
+            task_id=task_id,
+            event_type="discovery_started",
+            status="running",
+            message=f"Scout discovery started for {task['research_id']}",
+            payload={"backend": getattr(searcher, "name", type(searcher).__name__)},
+        )
+        discovered = searcher.discover(
+            task["question"],
+            task.get("method_family"),
+            limit=max_sources,
+            project_root=root,
+            resolve_write=resolve_write,
+        )
+        sources = list(discovered.sources)
+        if not sources:
+            raise ValueError("no candidate sources found for this research task")
 
-    findings = format_findings_markdown(task, sources)
-    text = note_path.read_text(encoding="utf-8")
-    if "Scout findings go here." in text:
-        text = text.replace("Scout findings go here.", findings)
-    else:
-        text = text.rstrip() + "\n\n" + findings
-    text = text.replace("status: researching", "status: raw_saved", 1)
-    if resolve_write is not None:
-        note_path = resolve_write(note_path)
-    note_path.write_text(text, encoding="utf-8")
+        stage = "write_note"
+        findings = format_findings_markdown(task, sources)
+        text = note_path.read_text(encoding="utf-8")
+        if "Scout findings go here." in text:
+            text = text.replace("Scout findings go here.", findings)
+        else:
+            text = text.rstrip() + "\n\n" + findings
+        text = text.replace("status: researching", "status: raw_saved", 1)
+        if resolve_write is not None:
+            note_path = resolve_write(note_path)
+        note_path.write_text(text, encoding="utf-8")
 
-    update_research_status(db_path, task["research_id"], "raw_saved", raw_note_path=str(note_path))
-    return {
-        "research_id": task["research_id"],
-        "status": "raw_saved",
-        "raw_note_path": str(note_path),
-        "sources_count": len(sources),
-        "snapshots": list(discovered.snapshots),
-        "backend": discovered.backend,
-        "recommendation": "curation",
-    }
+        update_research_status(db_path, task["research_id"], "raw_saved", raw_note_path=str(note_path))
+        _record_scout_event(
+            db_path,
+            run_id=run_id,
+            task_id=task_id,
+            event_type="discovery_completed",
+            status="completed",
+            message=f"Scout discovery completed for {task['research_id']}",
+            payload={"sources_count": len(sources), "backend": discovered.backend},
+        )
+        return {
+            "research_id": task["research_id"],
+            "status": "raw_saved",
+            "raw_note_path": str(note_path),
+            "sources_count": len(sources),
+            "snapshots": list(discovered.snapshots),
+            "backend": discovered.backend,
+            "recommendation": "curation",
+        }
+    except Exception as exc:
+        if task is not None:
+            _record_scout_event(
+                db_path,
+                run_id=run_id,
+                task_id=task_id,
+                event_type="discovery_failed",
+                status="failed",
+                message=str(exc),
+                payload={"stage": stage, "error": type(exc).__name__},
+            )
+            _fail_closed_discovery(
+                project_root=root,
+                db_path=db_path,
+                research_id=str(task["research_id"]),
+                run_id=run_id,
+                task_id=task_id,
+                note_path=note_path,
+                created_scaffold=created_scaffold,
+                stage=stage,
+                error=exc,
+                resolve_write=resolve_write,
+            )
+        raise
 
 
 def execute_research_task(

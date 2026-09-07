@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 import pytest
 
 from quant_brain.discovery.live_discovery import (
@@ -8,6 +10,7 @@ from quant_brain.discovery.live_discovery import (
     assert_not_forbidden_subcommand,
     get_discovery_backend,
     save_source_snapshot,
+    snapshot_relative_path,
 )
 
 
@@ -28,6 +31,38 @@ def test_save_source_snapshot_writes_canonical_source_snapshots_folder(tmp_path)
     text = written.read_text(encoding="utf-8")
     assert "https://example.com/rsi" in text
     assert "Wilder RSI uses a 14-period default." in text
+    name = written.name
+    assert name.endswith(".md")
+    stem = name[: -len(".md")]
+    content_part, url_part = stem.split("-")
+    assert len(content_part) == 12
+    assert len(url_part) == 8
+
+
+def test_identical_content_from_two_urls_keeps_both_identities(tmp_path):
+    captured = datetime(2026, 9, 7, tzinfo=UTC)
+    body = "Identical fetched body"
+    first = save_source_snapshot(
+        tmp_path,
+        url="https://example.com/a",
+        content=body,
+        captured_at=captured,
+    )
+    second = save_source_snapshot(
+        tmp_path,
+        url="https://example.com/b",
+        content=body,
+        captured_at=captured,
+    )
+
+    assert first != second
+    first_text = (tmp_path / first).read_text(encoding="utf-8")
+    second_text = (tmp_path / second).read_text(encoding="utf-8")
+    assert "https://example.com/a" in first_text
+    assert "https://example.com/b" in second_text
+    assert "https://example.com/b" not in first_text
+    assert snapshot_relative_path(body, "https://example.com/a", captured) in first
+    assert snapshot_relative_path(body, "https://example.com/b", captured) in second
 
 
 def test_seeded_backend_is_the_test_double_not_a_second_agent():
@@ -42,10 +77,10 @@ def test_seeded_backend_is_the_test_double_not_a_second_agent():
     assert all("data_access" in source for source in result.sources)
 
 
-def test_live_backend_without_search_fn_fails_closed():
+def test_live_backend_without_search_fn_fails_closed_when_network_disabled():
     backend = LiveDiscoveryBackend()
 
-    with pytest.raises(LiveDiscoveryError, match="search function"):
+    with pytest.raises(LiveDiscoveryError, match="network is disabled"):
         backend.discover("ETF RSI", "mean_reversion")
 
 

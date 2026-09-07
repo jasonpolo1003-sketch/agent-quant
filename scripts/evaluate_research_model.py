@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 
 from quant_brain.config import PROJECT_ROOT
 from quant_brain.research.model_eval import evaluate_model, save_evaluation

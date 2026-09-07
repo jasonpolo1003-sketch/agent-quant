@@ -30,10 +30,10 @@ Out of scope: live research runs, strategy cards, relaxing the curator quality g
 Registry, path enforcement, `save_source_snapshot`, and tests agree on:
 
 ```text
-brain/00_Inbox/Source_Snapshots/YYYY-MM-DD/{sha256[:16]}.md
+brain/00_Inbox/Source_Snapshots/YYYY-MM-DD/{content_hash[:12]}-{url_hash[:8]}.md
 ```
 
-The older `brain/00_Inbox/Snapshots/` name is not a write path. Existing snapshot content is not deleted; this is path-name alignment only.
+The older `brain/00_Inbox/Snapshots/` name is not a write path. Existing snapshot content is not deleted; this is path-name alignment only. Two URLs that return identical body text keep two snapshot files so both identities stay auditable.
 
 ## R2 — Raw-note schema enforcement
 
@@ -51,8 +51,10 @@ uv run python scripts/validate_raw_research.py path/to/note.md
 
 `discovery` tasks route through the registry to `research_scout`. The handler runs a `DiscoveryBackend` and returns `recommendation="curation"`. It does not dispatch or execute the curator.
 
-- **Production backend:** `live` (Agent Reach / Jina, injectable I/O; fail-closed if search/fetch is missing — no invented scraper).
+- **Production backend:** `live`. The handler constructs `LiveDiscoveryBackend(allow_network=True)` with no injected `search_fn`. Search goes through `AgentReachAdapter` (`agent-reach doctor --json`, then Exa/mcporter, then `gh` fallback; fetch via Jina Reader). See [../agent_reach_adapter_workflow.md](../agent_reach_adapter_workflow.md).
 - **Test double:** `seeded` (`STARTER_SOURCES`) behind the same handler, selected with `--stub`, `backend=seeded`, or `QUANT_BRAIN_DISCOVERY=seeded`. Not a second `assigned_agent`.
+- **Caps:** `max_sources = min(agent extras, task payload)`. Callers may narrow; they may not widen.
+- **Fail closed:** live failure restores the research question to `queued`, deletes incomplete raw-note scaffolds, writes `Failed_Runs/{run_id}.md`, and records scout events. The exception still propagates so dispatch records `handler_failed`.
 
 Pytest sets `QUANT_BRAIN_DISCOVERY=seeded` so CI makes zero network calls.
 
@@ -61,6 +63,10 @@ Pytest sets `QUANT_BRAIN_DISCOVERY=seeded` so CI makes zero network calls.
 ```bash
 uv run pytest -q
 uv run python -m quant_brain.harness.registry --task-type discovery --json
+uv run python scripts/agent_reach_check.py
 uv run python scripts/dispatch_task.py --type discovery --research-id RQ-x --dry-run
+uv run python scripts/dispatch_task.py --type discovery --research-id RQ-x
 uv run python scripts/dispatch_task.py --type discovery --research-id RQ-x --stub
 ```
+
+R4 remains deferred. Do not run child research questions or strategy cards as part of this reconciliation.

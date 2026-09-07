@@ -1,0 +1,50 @@
+{
+  "web": {
+    "status": "ok",
+    "name": "Web pages",
+    "message": "Jina Reader",
+    "tier": 0,
+    "backends": ["jina"],
+    "active_backend": "jina"
+  },
+  "search": {
+    "status": "ok",
+    "name": "Web search",
+    "message": "Exa via mcporter",
+    "tier": 0,
+    "backends": ["mcporter"],
+    "active_backend": "mcporter"
+  },
+  "github": {
+    "status": "warn",
+    "name": "GitHub",
+    "message": "gh present; doctor skipped auth probe",
+    "tier": 0,
+    "backends": ["gh"],
+    "active_backend": "gh"
+  },
+  "youtube": {
+    "status": "ok",
+    "name": "YouTube",
+    "message": "yt-dlp",
+    "tier": 0,
+    "backends": ["yt-dlp"],
+    "active_backend": "yt-dlp"
+  },
+  "rss": {
+    "status": "ok",
+    "name": "RSS",
+    "message": "feedparser",
+    "tier": 0,
+    "backends": ["feedparser"],
+    "active_backend": "feedparser"
+  },
+  "reddit": {
+    "status": "warn",
+    "name": "Reddit",
+    "message": "login required",
+    "tier": 1,
+    "backends": ["opencli"],
+    "active_backend": null
+  }
+}
