@@ -276,6 +276,11 @@ def dispatch(
     try:
         with _dispatch_guard():
             result = handler(task, agent, context)
+            # Validated inside the guarded block so a rejected claim finalizes
+            # through the same fail-closed path as a handler exception. A
+            # handler must not claim outputs it was never allowed to write.
+            for output in result.outputs:
+                resolve_write_target(root, output, agent.allowed_write_paths)
     except PathViolation as exc:
         duration = time.monotonic() - started
         emit(
@@ -314,10 +319,6 @@ def dispatch(
         raise
 
     duration = time.monotonic() - started
-
-    # A handler must not claim outputs it was never allowed to write.
-    for output in result.outputs:
-        resolve_write_target(root, output, agent.allowed_write_paths)
 
     emit(
         "handler_completed",

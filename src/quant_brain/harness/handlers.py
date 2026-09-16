@@ -78,6 +78,13 @@ def run_discovery(task: Task, agent: AgentSpec, context: WorkPacketContext) -> H
     from quant_brain.discovery.live_discovery import get_discovery_backend
     from quant_brain.research.executor import execute_discovery_task
 
+    # These are parameters of nothing: the live backend always runs the validated
+    # ladder and there is no override to forward. Reject on key presence rather
+    # than truthiness, since `use_qwen: False` is itself the bypass. Checked before
+    # the backend is resolved so a payload cannot narrow the gate's own scope.
+    if any(key in task.payload for key in ("use_qwen", "qwen_runner")):
+        raise ValueError("Qwen controls are not accepted in production discovery payloads")
+
     backend_name = _discovery_backend_name(task)
     allow_network = backend_name == "live" and task.payload.get("allow_network", True)
     backend_kwargs: dict[str, Any] = {}
@@ -115,6 +122,9 @@ def run_discovery(task: Task, agent: AgentSpec, context: WorkPacketContext) -> H
             "sources_count": result.get("sources_count"),
             "backend": result.get("backend"),
             "snapshots": list(result.get("snapshots") or []),
+            "model_used": result.get("model_used"),
+            "repaired": result.get("repaired", False),
+            "escalated": result.get("escalated", False),
         },
     )
 
