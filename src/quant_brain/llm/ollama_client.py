@@ -1,14 +1,27 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import time
 import urllib.error
 import urllib.request
+from dataclasses import dataclass
 from typing import Any
 
 DEFAULT_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 DEFAULT_EMBED_MODEL = "nomic-embed-text"
 DEFAULT_EMBED_TIMEOUT = 60
+DEFAULT_GENERATE_TIMEOUT = 300
+
+
+@dataclass(frozen=True)
+class OllamaResponse:
+    text: str
+    model: str
+    duration_seconds: float
+    prompt_hash: str
+    response_hash: str
 
 
 class OllamaError(RuntimeError):
@@ -42,6 +55,42 @@ def _post(path: str, payload: dict[str, Any], host: str, timeout: int) -> dict[s
         raise OllamaError(f"Ollama request to {path} timed out after {timeout}s") from exc
     except json.JSONDecodeError as exc:
         raise OllamaError(f"Ollama returned malformed JSON for {path}") from exc
+
+
+def generate(
+    prompt: str,
+    model: str,
+    *,
+    host: str = DEFAULT_HOST,
+    temperature: float = 0.0,
+    timeout: int = DEFAULT_GENERATE_TIMEOUT,
+    format: str | dict[str, Any] = "json",
+    system: str | None = None,
+) -> OllamaResponse:
+    """Generate through local Ollama with deterministic schema decoding."""
+    payload: dict[str, Any] = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False,
+        "think": False,
+        "format": format,
+        "options": {"temperature": temperature},
+    }
+    if system is not None:
+        payload["system"] = system
+    started = time.perf_counter()
+    data = _post("/api/generate", payload, host, timeout)
+    duration = time.perf_counter() - started
+    text = data.get("response")
+    if not isinstance(text, str):
+        raise OllamaError(f"Ollama returned no response text for model {model!r}")
+    return OllamaResponse(
+        text=text,
+        model=model,
+        duration_seconds=duration,
+        prompt_hash=hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+        response_hash=hashlib.sha256(text.encode("utf-8")).hexdigest(),
+    )
 
 
 def embed(
