@@ -33,6 +33,9 @@ where = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# Failed-run audit directories are immutable historical receipts. Lint maintained
+# source/tests/scripts, but do not rewrite captured Python artifacts in this tree.
+extend-exclude = ["brain/00_Inbox/Failed_Runs/**"]
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "I", "UP", "RUF"]

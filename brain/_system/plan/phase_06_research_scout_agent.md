@@ -5,10 +5,12 @@ phase: 6
 title: Research Scout as the first registered agent
 status: pending
 created: 2026-08-28
-acceptance_task: RQ-dd7da469
+acceptance_tasks: [RQ-6d9c12f4, RQ-c920baeb, RQ-80be8cf7]
 ---
 
 # Phase 6 — Research Scout as the first registered agent
+
+> **CURRENT CHECKPOINT (2026-09-11): pending acceptance.** The production discovery handler, Agent Reach path, and adversarially verified Phase 5 / Gate B Qwen boundary exist. This phase is not complete until Gate C is verified and the real child Scout acceptance runs are performed. `RQ-dd7da469` is preserved experimental rejection history and does not count as acceptance.
 
 Parent plan: [../../../PLAN.md](../../../PLAN.md)
 
@@ -37,20 +39,19 @@ Phases 0-5 complete. All tests green. Ollama running with `qwen3:14b` + `qwen3.8
 
 ## Exit gate — the acceptance test
 
-Dispatch a `discovery` task for the already-queued research question:
+After Phases 5 and roadmap Gate C are complete, dispatch separate `discovery` tasks for the queued child research questions:
 
 ```
-RQ-dd7da469
-Question: Find source-supported exit conditions, maximum holding periods,
-          timing/regime risks, and fixed cost assumptions for the bounded
-          RSI candidates.
+RQ-6d9c12f4 — source-supported exit rules
+RQ-c920baeb — hard maximum holding periods
+RQ-80be8cf7 — commission/slippage assumptions
 ```
 
 Success requires all of:
 1. Raw research note citing **≥3 upstream sources** (never Agent Reach itself).
 2. All Phase 5 validators pass (one repair and/or 27B escalation permitted).
 3. Complete event trail; `summarize_run` reconstructs the run without reading files.
-4. Curator accepts the note and promotes **≥1 Tier A/B source**.
+4. The curator outcome is recorded honestly; zero promotions is acceptable and does not justify lowering the quality bar.
 5. **Zero harness-code changes** required to make this work.
 
 ### On outcome (5) vs research outcome
@@ -59,7 +60,7 @@ If 1-3 and 5 pass but the curator finds the evidence insufficient, **the phase s
 
 Do not lower the bar to manufacture a pass. Record what was actually found.
 
-## What gets built
+## Implementation shape (handler and validated Qwen integration shipped; acceptance pending)
 
 ### Handler, not orchestrator
 
@@ -120,7 +121,7 @@ Every run — pass or fail — writes a short report: run_id, task, channels use
 - **Unit:** each step with stubbed dependencies (fake adapter, fake `qwen_call`).
 - **Integration (offline):** full handler with recorded Agent Reach + Ollama fixtures — proves wiring with no network or GPU.
 - **Harness regression:** the Phase 2 dispatcher tests must still pass **unchanged**. That is the proof the harness held.
-- **Acceptance (manual, live):** the real RQ-dd7da469 run. Not in CI.
+- **Acceptance (manual, live):** the three real child runs listed above, performed separately under the roadmap. Not in CI.
 
 ## Files to create/modify
 
@@ -143,11 +144,11 @@ uv run pytest tests/test_discovery_handler.py -v
 uv run pytest tests/test_dispatcher.py -v          # MUST pass unchanged
 uv run pytest -q
 
-# live acceptance
-uv run python scripts/dispatch_task.py --type discovery --research-id RQ-dd7da469 --dry-run
-uv run python scripts/dispatch_task.py --type discovery --research-id RQ-dd7da469
+# live acceptance (only after Phase 5 / Gate B and Gate C pass)
+uv run python scripts/dispatch_task.py --type discovery --research-id <CHILD-RQ-ID> --dry-run
+uv run python scripts/dispatch_task.py --type discovery --research-id <CHILD-RQ-ID>
 uv run python -m quant_brain.ops.events tail --run-id <printed>
-uv run python scripts/dispatch_task.py --type curation --research-id RQ-dd7da469
+uv run python scripts/dispatch_task.py --type curation --research-id <CHILD-RQ-ID>
 ```
 
 Then **read the raw note and run report by hand.** First live run deserves human eyes on every citation.
@@ -161,7 +162,7 @@ Then **read the raw note and run report by hand.** First live run deserves human
 - [ ] Run report written every run
 - [ ] Offline integration test passes
 - [ ] **Phase 2 dispatcher tests pass unchanged** — the harness held
-- [ ] Live acceptance run on RQ-dd7da469 completed and reviewed by Jason
+- [ ] Separate live acceptance runs on `RQ-6d9c12f4`, `RQ-c920baeb`, and `RQ-80be8cf7` completed and reviewed by Jason
 - [ ] Curator outcome recorded honestly (promotion **or** insufficient-evidence finding)
 - [ ] Strategy Door updated **only if** evidence genuinely resolved the gaps
 - [ ] `PLAN.md` §10 checkpoint updated

@@ -4,9 +4,9 @@ type: master_plan
 status: active
 owner: jason
 created: 2026-08-28
-last_updated: 2026-08-28
-revision: 2
-supersedes: revision 1 (monolithic executor design)
+last_updated: 2026-09-07
+revision: 3
+supersedes: revision 2 (harness architecture retained; factual checkpoint reconciled)
 read_first: true
 ---
 
@@ -72,15 +72,15 @@ The real issue is narrower and is a **data hygiene** problem, not architecture: 
 
 **Cleanup task, tracked in §9:** once a real extraction agent exists, re-verify those five notes against their upstream sources, or demote them to leads.
 
-## 5. Current state (verified 2026-08-28)
+## 5. Current state (verified 2026-09-07)
 
-**Working:** SQLite schema + init; yfinance daily SPY/QQQ/IWM; research intake CLI; curator promotion; markdown indexer (21 files → 233 chunks); retrieval context builder + audit log; work packet builder + bounded executor; Agent Reach v1.5.0 installed and `doctor` runs.
+**Working:** Phases 0–4 are complete. The baseline is green (**149 passed, 1 skipped**); the registry/dispatcher and enforced path boundaries are live; `nomic-embed-text` is the default semantic retrieval backend; and the merged production Scout path routes `discovery` through `quant_brain.discovery`, Agent Reach/upstream tools, snapshots, raw-note validation, and a recommendation-only return to the harness. The Agent Reach adapter and discovery path are covered by recorded fixtures with zero network in pytest.
 
-**Broken:** `tests/test_agent_events.py` imports `quant_brain.ops`, which does not exist → pytest fails at collection. The "49 passed" in `SESSION_HANDOFF.md` is stale.
+**Next:** Phase 5 / roadmap **Gate B** is complete and adversarially hardened: production live Scout extraction uses the reusable local Qwen boundary (14B → one repair → 27B → fail closed), deterministic evidence validators, strict extractive support before durable promotion, compensating raw-note cleanup, and complete dispatcher failure finalization. Gate C is next and remains authorized but incomplete.
 
-**Stubs awaiting real workers (by design):** research executor (`STARTER_SOURCES`); embeddings (`local-hash-embedding-v1`, a SHA-256 feature hash — lexical, not semantic); Qwen evaluated but never called at runtime; Agent Reach documented but never called by code.
+**Still pending:** Phase 6 acceptance. The validated Phase 5 runtime is integrated, but the production Scout is not accepted end-to-end until the real child Scout acceptance runs are executed under the roadmap after Gate C. Preserved `research/live_*.py` runs are explicitly experimental history and do not satisfy this gate. No research acceptance, strategy card, backtest, paper trade, or live trade is complete.
 
-**Not built, intentionally:** any backtest, any strategy card, any paper/live trading.
+**Market data:** the repository currently has **`price_datasets = 0`**. Historical downloader/module claims were not present in the reconciled tree and must not be treated as current capability. Roadmap **Gate F** owns restoring real files, provenance/checksums, and SQLite registration before any backtest.
 
 ## 6. Non-goals
 
@@ -127,7 +127,7 @@ Each phase has an entry gate, an exit gate, and deliverables. Detail docs in [br
 **Detail:** [brain/_system/plan/phase_04_agent_reach_adapter.md](brain/_system/plan/phase_04_agent_reach_adapter.md)
 **Entry:** Phase 0.
 **Exit:** Health-check via `doctor --json`; fetch a web URL via Jina; snapshot with hash + captured_at; **zero network in pytest**.
-**Deliverables:** `src/quant_brain/discovery/agent_reach.py`; zero-config channels only (web, github, youtube, rss, exa); login-backed channels off by default; snapshots to `brain/00_Inbox/Snapshots/`; forbidden-subcommand guard (`install`/`uninstall`/`configure`).
+**Deliverables:** `src/quant_brain/discovery/agent_reach.py`; zero-config channels only (web, github, youtube, rss, exa); login-backed channels off by default; snapshots to `brain/00_Inbox/Source_Snapshots/`; forbidden-subcommand guard (`install`/`uninstall`/`configure`).
 
 ### Phase 5 — Qwen runtime + validators
 **Detail:** [brain/_system/plan/phase_05_qwen_runtime.md](brain/_system/plan/phase_05_qwen_runtime.md)
@@ -138,7 +138,7 @@ Each phase has an entry gate, an exit gate, and deliverables. Detail docs in [br
 ### Phase 6 — Research Scout as the first registered agent
 **Detail:** [brain/_system/plan/phase_06_research_scout_agent.md](brain/_system/plan/phase_06_research_scout_agent.md)
 **Entry:** Phases 0-5.
-**Exit:** The harness dispatches a `discovery` task to the Research Scout; it uses Agent Reach + Qwen to produce a cited raw note; validators pass; curator accepts. Acceptance task: **RQ-dd7da469**.
+**Exit:** After the validated Phase 5 Qwen boundary is integrated, the harness dispatches the roadmap's real child Scout runs (`RQ-6d9c12f4`, `RQ-c920baeb`, `RQ-80be8cf7`); each produces an honestly validated outcome and complete event/snapshot trail, and curator outcomes are recorded separately. The preserved `RQ-dd7da469` experimental rejection is audit history, not acceptance.
 **Deliverables:** Scout runner registered as a capability handler; replaces `STARTER_SOURCES` as the discovery implementation; hard caps (≤5 sources, ≤1 repair, ≤1 escalation, wall-clock); fail-closed to `brain/00_Inbox/Failed_Runs/`; run report every run.
 **v1 scope is this agent only.** Extractor, Curator, and Reviewer become registry entries later — if adding them requires harness changes, the harness was wrong.
 
@@ -193,11 +193,15 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 **Picking this up cold? Read this section, then start.**
 
 ### Where we are
-- Plan **revision 2** written 2026-08-28, restructured around the harness architecture after Jason clarified the goal.
+- Plan **revision 3** reconciled 2026-09-07. Revision 2 established the harness architecture; this revision records the merged Agent Reach/Scout implementation and current gated roadmap without changing that architecture.
 - **Phase 0 complete (2026-08-28).** Baseline is green: **51 passed**. `quant_brain/ops/events.py` implements `record_event` / `list_events` / `summarize_run`; `agent_events` table + `idx_agent_events_run` / `idx_agent_events_task` added to `schema.sql`. Existing data verified intact (21 notes / 233 chunks / 233 embeddings). CLI: `python -m quant_brain.ops.events tail --run-id X` and `summary --run-id X`.
 - **Phase 1 complete (2026-08-28).** **71 passed.** `harness/registry.py` loads validated `AgentSpec`s from frontmatter in `agents/*.md`. Both shipped agents migrated: `research_scout` (handles `discovery`, `qwen3:14b`) and `knowledge_curator` (handles `curation`, deterministic). Permissions now flow the right direction — `build_work_packet` takes paths from the agent's declaration; a caller may **narrow** but never **widen** (raises `RegistryError`). Malformed declarations fail loudly at load. CLI: `python -m quant_brain.harness.registry [--task-type X] [--json]`.
 - **Phase 2 complete (2026-08-28) — the harness exists.** **95 passed, 1 skipped.** `harness/dispatcher.py` routes typed tasks to the one qualified enabled agent (zero candidates → `NoCapableAgent`, multiple → `AmbiguousDispatch`; never a heuristic pick). `harness/paths.py` is the single enforcement implementation, comparing **resolved** paths so `..` and symlinks cannot smuggle a write out. Handlers cannot dispatch handlers (`ReentrantDispatch`). Every dispatch emits events; `summarize_run` reconstructs a run without reading files. `harness/migrations.py` added `agent_tasks.task_type` + `run_id` guarded by `PRAGMA table_info`. Verified live on a scratch copy: `discovery` → `research_scout` → wrote its raw note → recommended `curation`; `curation` → `knowledge_curator` → promoted 5 source notes. CLI: `scripts/dispatch_task.py --type X [--dry-run]`.
 - **Enforcement caught a real bug during Phase 2 verification:** legacy executors store *absolute* paths in `research_questions.raw_note_path`, which pointed outside the dispatched project root. `handlers._relative_output` now rebases onto the current run's root. Exactly the class of bug path enforcement exists to catch.
+- **Phase 3 complete (2026-08-28).** **97 passed, 1 skipped.** `nomic-embed-text` (768-dim, local Ollama) is the default embedding backend; `local-hash-embedding-v1` stays registered as `test-only` so pytest never needs Ollama (suite still runs in ~5s). All 233 chunks re-embedded (~8.5 min). Both backends coexist via `PRIMARY KEY (chunk_id, model)` — switching is a parameter, not a migration. **Recall@5 = 1.00 semantic vs 0.71 lexical (+0.29); MRR 0.790 vs 0.619.** New: `src/quant_brain/llm/ollama_client.py` (Phase 5 reuses it), `scripts/retrieval_eval.py --compare --save`, `--reembed-all` flag, and a loud error on dimension mismatch instead of silently returning zero results. Report: `brain/00_Inbox/Model_Evaluations/retrieval-eval-2026-08-28.json`.
+- **Open decision surfaced in Phase 3:** `brain/_system/` is excluded from the index (`markdown_indexer` defaults to `exclude_dirs={"_system"}`), so the pre-backtest validation checklist, the source-quality policy, and all workflow/plan docs are **not retrievable**. `index_markdown.py index --include-system` overrides it. Arguably the validation checklist should be indexed; not changed during a RAG phase to avoid altering indexer behavior mid-flight. Jason's call.
+- **Phase 4 complete (merged 2026-09-07).** The thin Agent Reach adapter, recorded-fixture tests, source snapshots, raw-research schema, and production discovery handler are present. Registry and dry-run verification route `discovery` to `research_scout`; the handler returns a recommendation rather than dispatching another agent. Agent Reach health is inspectable. This does **not** accept the Qwen-backed Scout or any research result.
+- **Gate B final verification (2026-09-11):** **201 passed, 1 skipped**; full-tree and scoped Ruff clean. Adversarial tests cover value/polarity preservation, generic ungrounded claims and rules, model-controlled promotion, post-write rollback, and dispatcher failure finalization. Child research questions remain queued and `price_datasets = 0`.
 - Note for whoever runs the indexer: `scripts/index_markdown.py index` re-chunks and resets all chunks to `embedding_status='pending'`, dropping embeddings. Follow it with `scripts/embed_chunks.py embed`. Pre-existing behavior, not introduced by Phase 0.
 
 ### What Jason decided (2026-08-28)
@@ -209,17 +213,17 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 6. The plan must be saved and portable enough for Claude Desktop to resume cold.
 
 ### What to do next
-Execute **Phase 3** — read [brain/_system/plan/phase_03_semantic_rag.md](brain/_system/plan/phase_03_semantic_rag.md). Pull `nomic-embed-text` in Ollama, make it the default embedding backend (keeping the hash backend as `test-only` so pytest stays hermetic), add `--reembed-all`, and build `scripts/retrieval_eval.py` reporting Recall@1/@5/MRR against hand-labeled non-lexical fixtures. Exit gate: Recall@5 >= 0.8, beating the hash baseline. Then update the table below.
+Execute authorized roadmap **Gate C** to improve bounded source acquisition. Phase 5 / Gate B is complete. Do **not** claim Phase 6 or research acceptance until Gate C is verified and the real child Scout acceptance runs are performed under the roadmap.
 
 | Phase | Status | Done on | Notes |
 |---|---|---|---|
 | 0 — Repair baseline | **done** | 2026-08-28 | 51 passed. `agent_events` + 2 indexes added; data intact (21/233/233) |
 | 1 — Agent registry | **done** | 2026-08-28 | 71 passed. Both agents declare typed capabilities; widening blocked |
 | 2 — Dispatcher + path enforcement | **done** | 2026-08-28 | 95 passed. Routing, enforcement, events, re-entrancy guard all live |
-| 3 — Semantic RAG | pending | — | **next** — independent of 1-2 |
-| 4 — Agent Reach adapter | pending | — | — |
-| 5 — Qwen runtime + validators | pending | — | — |
-| 6 — Research Scout agent | pending | — | Acceptance: RQ-dd7da469 |
+| 3 — Semantic RAG | **done** | 2026-08-28 | 97 passed. Recall@5 1.00 vs 0.71 lexical (+0.29) |
+| 4 — Agent Reach adapter | **done** | 2026-09-07 | Merged adapter + production discovery handler; fixture tests use zero network |
+| 5 — Qwen runtime + validators | **done** | 2026-09-07 | Gate B: hermetic ladder tests + bounded 14B live smoke; per-attempt hashes/timing recorded |
+| 6 — Research Scout agent | pending | — | Requires validated Qwen integration and real child Scout acceptance runs; experimental runs do not count |
 | 7 — Re-verify 5 source notes | pending | — | See §4 |
 | 8 — Strategy card + backtest | pending | — | Needs Jason's explicit approval |
 | 9 — Second market door | pending | — | Do not scope until 8 done |

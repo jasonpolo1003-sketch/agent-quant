@@ -15,4 +15,20 @@ Budget-first agent-assisted quantitative research, second-brain, and backtesting
 
 ## Core Loop
 
-Research queue -> raw brief -> source note -> method door -> strategy card -> backtest -> review -> paper candidate later.
+The canonical production path is registry/dispatcher -> `quant_brain.discovery` ->
+validated output -> recommendation only. The harness or a human authorizes any later stage.
+
+## Preserved Experimental Local Work
+
+The following commands belong to an unaccepted live-research/dashboard prototype retained
+for audit history. They are not the production interface or Scout acceptance path.
+
+```bash
+# Experimental dashboard
+uv run python scripts/serve_agent_dashboard.py
+
+# Experimental live-research prototype
+uv run python scripts/live_research_executor.py --research-id RQ-xxxx --run-id RUN-name
+```
+
+Experimental dashboard URL: `http://127.0.0.1:8765`
