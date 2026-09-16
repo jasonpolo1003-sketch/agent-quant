@@ -163,6 +163,21 @@ def search_similar_chunks(
             (model, len(query_vector)),
         ).fetchall()
 
+    if not rows:
+        # An empty result here usually means a dimension mismatch, not an empty
+        # corpus: vectors were stored at one width and the query built another.
+        # Silence would look like "nothing relevant found", so say what happened.
+        with connect(db_path) as conn:
+            stored = conn.execute(
+                "SELECT model, dimensions, COUNT(*) AS n FROM embeddings GROUP BY model, dimensions"
+            ).fetchall()
+        if stored:
+            available = ", ".join(f"{r['model']}@{r['dimensions']} ({r['n']})" for r in stored)
+            raise ValueError(
+                f"no embeddings for model {model!r} at {len(query_vector)} dimensions; "
+                f"stored: {available}. Re-embed with this model or pass matching dimensions."
+            )
+
     scored = []
     for row in rows:
         vector = json.loads(row["vector_json"])

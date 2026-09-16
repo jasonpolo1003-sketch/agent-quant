@@ -209,7 +209,8 @@ def index_markdown_tree(
     """Index markdown files under the brain folder."""
     root = Path(project_root)
     base = Path(brain_dir)
-    exclude_dirs = exclude_dirs or {"_system"}
+    if exclude_dirs is None:
+        exclude_dirs = {"_system", "Source_Snapshots"}
     results = []
     for path in sorted(base.rglob("*.md")):
         if any(part in exclude_dirs for part in path.parts):
@@ -232,7 +233,11 @@ def main() -> None:
     args = parser.parse_args()
     if args.index != "index":
         raise SystemExit("Only supported command is: index")
-    excludes = set() if args.include_system else {"_system"}
+    excludes = (
+        {"Source_Snapshots"}
+        if args.include_system
+        else {"_system", "Source_Snapshots"}
+    )
     result = index_markdown_tree(args.project_root, args.db, args.brain_dir, excludes)
     print(json.dumps(result, indent=2))
 

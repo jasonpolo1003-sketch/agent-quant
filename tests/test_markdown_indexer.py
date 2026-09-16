@@ -107,8 +107,12 @@ def test_index_markdown_tree_indexes_multiple_notes(tmp_path):
     (brain / "01_Sources" / "docs" / "a.md").write_text("---\nid: A\ntitle: A\ntype: source_note\n---\n\n# A\n\nAlpha", encoding="utf-8")
     (brain / "_system").mkdir()
     (brain / "_system" / "ignore.md").write_text("# system", encoding="utf-8")
+    (brain / "00_Inbox" / "Source_Snapshots").mkdir(parents=True)
+    (brain / "00_Inbox" / "Source_Snapshots" / "raw.md").write_text(
+        "# uncurated snapshot", encoding="utf-8"
+    )
 
-    result = index_markdown_tree(tmp_path, db_path, brain, exclude_dirs={"_system"})
+    result = index_markdown_tree(tmp_path, db_path, brain)
 
     assert result["files_indexed"] == 1
     with connect(db_path) as conn:
