@@ -3,11 +3,14 @@ id: PHASE-03
 type: plan_phase
 phase: 3
 title: Real semantic RAG
-status: pending
+status: done
 created: 2026-08-28
+completed: 2026-08-28
 ---
 
 # Phase 3 — Real semantic RAG
+
+> **COMPLETE (2026-08-28).** 97 passed, 1 skipped. `nomic-embed-text` is the default; hash backend retained as test-only. Recall@5 **1.00** vs 0.71 lexical, MRR 0.790 vs 0.619 — exit gate (>=0.8, beating baseline) cleared. Workflow doc: [../embedding_indexer_workflow.md](../embedding_indexer_workflow.md). Next: [phase_04_agent_reach_adapter.md](phase_04_agent_reach_adapter.md).
 
 Parent plan: [../../../PLAN.md](../../../PLAN.md)
 

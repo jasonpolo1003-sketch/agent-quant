@@ -1,0 +1,120 @@
+[
+  {
+    "model": "nomic-embed-text",
+    "limit": 5,
+    "fixture_count": 7,
+    "recall_at_1": 0.7143,
+    "recall_at_5": 1.0,
+    "mrr": 0.7905,
+    "results": [
+      {
+        "query": "can a backtest accidentally use tomorrow's information",
+        "expected_contains": "look-ahead-bias",
+        "rank": 1,
+        "top_path": "brain/01_Sources/docs/SRC-2830f8cd41-quantconnect-glossary-look-ahead-bias.md",
+        "top_score": 0.7261
+      },
+      {
+        "query": "why do only the companies that stayed in business show up in my sample",
+        "expected_contains": "survivorship-bias",
+        "rank": 1,
+        "top_path": "brain/01_Sources/docs/SRC-7691c731ac-quantconnect-glossary-survivorship-bias.md",
+        "top_score": 0.602
+      },
+      {
+        "query": "how is the momentum oscillator actually computed from average gains and losses",
+        "expected_contains": "relative-strength-index",
+        "rank": 1,
+        "top_path": "brain/01_Sources/docs/SRC-1ea110cb46-stockcharts-chartschool-relative-strength-index-rsi.md",
+        "top_score": 0.69
+      },
+      {
+        "query": "python library for quickly sweeping many parameter combinations over price series",
+        "expected_contains": "vectorbt",
+        "rank": 3,
+        "top_path": "brain/01_Sources/docs/SRC-26d92ac325-backtesting-py-documentation.md",
+        "top_score": 0.5992
+      },
+      {
+        "query": "framework for simulating trades with commissions and plotting statistics",
+        "expected_contains": "backtesting-py",
+        "rank": 1,
+        "top_path": "brain/01_Sources/docs/SRC-26d92ac325-backtesting-py-documentation.md",
+        "top_score": 0.6404
+      },
+      {
+        "query": "which asset classes and strategy families is this project willing to study",
+        "expected_contains": "quant-research-universe",
+        "rank": 1,
+        "top_path": "brain/80_Summaries/quant-research-universe.md",
+        "top_score": 0.6849
+      },
+      {
+        "query": "when should a trade be closed after entering on an oversold signal",
+        "expected_contains": "DOOR-etf-mean-reversion",
+        "rank": 5,
+        "top_path": "brain/01_Sources/web/SRC-df1769724d-relative-strength-index-rsi-investopedia-overview.md",
+        "top_score": 0.7023
+      }
+    ]
+  },
+  {
+    "model": "local-hash-embedding-v1",
+    "limit": 5,
+    "fixture_count": 7,
+    "recall_at_1": 0.5714,
+    "recall_at_5": 0.7143,
+    "mrr": 0.619,
+    "results": [
+      {
+        "query": "can a backtest accidentally use tomorrow's information",
+        "expected_contains": "look-ahead-bias",
+        "rank": null,
+        "top_path": "brain/00_Inbox/Curator_Reviews/WP-3818c6a760-result.md",
+        "top_score": 0.3859
+      },
+      {
+        "query": "why do only the companies that stayed in business show up in my sample",
+        "expected_contains": "survivorship-bias",
+        "rank": 3,
+        "top_path": "brain/00_Inbox/Raw_Research/RQ-4ddd4ef4.md",
+        "top_score": 0.25
+      },
+      {
+        "query": "how is the momentum oscillator actually computed from average gains and losses",
+        "expected_contains": "relative-strength-index",
+        "rank": 1,
+        "top_path": "brain/01_Sources/docs/SRC-1ea110cb46-stockcharts-chartschool-relative-strength-index-rsi.md",
+        "top_score": 0.3849
+      },
+      {
+        "query": "python library for quickly sweeping many parameter combinations over price series",
+        "expected_contains": "vectorbt",
+        "rank": 1,
+        "top_path": "brain/01_Sources/docs/SRC-022c5bed68-vectorbt-documentation.md",
+        "top_score": 0.2335
+      },
+      {
+        "query": "framework for simulating trades with commissions and plotting statistics",
+        "expected_contains": "backtesting-py",
+        "rank": 1,
+        "top_path": "brain/01_Sources/docs/SRC-26d92ac325-backtesting-py-documentation.md",
+        "top_score": 0.4714
+      },
+      {
+        "query": "which asset classes and strategy families is this project willing to study",
+        "expected_contains": "quant-research-universe",
+        "rank": 1,
+        "top_path": "brain/80_Summaries/quant-research-universe.md",
+        "top_score": 0.3273
+      },
+      {
+        "query": "when should a trade be closed after entering on an oversold signal",
+        "expected_contains": "DOOR-etf-mean-reversion",
+        "rank": null,
+        "top_path": "brain/00_Inbox/Curator_Reviews/RQ-4ddd4ef4-curated.md",
+        "top_score": 0.3333
+      }
+    ]
+  }
+]

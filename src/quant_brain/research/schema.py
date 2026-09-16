@@ -54,6 +54,9 @@ class RawResearchSchemaError(ValueError):
 class RawResearchSource(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
+    # Legacy/manual notes predate source IDs. The validated Qwen boundary
+    # requires this field, while the shared curator contract remains backward compatible.
+    source_id: str | None = None
     title: str = Field(min_length=1)
     source_type: SourceType
     url_or_citation: str = Field(min_length=1)

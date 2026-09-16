@@ -3,7 +3,8 @@ id: PHASE-05
 type: plan_phase
 phase: 5
 title: Ollama Qwen runtime + validators
-status: pending
+status: complete
+completed: 2026-09-07
 created: 2026-08-28
 ---
 
@@ -145,13 +146,13 @@ uv run python -c "from quant_brain.llm.ollama_client import generate; print(gene
 
 ## Definition of done
 
-- [ ] Ollama client works against local server, temp 0, JSON mode, explicit timeouts
-- [ ] Five validator gates implemented as pure functions with unit tests
-- [ ] Escalation ladder implemented with **exactly one** repair before escalation
-- [ ] Fail-closed path returns a structured failure, never a fabricated success
-- [ ] No cloud fallback anywhere in the module
-- [ ] Full suite green without Ollama running
-- [ ] `PLAN.md` §10 checkpoint updated
+- [x] Ollama client works against local server, temp 0, JSON mode, explicit timeouts
+- [x] Five validator gates implemented as pure functions with unit tests
+- [x] Escalation ladder implemented with **exactly one** repair before escalation
+- [x] Fail-closed path returns a structured failure, never a fabricated success
+- [x] No cloud fallback anywhere in the module
+- [x] Full suite green without Ollama running
+- [x] `PLAN.md` §10 checkpoint updated
 
 ## Do not
 

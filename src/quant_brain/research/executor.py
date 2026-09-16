@@ -204,13 +204,25 @@ def _resolve_note_path(project_root: Path, raw_note_path: str | None) -> Path | 
     return relative if relative.exists() else None
 
 
-def _discard_incomplete_raw_note(note_path: Path | None) -> None:
-    """Remove a scaffold that never received real findings."""
+def _discard_incomplete_raw_note(
+    note_path: Path | None, original_bytes: bytes | None = None
+) -> None:
+    """Undo this run's effect on the raw note.
+
+    Compensating rather than best-effort. Cleanup used to key on the note still
+    *looking* like a scaffold, which silently spared a note that had already been
+    rewritten to ``status: raw_saved`` — the orphan case. The run's own record of
+    what it changed is authoritative instead:
+
+    - a pre-existing note is restored byte-for-byte;
+    - a note this run created is removed.
+    """
     if note_path is None or not note_path.exists():
         return
-    text = note_path.read_text(encoding="utf-8")
-    if "Scout findings go here." in text or "status: researching" in text:
-        note_path.unlink()
+    if original_bytes is not None:
+        note_path.write_bytes(original_bytes)
+        return
+    note_path.unlink()
 
 
 def _write_failed_run_note(
@@ -310,6 +322,7 @@ def _fail_closed_discovery(
     stage: str,
     error: BaseException,
     resolve_write: Any | None,
+    original_note_bytes: bytes | None = None,
 ) -> str | None:
     """Restore retryable state, drop incomplete notes, write a Failed_Runs receipt."""
     from uuid import uuid4
@@ -341,7 +354,9 @@ def _fail_closed_discovery(
         failed_path = None
     if created_scaffold or (note_path is not None and note_path.exists()):
         try:
-            _discard_incomplete_raw_note(note_path)
+            _discard_incomplete_raw_note(
+                note_path, None if created_scaffold else original_note_bytes
+            )
         except OSError:
             _record_scout_event(
                 db_path,
@@ -384,6 +399,7 @@ def execute_discovery_task(
     task: dict[str, Any] | None = None
     note_path: Path | None = None
     created_scaffold = False
+    original_note_bytes: bytes | None = None
     stage = "load_task"
     try:
         if research_id is None:
@@ -437,8 +453,57 @@ def execute_discovery_task(
         if not sources:
             raise ValueError("no candidate sources found for this research task")
 
+        # Structural invariant: the live backend always extracts through the
+        # validated local-Qwen ladder. There is deliberately no override
+        # parameter, so no caller and no task payload can disable validation.
+        should_run_qwen = searcher.name == "live"
+        model_result = None
+        if should_run_qwen:
+            stage = "qwen_extract"
+            # Deliberately function-local: the module attribute is re-read on
+            # every call, which is the seam tests rebind. Hoisting this to
+            # module scope would silently break that injection point.
+            from quant_brain.llm.qwen_call import qwen_call
+
+            evidence_bundle = []
+            for index, (source, snapshot) in enumerate(
+                zip(sources, discovered.snapshots, strict=True), start=1
+            ):
+                snapshot_path = Path(snapshot)
+                if not snapshot_path.is_absolute():
+                    snapshot_path = root / snapshot_path
+                evidence_bundle.append(
+                    {
+                        "source_id": f"S{index}",
+                        "title": source["title"],
+                        "url_or_citation": source["url_or_citation"],
+                        "source_quality": source["source_quality"],
+                        "snapshot_text": snapshot_path.read_text(encoding="utf-8"),
+                    }
+                )
+            extraction_prompt = (
+                "Extract a raw research payload using only the supplied snapshots. "
+                "Preserve each source_id, title, URL, and source_quality exactly. "
+                "Evidence values must be exact snapshot quotations. Do not invent rules, "
+                "thresholds, holding periods, or costs.\n\n"
+                f"Research ID: {task['research_id']}\nQuestion: {task['question']}\n"
+                f"Evidence bundle:\n{json.dumps(evidence_bundle, indent=2)}"
+            )
+            model_result = qwen_call(
+                extraction_prompt,
+                evidence_bundle,
+                expected_research_id=task["research_id"],
+                db_path=db_path,
+                run_id=run_id,
+                task_id=task_id,
+            )
+            sources = list(model_result.output["sources"])
+
         stage = "write_note"
         findings = format_findings_markdown(task, sources)
+        # Remember the exact pre-write bytes so a later failure can put the file
+        # back rather than leaving a half-finalized note behind.
+        original_note_bytes = note_path.read_bytes()
         text = note_path.read_text(encoding="utf-8")
         if "Scout findings go here." in text:
             text = text.replace("Scout findings go here.", findings)
@@ -467,6 +532,9 @@ def execute_discovery_task(
             "snapshots": list(discovered.snapshots),
             "backend": discovered.backend,
             "recommendation": "curation",
+            "model_used": model_result.model_used if model_result else None,
+            "repaired": model_result.repaired if model_result else False,
+            "escalated": model_result.escalated if model_result else False,
         }
     except Exception as exc:
         if task is not None:
@@ -490,6 +558,7 @@ def execute_discovery_task(
                 stage=stage,
                 error=exc,
                 resolve_write=resolve_write,
+                original_note_bytes=original_note_bytes,
             )
         raise
 

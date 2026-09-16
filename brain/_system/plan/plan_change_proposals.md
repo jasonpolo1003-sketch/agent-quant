@@ -59,8 +59,8 @@ This exists because the project's core design rule is *move slowly, one verified
 - **Problem:** Jason approved `brain/00_Inbox/Source_Snapshots/` as the canonical snapshot folder. The registry, live snapshot writer, and tests now use that path. PLAN.md still names `Snapshots/`.
 - **Proposed change:** When PLAN.md is next edited, replace `brain/00_Inbox/Snapshots/` with `brain/00_Inbox/Source_Snapshots/` in the Phase 4 deliverables sentence. Do not reorder phases or change exit gates.
 - **Cost of not changing:** the master plan disagrees with the approved canonical path and with `agents/research_scout.md`.
-- **Status:** proposed
-- **Jason's decision:** path itself is already approved via `scout_reconciliation_plan.md`; PLAN.md wording still needs a human edit.
+- **Status:** accepted and applied 2026-09-07
+- **Jason's decision:** path approved via `scout_reconciliation_plan.md`; applied to PLAN.md during authorized Gate A factual reconciliation.
 
 ---
 
@@ -70,4 +70,4 @@ Once Jason accepts a proposal, apply it to `PLAN.md`, then record the applied ch
 
 | Date | Proposal | Applied to | Summary |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-09-07 | PROP-001 | `PLAN.md` Phase 4 deliverables | Replaced stale `Snapshots/` with canonical `Source_Snapshots/` path during Gate A factual reconciliation. |

@@ -1,12 +1,16 @@
 # Quant Agent Brain — Session Handoff
 
-> **⚠️ READ `PLAN.md` FIRST.** As of 2026-08-28 the source of truth for what to build and in what order is [PLAN.md](PLAN.md), with per-phase detail in [brain/_system/plan/](brain/_system/plan/). Start at **PLAN.md §9 "Handoff Checkpoint"** — it carries the live phase-status table.
+> **Gate B verified 2026-09-11.** The production live Research Scout passes fetched snapshots through `quant_brain.llm.qwen_call`: qwen3:14b at temperature 0/schema mode, deterministic validation, exactly one 14B repair, qwen3.8:27b escalation, then structured fail closed. Every attempt records model, duration, prompt/response SHA-256 hashes, and validator verdict/reasons in `agent_events`. Durable promotion requires fully extractive main claims and strategy rules; late write failures restore/delete notes consistently; dispatcher validation failures finalize tasks as failed. Hermetic and adversarial tests pass (**201 passed, 1 skipped**), with full-tree/scoped Ruff clean. Phase 6 remains pending; Gate C is next.
 >
-> This file is now a **historical record of what was built**, useful for context. Where this file and `PLAN.md` disagree about *next steps*, **`PLAN.md` wins**.
+> **Gate A verified 2026-09-07.** Desktop `main` was safely fast-forwarded from `f053341` to merged PR #1 commit `feaa84e86db5b435cf12a21d65e7e924cd116bbb`, then the pre-existing tracked and untracked work was reapplied. The exact backup directory is `C:\Users\jason\quant-agent-brain-gate-a-backup-20260907-171959`; it contains `tracked-worktree.patch`, `tracked-index.patch`, `untracked.tar.gz`, `untracked-list.txt`, `head-before.txt`, `status-before.z`, and related inventory files. The backup branch and retained stash also preserve the pre-integration state.
 >
-> **Known stale below:** the "49 passed" test count is no longer true — `tests/test_agent_events.py` imports `quant_brain.ops`, which does not exist, so the suite fails at collection. Repairing that is Phase 0.
+> The reviewed PR implementation is the production Scout path: registry/dispatcher → `quant_brain.discovery` → recommendation only. Pre-existing untracked `src/quant_brain/research/live_*.py` and dashboard files remain preserved as experimental local work; they are not a competing accepted architecture.
 >
-> The "Next Best Step" section at the bottom has been superseded by the phased plan: the Live Research Discovery Executor is now **Phase 4**, and it depends on Phase 0 (event store), Phase 1 (real semantic embeddings), Phase 2 (Agent Reach adapter), and Phase 3 (Qwen runtime + validators) landing first.
+> `RQ-66078766` remains an **experimental audit receipt**, including raw research, rejected curator review, source snapshots, failed-run material, and decision log. The real child queue remains untouched: `RQ-6d9c12f4`, `RQ-c920baeb`, and `RQ-80be8cf7`. Do not execute them until the later roadmap gate is explicitly approved.
+>
+> Gate A verification: `uv sync --extra dev` succeeded; full pytest passed (`149 passed, 1 skipped`); Ruff passed with immutable failed-run audit artifacts explicitly excluded in `pyproject.toml` (maintained `src`, `tests`, and `scripts` remain lint-clean); discovery registry and child dry-run resolved to `research_scout`; Agent Reach health was inspectable, with web/RSS/Bilibili healthy and optional-channel warnings/off states. No research, strategy card, backtest, paper trade, remote push, or remote merge was performed.
+>
+> **Read `PLAN.md` first.** It remains the master architecture source of truth. Use `.hermes/plans/2026-09-07_171423-research-to-paper-trading-roadmap.md` for the gated execution sequence, and do not silently rewrite master phases.
 
 Use this file to resume work in a new Hermes session without reloading the full conversation.
 
@@ -51,7 +55,8 @@ Python uses `uv`.
 Latest verified test count:
 
 ```text
-49 passed
+149 passed
+1 skipped
 ```
 
 ### 2. SQLite database
@@ -87,24 +92,9 @@ agent_tasks
 retrieval_log
 ```
 
-### 3. Market data downloader
+### 3. Market data foundation — historical claim, not current capability
 
-Files:
-
-```text
-src/quant_brain/data/price_data.py
-scripts/download_prices.py
-src/quant_brain/data/dataset_registry.py
-scripts/register_datasets.py
-```
-
-Downloaded/registered daily yfinance data for:
-
-```text
-SPY
-QQQ
-IWM
-```
+Earlier handoffs claimed market-data downloader/registry modules and downloaded SPY/QQQ/IWM data. Those modules are not present in the reconciled source tree, and the current database has **`price_datasets = 0`**. Do not infer that usable price files or registrations exist. Roadmap **Gate F** owns restoring reproducible files, provider/date/calendar/adjustment metadata, checksums, and SQLite registrations before any backtest.
 
 ### 4. Research intake system
 
@@ -194,8 +184,8 @@ chunks
 Current indexed count at last run:
 
 ```text
-21 Markdown files
-233 chunks
+23 Markdown files
+260 chunks
 ```
 
 ### 8. Embedding indexer
@@ -208,25 +198,25 @@ scripts/embed_chunks.py
 brain/_system/embedding_indexer_workflow.md
 ```
 
-Uses temporary local deterministic embeddings:
+Uses real local semantic embeddings through Ollama:
 
 ```text
-local-hash-embedding-v1
+nomic-embed-text
+768 dimensions
 ```
 
-This proves RAG plumbing before upgrading to real semantic embeddings.
+The deterministic `local-hash-embedding-v1` backend remains available only as an offline/test fallback.
 
 Current embedding count at last run:
 
 ```text
-233 embeddings
+260 embeddings
 0 pending chunks
 ```
 
-Later upgrade path:
+Later scaling options:
 
 ```text
-Ollama nomic-embed-text
 Ollama mxbai-embed-large
 sentence-transformers/all-MiniLM-L6-v2
 LanceDB or Chroma
@@ -373,12 +363,13 @@ next-bar entry for either candidate
 
 It did not find enough evidence to approve an exit rule or maximum holding period, so no strategy card or backtest was created.
 
-A follow-up task is queued:
+A follow-up task was originally queued, then used only by the preserved experimental
+live-research work described below. It is not a production acceptance receipt:
 
 ```text
 RQ-dd7da469
 Question: Find source-supported exit conditions, maximum holding periods, timing/regime risks, and fixed cost assumptions for the bounded RSI candidates.
-Status: queued
+Current artifact status: rejected (experimental history; not accepted)
 ```
 
 ### 15. Agent Reach Live-Research Connection
@@ -460,66 +451,117 @@ qwen3.8:27b   3/3 passed, 123.972 seconds total, 0 cases repaired
 
 The cases tested missing-evidence honesty, slop rejection, and cross-asset source-grounded mapping. A stronger validator caught a direct contradiction in an early 14B answer; one bounded repair corrected it. Therefore 14B is approved only as the default evidence-processing worker behind schema, source-ID, validator, and one-repair gates. The slower 27B model is the escalation/reviewer.
 
-## Current Architecture
+### 18. Experimental Local History — Not Production
+
+The following files and run records are preserved because they are useful audit history.
+They were pre-existing untracked local work when Gate A was reconciled. They do **not**
+replace, extend, or prove acceptance of the registry/dispatcher architecture in `PLAN.md`.
+
+#### Experimental live-research prototype
+
+Files:
 
 ```text
-Research structure:
-Agent Reach / papers / practitioner discovery
-→ research queue
-→ Research Scout runner
-→ bounded source discovery/fetch
-→ Qwen 14B evidence extraction (validated; one repair max)
-→ Qwen 27B escalation when needed
-→ raw research note
-→ Curator executor
-→ curated source notes
-
-RAG structure:
-Markdown notes
-→ heading chunks
-→ embeddings
-→ retrieval context packet
-
-Agent execution structure:
-agent role file
-→ work packet builder
-→ bounded task + evidence + allowed read/write paths
-→ deterministic executor
-→ cited result + database audit state
+src/quant_brain/research/live_discovery.py
+src/quant_brain/research/live_worker.py
+src/quant_brain/research/live_executor.py
+scripts/live_research_executor.py
+brain/_system/live_research_executor_workflow.md
 ```
 
-## Next Best Step
+The prototype attempted this bounded flow:
 
-Build **Live Research Discovery Executor v1** and use queued task `RQ-dd7da469` as its acceptance test.
+```text
+Agent Reach health check
+→ upstream web search
+→ deterministic dedupe/ranking
+→ Jina source snapshots + hashes
+→ bounded Qwen 14B extraction
+→ exact source/URL/quote validation
+→ one repair
+→ Qwen 27B escalation
+→ raw research note
+→ curator gate
+→ ordered SQLite events
+```
 
-The executor should:
+Experimental rejected run (not an acceptance run):
 
-1. Run the Agent Reach health check.
-2. Discover a bounded candidate set through upstream web/paper/YouTube/GitHub channels.
-3. Fetch and snapshot no more than five strong sources.
-4. Give only bounded evidence with source IDs to `qwen3:14b`.
-5. Validate schema, citations, source quality, contradictions, and invented strategy rules.
-6. Allow one repair; escalate to `qwen3.8:27b` or fail closed if validation still fails.
-7. Send validated raw research to the curator.
+```text
+Research: RQ-dd7da469
+Run: RUN-rsi-exit-live-v5
+Sources fetched: 3
+Qwen 14B: two exact-quote validation failures
+Qwen 27B: passed validation
+Curator: rejected all 3 discovery-only sources
+```
 
-Recommended scope for the next session:
+The rejection is retained as quality-gate evidence only. It did not accept the Scout,
+promote sources, resolve the RSI evidence gaps, or authorize another stage.
 
-- Find at most two source-supported exit/holding-period choices.
-- Record fixed transaction-cost assumptions without pretending they are universal.
-- Preserve timing and regime risks.
-- Do not create a strategy card or run a backtest yet.
-- Update the Strategy Door only if the evidence actually resolves the open gaps.
-- Preserve the cross-asset research map as a backlog, not dozens of parameter variations.
-- After the first end-to-end pipeline works, open the next independent door: multi-asset trend following using realistic futures data or a clearly labeled ETF proxy.
+#### Experimental operations dashboard
+
+Files:
+
+```text
+src/quant_brain/ops/events.py
+src/quant_brain/ops/dashboard.py
+scripts/serve_agent_dashboard.py
+ui/agent_dashboard.html
+brain/_system/agent_operations_dashboard_workflow.md
+brain/07_Decision_Log/DEC-agent-operations-dashboard.md
+```
+
+Historical prototype launch command:
+
+```bash
+uv run python scripts/serve_agent_dashboard.py
+```
+
+Local URL:
+
+```text
+http://127.0.0.1:8765
+```
+
+This dashboard is preserved experimental UI. It is not the production interface, not a
+Gate A deliverable, and not part of the canonical execution path.
+
+## Canonical Current Architecture
+
+`PLAN.md` is authoritative. Gate A recognizes only this production Scout path:
+
+```text
+agent registry + typed capability
+→ dispatcher selects research_scout
+→ quant_brain.discovery performs the bounded discovery task
+→ validated output
+→ recommendation only
+→ harness/human decides whether any later task is authorized
+```
+
+The `src/quant_brain/research/live_*.py` modules, experimental dashboard, and their
+workflows are outside that path. Do not package, promote, or describe them as current
+production merely because their artifacts remain on disk.
+
+## Gate Status and Resume Rule
+
+Gate A reconciliation and Gate B / master-plan Phase 5 are complete. Jason has authorized
+roadmap Gate C, which is next. This does not authorize research
+execution (Gate D), a strategy card, a backtest, or paper trading. Follow the explicit
+gated roadmap and do not infer a production step from the experimental run history.
+Preserve the queued child research
+questions `RQ-6d9c12f4`, `RQ-c920baeb`, and `RQ-80be8cf7` without executing them.
 
 ## Commands To Verify State
 
 ```bash
 cd C:/Users/jason/OneDrive/Desktop/quant-agent-brain
 uv run pytest -q
-uv run python scripts/index_markdown.py index
-uv run python scripts/embed_chunks.py embed
-uv run python scripts/build_context.py "lookahead bias future data" --limit 3
+uv run ruff check . --no-cache
+uv run ruff check src tests scripts
+uv run python -m quant_brain.harness.registry --task-type discovery --json
+uv run python scripts/dispatch_task.py --type discovery --research-id RQ-6d9c12f4 --dry-run
 ```
 
 ## Important Design Rule

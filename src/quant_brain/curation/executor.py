@@ -18,6 +18,44 @@ JSON_BLOCK_RE = re.compile(r"```json\s*(\{.*?\})\s*```", re.DOTALL)
 PROMOTABLE_SOURCE_QUALITIES = {"primary", "practitioner"}
 
 
+def promotion_block_reason(source_payload: dict[str, Any]) -> str | None:
+    """Return why this source may not be promoted, or None if it may be.
+
+    Model-generated judgment is advisory. ``mvp_testable``, ``confidence`` and
+    ``curator_recommendation`` express what the model would like to happen; they
+    are never sufficient authority to write into ``brain/01_Sources/``.
+
+    The separate condition the curator derives for itself is extractive support:
+    a promotable claim must be recoverable from the source's own exact evidence
+    quotation, which the validator has already pinned to the snapshot. When that
+    cannot be established deterministically the answer is "not promotable", and
+    a human or later curation step must confirm.
+    """
+    from quant_brain.llm.validators import claim_is_extractively_supported
+
+    quality = source_payload.get("source_quality", "discovery-only")
+    if quality not in PROMOTABLE_SOURCE_QUALITIES:
+        return f"source_quality {quality!r} is not promotable"
+    if not source_payload.get("mvp_testable", False):
+        return "model did not mark the source mvp_testable"
+    claim = str(source_payload.get("main_claim") or "")
+    evidence = source_payload.get("evidence")
+    if not claim.strip():
+        return "no main_claim to verify"
+    if not claim_is_extractively_supported(claim, evidence):
+        return (
+            "main_claim is not extractively supported by the source's own evidence "
+            "quotation; model judgment alone cannot authorize promotion"
+        )
+    rule = str(source_payload.get("possible_strategy_rule") or "")
+    if rule.strip() and not claim_is_extractively_supported(rule, evidence):
+        return (
+            "possible_strategy_rule is not extractively supported by the source's own "
+            "evidence quotation; an ungrounded model rule cannot become durable"
+        )
+    return None
+
+
 @dataclass
 class CuratorResult:
     research_id: str
@@ -93,6 +131,7 @@ def _next_raw_saved_task(db_path: str | Path) -> dict[str, Any] | None:
 def _write_curator_note(
     project_root: str | Path,
     research_id: str,
+    verdict: str,
     promoted_paths: list[str],
     skipped_sources: list[dict[str, Any]],
     open_questions: list[str],
@@ -100,7 +139,7 @@ def _write_curator_note(
     root = Path(project_root)
     out_dir = root / "brain" / "00_Inbox" / "Curator_Reviews"
     out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / f"{research_id}-curated.md"
+    path = out_dir / f"{research_id}-{verdict}.md"
     promoted_lines = "\n".join(f"- {p}" for p in promoted_paths) or "- None"
     skipped_lines = (
         "\n".join(
@@ -114,7 +153,7 @@ def _write_curator_note(
 id: CUR-{uuid4().hex[:8]}
 type: curator_review
 research_id: {research_id}
-verdict: curated
+verdict: {verdict}
 reviewer: knowledge_curator_executor
 ---
 
@@ -122,7 +161,7 @@ reviewer: knowledge_curator_executor
 
 ## Verdict
 
-curated
+{verdict}
 
 ## Promoted Source Notes
 
@@ -191,11 +230,7 @@ def execute_curator_task(
     promoted_paths: list[str] = []
     skipped_sources: list[dict[str, Any]] = []
     for source_payload in payload.get("sources", []):
-        source_quality = source_payload.get("source_quality", "discovery-only")
-        if (
-            not source_payload.get("mvp_testable", False)
-            or source_quality not in PROMOTABLE_SOURCE_QUALITIES
-        ):
+        if promotion_block_reason(source_payload) is not None:
             skipped_sources.append(source_payload)
             continue
         source = source_payload_to_curated_source(
@@ -216,14 +251,15 @@ def execute_curator_task(
             source.confidence,
         )
 
+    final_status = "curated" if promoted_paths else "rejected"
     curator_note_path = _write_curator_note(
         project_root,
         task["research_id"],
+        final_status,
         promoted_paths,
         skipped_sources,
         list(payload.get("open_questions") or []),
     )
-    final_status = "curated" if promoted_paths else "rejected"
     update_research_status(
         db_path,
         task["research_id"],

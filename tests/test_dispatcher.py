@@ -198,7 +198,25 @@ def test_claimed_output_outside_declared_paths_is_rejected(project):
     register_handler("discovery", "research_scout", lying_handler)
 
     with pytest.raises(PathViolation):
-        dispatch(Task(task_id="T-5", task_type="discovery"), project_root=root, db_path=db_path)
+        dispatch(
+            Task(task_id="T-5", task_type="discovery", run_id="RUN-T5"),
+            project_root=root,
+            db_path=db_path,
+        )
+
+    # Result validation must finalize through the same fail-closed lifecycle as
+    # handler execution; otherwise the task row is stranded in "running".
+    with connect(db_path) as conn:
+        row = conn.execute(
+            "SELECT status, error, completed_at FROM agent_tasks WHERE task_id = 'T-5'"
+        ).fetchone()
+    assert row["status"] == "failed"
+    assert row["error"]
+    assert row["completed_at"] is not None
+    types = [event["event_type"] for event in list_events(db_path, run_id="RUN-T5")]
+    assert "path_violation" in types
+    assert "dispatch_failed" in types
+    assert not (root / "brain" / "01_Sources" / "x.md").exists()
 
 
 def test_handler_cannot_dispatch_another_agent(project):
