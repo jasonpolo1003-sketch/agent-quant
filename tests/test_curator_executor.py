@@ -44,7 +44,9 @@ def sample_payload(research_id="RQ-test"):
                 "source_type": "docs",
                 "url_or_citation": "https://example.com/lookahead",
                 "main_claim": "Signals must avoid future data.",
-                "evidence": "Close-based signal needs next-bar execution.",
+                "evidence": (
+                    "Signals must avoid future data. Enter no earlier than the next bar."
+                ),
                 "possible_strategy_rule": "Enter no earlier than the next bar.",
                 "risks": ["Cheating with future data inflates performance."],
                 "confidence": "high",
@@ -147,6 +149,120 @@ def test_execute_curator_task_promotes_mvp_sources_and_records_review(tmp_path):
     assert findings_count == 1
 
 
+def test_model_judgment_alone_cannot_authorize_promotion(tmp_path):
+    """mvp_testable/confidence/recommendation are advisory, not promotion authority.
+
+    The reviewer's payload: a benign, exact quotation paired with an invented
+    "robust strategy" conclusion and every model field set to favor promotion.
+    Nothing in the source text supports the conclusion, so no durable source
+    note may be written.
+    """
+    db_path = tmp_path / "brain.sqlite"
+    init_database(db_path)
+    task = add_research_question(db_path, "Research ETF mean reversion", "mean_reversion")
+    payload = sample_payload(task["research_id"])
+    payload["sources"] = [
+        {
+            "title": "Benign Note",
+            "source_type": "docs",
+            "url_or_citation": "https://example.com/benign",
+            "main_claim": "A robust strategy is supported.",
+            "evidence": "The page describes an indicator.",
+            "possible_strategy_rule": "",
+            "risks": ["Unverified interpretation."],
+            "confidence": "high",
+            "source_quality": "primary",
+            "asset_classes": ["equity"],
+            "data_required": ["daily close"],
+            "data_access": "available-now",
+            "mvp_testable": True,
+        }
+    ]
+    payload["curator_recommendation"] = "promote_source"
+    raw_note = tmp_path / "brain" / "00_Inbox" / "Raw_Research" / f"{task['research_id']}.md"
+    write_raw_note(raw_note, task["research_id"], payload)
+    update_research_status(db_path, task["research_id"], "raw_saved", raw_note_path=str(raw_note))
+
+    result = execute_curator_task(tmp_path, db_path, task["research_id"])
+
+    assert result.promoted_sources_count == 0
+    assert result.promoted_paths == []
+    assert result.status == "rejected"
+    with connect(db_path) as conn:
+        assert conn.execute("select count(*) from sources").fetchone()[0] == 0
+    assert not (tmp_path / "brain" / "01_Sources").exists()
+
+
+def test_generic_ungrounded_claim_cannot_authorize_promotion(tmp_path):
+    """Promotion requires extractive support even without known risk keywords."""
+    db_path = tmp_path / "brain.sqlite"
+    init_database(db_path)
+    task = add_research_question(db_path, "Research ETF mean reversion", "mean_reversion")
+    payload = sample_payload(task["research_id"])
+    payload["sources"] = [
+        {
+            "title": "Benign Note",
+            "source_type": "docs",
+            "url_or_citation": "https://example.com/benign",
+            "main_claim": "This proves the method works reliably.",
+            "evidence": "The page describes an indicator.",
+            "possible_strategy_rule": "",
+            "risks": ["Requires review."],
+            "confidence": "high",
+            "source_quality": "primary",
+            "asset_classes": ["equity"],
+            "data_required": ["daily close"],
+            "data_access": "available-now",
+            "mvp_testable": True,
+        }
+    ]
+    payload["curator_recommendation"] = "promote_source"
+    raw_note = tmp_path / "brain" / "00_Inbox" / "Raw_Research" / f"{task['research_id']}.md"
+    write_raw_note(raw_note, task["research_id"], payload)
+    update_research_status(db_path, task["research_id"], "raw_saved", raw_note_path=str(raw_note))
+
+    result = execute_curator_task(tmp_path, db_path, task["research_id"])
+
+    assert result.status == "rejected"
+    assert result.promoted_sources_count == 0
+    assert not (tmp_path / "brain" / "01_Sources").exists()
+
+
+def test_generic_ungrounded_strategy_rule_cannot_become_durable(tmp_path):
+    """Curator independently blocks a rule absent from exact evidence."""
+    db_path = tmp_path / "brain.sqlite"
+    init_database(db_path)
+    task = add_research_question(db_path, "Research ETF mean reversion", "mean_reversion")
+    payload = sample_payload(task["research_id"])
+    payload["sources"] = [
+        {
+            "title": "Benign Note",
+            "source_type": "docs",
+            "url_or_citation": "https://example.com/benign",
+            "main_claim": "The page describes an indicator.",
+            "evidence": "The page describes an indicator.",
+            "possible_strategy_rule": "This method works reliably.",
+            "risks": ["Requires review."],
+            "confidence": "high",
+            "source_quality": "primary",
+            "asset_classes": ["equity"],
+            "data_required": ["daily close"],
+            "data_access": "available-now",
+            "mvp_testable": True,
+        }
+    ]
+    payload["curator_recommendation"] = "promote_source"
+    raw_note = tmp_path / "brain" / "00_Inbox" / "Raw_Research" / f"{task['research_id']}.md"
+    write_raw_note(raw_note, task["research_id"], payload)
+    update_research_status(db_path, task["research_id"], "raw_saved", raw_note_path=str(raw_note))
+
+    result = execute_curator_task(tmp_path, db_path, task["research_id"])
+
+    assert result.status == "rejected"
+    assert result.promoted_sources_count == 0
+    assert not (tmp_path / "brain" / "01_Sources").exists()
+
+
 def test_execute_curator_task_rejects_missing_json(tmp_path):
     db_path = tmp_path / "brain.sqlite"
     init_database(db_path)
@@ -193,3 +309,23 @@ def test_execute_curator_task_rejects_illegal_data_access_and_does_not_promote(t
         findings = conn.execute("select count(*) from research_findings").fetchone()[0]
     assert row["status"] == "raw_saved"
     assert findings == 0
+
+
+def test_execute_curator_task_writes_rejected_review_when_nothing_is_promoted(tmp_path):
+    db_path = tmp_path / "brain.sqlite"
+    init_database(db_path)
+    task = add_research_question(db_path, "Research weak source", "mean_reversion")
+    payload = sample_payload(task["research_id"])
+    payload["sources"] = [payload["sources"][2]]
+    payload["curator_recommendation"] = "rejected"
+    raw_note = tmp_path / "brain" / "00_Inbox" / "Raw_Research" / f"{task['research_id']}.md"
+    write_raw_note(raw_note, task["research_id"], payload)
+    update_research_status(db_path, task["research_id"], "raw_saved", raw_note_path=str(raw_note))
+
+    result = execute_curator_task(tmp_path, db_path, task["research_id"])
+
+    assert result.status == "rejected"
+    assert result.curator_note_path.endswith("-rejected.md")
+    review = Path(result.curator_note_path).read_text(encoding="utf-8")
+    assert "verdict: rejected" in review
+    assert "## Verdict\n\nrejected" in review
