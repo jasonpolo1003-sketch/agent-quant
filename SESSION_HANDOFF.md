@@ -544,10 +544,36 @@ The `src/quant_brain/research/live_*.py` modules, experimental dashboard, and th
 workflows are outside that path. Do not package, promote, or describe them as current
 production merely because their artifacts remain on disk.
 
+## Merged Checkpoint (2026-09-15)
+
+Gate B was merged to `main` as `fb3ecc3` (PR #2). Local `main` is synchronized with it by
+fast-forward; the merge introduced no upstream edits, so the accepted Gate A/B code is
+byte-identical to the reviewed checkpoint. Recovery tag: `pre-gatec-reconcile-20260915`.
+
+Verified after reconciliation: 210 passed / 1 skipped, Ruff clean on both invocations,
+child RQs queued, `RQ-66078766` rejected, and `strategy_cards` / `backtests` /
+`price_datasets` / `reviews` all zero.
+
+### Deliberately uncommitted work
+
+Preserved in the working tree, **not** in production, and not silently promoted:
+
+- **Gate C-adjacent scaffolding** — `src/quant_brain/research/live_{discovery,executor,worker}.py`,
+  `src/quant_brain/ops/dashboard.py`, `ui/`, `scripts/{live_research_executor,serve_agent_dashboard,gate_b_live_smoke}.py`
+  and their tests. These pass (13 tests) but were excluded from PR #2 review.
+- **Phase 3 semantic-RAG edits** — `src/quant_brain/indexing/{embeddings,markdown_indexer}.py`,
+  `scripts/retrieval_eval.py`, `tests/test_markdown_indexer.py`. Substantive and tested
+  (they exclude `Source_Snapshots` from indexing), but they belong to Phase 3 rather than the
+  Gate B checkpoint and need their own review.
+- `.hermes/` planning notes and `src/quant_agent_brain.egg-info/` build metadata.
+
+Promoting any of the above into production requires its own reviewed change, not a
+carry-over from this reconciliation.
+
 ## Gate Status and Resume Rule
 
-Gate A reconciliation and Gate B / master-plan Phase 5 are complete. Jason has authorized
-roadmap Gate C, which is next. This does not authorize research
+Gate A reconciliation and Gate B / master-plan Phase 5 are complete and merged. Jason has
+authorized roadmap Gate C, which is next. This does not authorize research
 execution (Gate D), a strategy card, a backtest, or paper trading. Follow the explicit
 gated roadmap and do not infer a production step from the experimental run history.
 Preserve the queued child research
