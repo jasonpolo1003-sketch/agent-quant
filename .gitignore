@@ -12,5 +12,11 @@ db/*.duckdb
 db/lancedb/
 reports/generated/
 
+# Generated packaging metadata (rebuilt by the build backend on every install)
+src/*.egg-info/
+
+# Local planning scratch, not project history
+.hermes/
+
 # Throwaway debugging scripts from ad-hoc audit runs
 brain/00_Inbox/Failed_Runs/audit_*_tmp_*/
