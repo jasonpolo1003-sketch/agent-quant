@@ -4,6 +4,17 @@ The fixture queries are deliberately NON-LEXICAL: they avoid sharing rare tokens
 with their target note. That is the whole point -- a lexical backend can match on
 shared words, so a query that shares vocabulary with its target proves nothing
 about semantic retrieval.
+
+KNOWN ISSUE -- `--compare` does not currently work. It evaluates the semantic
+backend against the `local-hash-embedding-v1` lexical baseline, but the hash
+vectors are no longer in db/brain.sqlite: the Phase 3 re-embed left only
+`nomic-embed-text@768`, despite the Phase 3 design note saying to keep the hash
+vectors precisely so this script could compare against them. `--compare` now
+raises a dimension-mismatch ValueError from search_similar_chunks; before that
+error existed it silently reported the baseline as recall 0.00, which is worse.
+Restoring it means re-embedding all chunks under HASH_MODEL, which writes to the
+database -- deliberately not done here. The single-model run (the one that gates
+Phase 3) is unaffected.
 """
 
 from __future__ import annotations
@@ -37,14 +48,23 @@ FIXTURES: tuple[tuple[str, str], ...] = (
         "vectorbt",
     ),
     (
-        "what should I confirm before trusting a simulated performance result",
-        "pre_backtest_validation_checklist",
-    ),
-    (
         "framework for simulating trades with commissions and plotting statistics",
         "backtesting-py",
     ),
+    (
+        "which asset classes and strategy families is this project willing to study",
+        "quant-research-universe",
+    ),
+    (
+        "when should a trade be closed after entering on an oversold signal",
+        "DOOR-etf-mean-reversion",
+    ),
 )
+
+# NOTE: brain/_system/ is excluded from the index by default (markdown_indexer
+# exclude_dirs={"_system"}), so pre_backtest_validation_checklist.md and the
+# source-quality policy are NOT retrievable. That is why no fixture targets
+# them. See PLAN.md for the open decision on indexing _system.
 
 
 def evaluate(
@@ -52,6 +72,7 @@ def evaluate(
     model: str,
     limit: int = 5,
     fixtures: tuple[tuple[str, str], ...] = FIXTURES,
+    dimensions: int | None = None,
 ) -> dict[str, Any]:
     """Run every fixture query and report Recall@1, Recall@5, and MRR."""
     rows = []
@@ -60,7 +81,9 @@ def evaluate(
     reciprocal_ranks = 0.0
 
     for query, expected in fixtures:
-        results = search_similar_chunks(db_path, query, limit=limit, model=model)
+        results = search_similar_chunks(
+            db_path, query, limit=limit, model=model, dimensions=dimensions
+        )
         paths = [str(item["note_path"]) for item in results]
         rank = next((i + 1 for i, path in enumerate(paths) if expected in path), None)
 
