@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -11,6 +13,7 @@ from quant_brain.discovery.agent_reach import (
     AgentReachAdapter,
     AgentReachError,
     AgentReachUnavailable,
+    default_runner,
     is_channel_usable,
     parse_channel_health,
     plan_queries,
@@ -278,3 +281,38 @@ def test_fetch_web_still_supports_a_fetcher_that_takes_only_a_url() -> None:
     ).fetch_web("https://example.com/x")
 
     assert result["content"] == PAGE_MD
+
+
+def test_default_runner_decodes_utf8_output_under_a_non_utf8_locale() -> None:
+    """text=True alone decodes with the locale codec (cp1252 here), losing UTF-8.
+
+    The real failure this pins: agent-reach doctor emits UTF-8 channel names, the
+    locale decode raises on subprocess's reader thread where no caller can catch
+    it, and stdout silently becomes None. Must use a real subprocess -- the defect
+    lives inside subprocess.run's decode, which no injected runner reaches.
+    """
+    completed = default_runner(
+        [
+            sys.executable,
+            "-c",
+            "import sys; sys.stdout.buffer.write('全网语义搜索'.encode('utf-8'))",
+        ],
+        timeout=60,
+    )
+
+    assert completed.returncode == 0
+    assert completed.stdout == "全网语义搜索"
+
+
+def test_check_health_fails_loudly_when_stdout_is_none() -> None:
+    """A null stdout must name its own cause, not surface as a TypeError."""
+
+    def runner(argv: list[str], timeout: int = 60) -> subprocess.CompletedProcess[str]:
+        del timeout
+        # A real CompletedProcess: the tuple path coerces None to "" and would
+        # hide exactly the condition under test.
+        return subprocess.CompletedProcess(argv, 0, None, "")
+
+    adapter = AgentReachAdapter(runner=runner, skip_exe_check=True)
+    with pytest.raises(AgentReachUnavailable, match="no decodable stdout"):
+        adapter.check_health()

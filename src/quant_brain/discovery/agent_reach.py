@@ -129,11 +129,24 @@ def default_runner(
     timeout: int = 60,
     **_kwargs: Any,
 ) -> subprocess.CompletedProcess[str]:
-    """Run an argument list. Never uses shell=True."""
+    """Run an argument list. Never uses shell=True.
+
+    ``encoding``/``errors`` are not optional. ``text=True`` alone decodes with
+    ``locale.getpreferredencoding(False)``, which is ``cp1252`` on this machine,
+    while ``agent-reach doctor --json`` emits UTF-8 channel names such as
+    "全网语义搜索". The locale decode then raises ``UnicodeDecodeError`` inside
+    subprocess's reader thread -- where no caller can catch it -- leaving
+    ``stdout`` as ``None`` so the caller sees a misleading ``TypeError`` from
+    ``json.loads``. ``errors="replace"`` guarantees the caller always receives a
+    ``str``: a genuinely undecodable byte becomes U+FFFD inside the payload
+    rather than destroying the whole run.
+    """
     return subprocess.run(
         argv,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         timeout=timeout,
         check=False,
         shell=False,
@@ -349,6 +362,14 @@ class AgentReachAdapter:
             detail = (completed.stderr or completed.stdout or "").strip()[:400]
             raise AgentReachUnavailable(
                 f"agent-reach doctor failed (exit {completed.returncode}): {detail}"
+            )
+        if completed.stdout is None:
+            # A decode failure on subprocess's reader thread nulls stdout while
+            # still reporting exit 0. Say that plainly instead of letting
+            # json.loads(None) raise a TypeError that points at the wrong line.
+            raise AgentReachUnavailable(
+                "agent-reach doctor exited 0 but produced no decodable stdout; "
+                "check the runner's output encoding"
             )
         try:
             payload = json.loads(completed.stdout)
