@@ -4,9 +4,9 @@ type: master_plan
 status: active
 owner: jason
 created: 2026-08-28
-last_updated: 2026-09-07
-revision: 3
-supersedes: revision 2 (harness architecture retained; factual checkpoint reconciled)
+last_updated: 2026-09-16
+revision: 4
+supersedes: revision 3 (harness architecture retained; statistical validation gates strengthened)
 read_first: true
 ---
 
@@ -63,6 +63,7 @@ The goal is *not* an agent that does research. The goal is a **harness that disp
 8. **No overengineering.** A deterministic function beats an LLM call whenever it can do the job. A stub behind a stable interface is legitimate — see §4.
 9. **Observable dispatch.** Every routing decision recorded via `ops.events`.
 10. **Human review is a first-class stage.** Curator, reviewer, and Jason can all say reject.
+11. **Every test is a trial.** Parameter sweeps, robustness variants, discarded configurations, and baseline runs enter the same immutable ledger. Adversarial review must use that complete ledger for multiple-testing adjustment; a raw prop-challenge pass rate is not evidence of edge without same-engine random-entry and buy-and-hold comparisons.
 
 ## 4. Stubs are legitimate; unverified promotions are not
 
@@ -193,7 +194,7 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 **Picking this up cold? Read this section, then start.**
 
 ### Where we are
-- Plan **revision 3** reconciled 2026-09-07. Revision 2 established the harness architecture; this revision records the merged Agent Reach/Scout implementation and current gated roadmap without changing that architecture.
+- Plan **revision 4** updated 2026-09-16. Revision 3 reconciled the merged Agent Reach/Scout implementation and gated roadmap; revision 4 preserves that architecture while making immutable trial accounting, multiple-testing adjustment, and same-engine challenge baselines hard requirements.
 - **Phase 0 complete (2026-08-28).** Baseline is green: **51 passed**. `quant_brain/ops/events.py` implements `record_event` / `list_events` / `summarize_run`; `agent_events` table + `idx_agent_events_run` / `idx_agent_events_task` added to `schema.sql`. Existing data verified intact (21 notes / 233 chunks / 233 embeddings). CLI: `python -m quant_brain.ops.events tail --run-id X` and `summary --run-id X`.
 - **Phase 1 complete (2026-08-28).** **71 passed.** `harness/registry.py` loads validated `AgentSpec`s from frontmatter in `agents/*.md`. Both shipped agents migrated: `research_scout` (handles `discovery`, `qwen3:14b`) and `knowledge_curator` (handles `curation`, deterministic). Permissions now flow the right direction — `build_work_packet` takes paths from the agent's declaration; a caller may **narrow** but never **widen** (raises `RegistryError`). Malformed declarations fail loudly at load. CLI: `python -m quant_brain.harness.registry [--task-type X] [--json]`.
 - **Phase 2 complete (2026-08-28) — the harness exists.** **95 passed, 1 skipped.** `harness/dispatcher.py` routes typed tasks to the one qualified enabled agent (zero candidates → `NoCapableAgent`, multiple → `AmbiguousDispatch`; never a heuristic pick). `harness/paths.py` is the single enforcement implementation, comparing **resolved** paths so `..` and symlinks cannot smuggle a write out. Handlers cannot dispatch handlers (`ReentrantDispatch`). Every dispatch emits events; `summarize_run` reconstructs a run without reading files. `harness/migrations.py` added `agent_tasks.task_type` + `run_id` guarded by `PRAGMA table_info`. Verified live on a scratch copy: `discovery` → `research_scout` → wrote its raw note → recommended `curation`; `curation` → `knowledge_curator` → promoted 5 source notes. CLI: `scripts/dispatch_task.py --type X [--dry-run]`.
