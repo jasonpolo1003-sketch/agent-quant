@@ -1,0 +1,82 @@
+{
+  "_comment": "Recorded-shape search results for hermetic acquisition tests. Adversarial on purpose: the credible primary hit is buried at rank 6, one page appears twice differing only by a trailing slash, and two pages share an .edu host but differ in path. No network is involved.",
+  "results": [
+    {
+      "rank": 1,
+      "title": "RSI Trading Strategy - The Only Guide You Need",
+      "url": "https://seo-farm.example/rsi-guide",
+      "snippet": "Everything about RSI exit rules for ETF mean reversion trading strategies.",
+      "source_type": "web"
+    },
+    {
+      "rank": 2,
+      "title": "Relative Strength Index (RSI)",
+      "url": "https://www.investopedia.com/terms/r/rsi.asp",
+      "snippet": "RSI is a momentum oscillator measuring speed and change of price movements.",
+      "source_type": "web"
+    },
+    {
+      "rank": 3,
+      "title": "Guaranteed returns with our RSI exit system",
+      "url": "https://tradingsecrets.example/system",
+      "snippet": "Join our VIP telegram signal service. Guaranteed returns every month.",
+      "source_type": "web"
+    },
+    {
+      "rank": 4,
+      "title": "Best Broker for ETF Mean Reversion",
+      "url": "https://reviews.example/go/broker?ref=abc123",
+      "snippet": "Our top rated broker for RSI mean reversion exit rules and ETF trading.",
+      "source_type": "web"
+    },
+    {
+      "rank": 5,
+      "title": "Momentum Exit Rules and Holding Periods",
+      "url": "https://alphaarchitect.com/2020/05/momentum-exit-rules/",
+      "snippet": "We test exit rules and maximum holding periods for momentum and mean reversion.",
+      "source_type": "web"
+    },
+    {
+      "rank": 6,
+      "title": "Mean Reversion Exit Rules in ETF Markets",
+      "url": "https://arxiv.org/abs/2301.04567",
+      "snippet": "We study source supported exit rules and holding periods for ETF mean reversion.",
+      "source_type": "web"
+    },
+    {
+      "rank": 7,
+      "title": "Relative Strength Index (RSI)",
+      "url": "https://www.investopedia.com/terms/r/rsi.asp/",
+      "snippet": "Duplicate of the rank-2 hit arriving from a second channel.",
+      "source_type": "repo"
+    },
+    {
+      "rank": 8,
+      "title": "Liquidity and Exit Timing in Exchange Traded Funds",
+      "url": "https://economics.harvard.edu/working-papers/etf-liquidity-2023",
+      "snippet": "Working paper on ETF exit timing, holding periods and execution costs.",
+      "source_type": "web"
+    },
+    {
+      "rank": 9,
+      "title": "My thoughts on RSI",
+      "url": "https://economics.harvard.edu/~jsmith/blog/my-thoughts-on-rsi",
+      "snippet": "Personal blog page on the same university host as the working paper above.",
+      "source_type": "web"
+    },
+    {
+      "rank": 10,
+      "title": "Investor Bulletin: Exchange Traded Funds",
+      "url": "https://www.sec.gov/investor/alerts/etfs.htm",
+      "snippet": "Regulatory investor bulletin covering ETF trading costs and mechanics.",
+      "source_type": "web"
+    },
+    {
+      "rank": 11,
+      "title": "RSI exit rules discussion",
+      "url": "https://forum.example/thread/12345",
+      "snippet": "Search snippet with no fetchable body: a lead, never evidence.",
+      "source_type": "web"
+    }
+  ]
+}

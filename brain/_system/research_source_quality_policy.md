@@ -72,6 +72,20 @@ Being in the research universe does not mean the project can test it now.
 
 ## Source Quality Tiers
 
+> **Executable form:** `src/quant_brain/discovery/source_quality.py` implements these
+> tiers as a deterministic, offline classifier used during bounded acquisition. The
+> tier names map onto the raw-research schema enum: Tier A → `primary`, Tier B →
+> `practitioner`, Tier C → `discovery-only`, Tier D → `reject`. This document remains
+> the normative statement; the module is how the Scout applies it before spending a
+> fetch or a model call.
+>
+> The policy lives in code rather than a data file in this tree because `brain/` is
+> agent-readable space: a tier list here would let an agent widen its own promotion
+> criteria. A bare TLD is never sufficient for Tier A — a `.edu` page qualifies only on
+> a research, publication or repository path, and `.gov` only for recognized
+> regulators, exchanges and statistical agencies. Promotional rejection takes
+> precedence over every other signal.
+
 ### Tier A — Primary evidence
 
 Examples:

@@ -131,8 +131,18 @@ def select_candidate_sources(method_family: str | None, question: str, limit: in
     return selected[:limit]
 
 
-def format_findings_markdown(task: dict[str, Any], sources: list[dict[str, Any]]) -> str:
-    """Format selected sources into a raw research note section plus JSON block."""
+def format_findings_markdown(
+    task: dict[str, Any],
+    sources: list[dict[str, Any]],
+    rejected: list[dict[str, Any]] | None = None,
+) -> str:
+    """Format selected sources into a raw research note section plus JSON block.
+
+    ``rejected`` is rendered as prose *outside* the validated JSON block. The
+    raw-research payload forbids extra fields, and honest rejection reporting is
+    not worth widening that contract for; the machine-readable copy is the
+    ``discovery_candidates_rejected`` event.
+    """
     lines = [
         "## Scout Findings",
         "",
@@ -161,6 +171,25 @@ def format_findings_markdown(task: dict[str, Any], sources: list[dict[str, Any]]
                 "",
             ]
         )
+
+    if rejected:
+        lines.extend(
+            [
+                "## Rejected Candidates",
+                "",
+                "Considered during bounded acquisition and deliberately not used as "
+                "evidence. Honest rejection is a valid outcome.",
+                "",
+                "| URL | Tier | Reason |",
+                "| --- | --- | --- |",
+            ]
+        )
+        for record in rejected:
+            url = str(record.get("url", "")).replace("|", "\\|")
+            tier = str(record.get("tier", "")).replace("|", "\\|")
+            reason = str(record.get("reason", "")).replace("|", "\\|")
+            lines.append(f"| {url} | {tier} | {reason} |")
+        lines.append("")
 
     payload = build_raw_research_payload(task, sources)
     lines.extend(["## Required JSON Block", "", "```json", json.dumps(payload, indent=2), "```", ""])
@@ -453,6 +482,27 @@ def execute_discovery_task(
         if not sources:
             raise ValueError("no candidate sources found for this research task")
 
+        rejected_records = [dict(record) for record in getattr(discovered, "rejected", ())]
+        if rejected_records:
+            # Immutable, machine-queryable record of what was deliberately not
+            # used. The note carries the human-readable copy.
+            _record_scout_event(
+                db_path,
+                run_id=run_id,
+                task_id=task_id,
+                event_type="discovery_candidates_rejected",
+                status="running",
+                message=(
+                    f"{len(rejected_records)} candidate(s) rejected before extraction "
+                    f"for {task['research_id']}"
+                ),
+                payload={
+                    "accepted_count": len(sources),
+                    "rejected_count": len(rejected_records),
+                    "rejected": rejected_records,
+                },
+            )
+
         # Structural invariant: the live backend always extracts through the
         # validated local-Qwen ladder. There is deliberately no override
         # parameter, so no caller and no task payload can disable validation.
@@ -500,7 +550,7 @@ def execute_discovery_task(
             sources = list(model_result.output["sources"])
 
         stage = "write_note"
-        findings = format_findings_markdown(task, sources)
+        findings = format_findings_markdown(task, sources, rejected_records)
         # Remember the exact pre-write bytes so a later failure can put the file
         # back rather than leaving a half-finalized note behind.
         original_note_bytes = note_path.read_bytes()
@@ -531,6 +581,8 @@ def execute_discovery_task(
             "sources_count": len(sources),
             "snapshots": list(discovered.snapshots),
             "backend": discovered.backend,
+            "rejected": rejected_records,
+            "rejected_count": len(rejected_records),
             "recommendation": "curation",
             "model_used": model_result.model_used if model_result else None,
             "repaired": model_result.repaired if model_result else False,

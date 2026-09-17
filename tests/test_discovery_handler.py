@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -63,6 +64,27 @@ output_contract: curator_verdict_v1
 
 Promote useful sources.
 """
+
+
+# A fetched page must clear the acquisition content floor to reach the model.
+# These tests pin dispatch, capping and rollback behaviour, not thin-content
+# rejection, so they use a realistic page body rather than a placeholder.
+PAGE_BODY = " ".join(
+    [
+        "Wilder's relative strength index compares the average magnitude of recent",
+        "gains to the average magnitude of recent losses over a fixed lookback of",
+        "fourteen periods by default. The value is bounded between zero and one",
+        "hundred, and readings below thirty are conventionally described as",
+        "oversold. Exact evidence passage. The documentation treats these levels as",
+        "conventions rather than tested decision rules, and does not establish an",
+        "exit condition, a maximum holding period, or any cost assumption. A signal",
+        "derived from a closing price is not observable until that close has",
+        "occurred, so execution must happen no earlier than the following bar.",
+        "Treating a close-derived signal as executable at the same close introduces",
+        "lookahead bias and overstates measured performance on any instrument.",
+    ]
+    * 2
+)
 
 
 @pytest.fixture
@@ -239,7 +261,7 @@ def test_dispatched_live_path_writes_snapshots_without_curation(project, monkeyp
         return {
             "url": url,
             "title": "RSI",
-            "content": "Wilder RSI documentation body.",
+            "content": PAGE_BODY,
             "channel": "web",
             "backend": "fixture",
         }
@@ -268,6 +290,64 @@ def test_dispatched_live_path_writes_snapshots_without_curation(project, monkeyp
     assert not (root / "brain" / "01_Sources").exists()
     reviews = root / "brain" / "00_Inbox" / "Curator_Reviews"
     assert not any(reviews.glob("*.md"))
+
+
+def test_rejected_candidates_are_recorded_in_the_note_and_the_event_ledger(project, monkeypatch):
+    """Honest rejection is reported two ways: prose for the curator, events for audit."""
+    from quant_brain.ops.events import list_events
+
+    root, db_path = project
+    task_row = add_research_question(db_path, "Research ETF RSI mean reversion", "mean_reversion")
+    register_default_handlers()
+    stub_validated_qwen(monkeypatch)
+
+    def search_fn(question, method_family, *, limit):
+        return [
+            {"title": "Paper", "url": "https://arxiv.org/abs/2301.04567", "source_type": "paper"},
+            {"title": "Guaranteed returns", "url": "https://scam.example/go/x?ref=1"},
+        ]
+
+    def fetch_fn(url):
+        return {"url": url, "title": "P", "content": PAGE_BODY, "channel": "web"}
+
+    result = dispatch(
+        Task(
+            task_id="T-reject",
+            task_type="discovery",
+            run_id="RUN-reject",
+            payload={
+                "research_id": task_row["research_id"],
+                "backend": "live",
+                "allow_network": False,
+                "search_fn": search_fn,
+                "fetch_fn": fetch_fn,
+            },
+        ),
+        project_root=root,
+        db_path=db_path,
+    )
+
+    assert result.detail["rejected_count"] == 1
+
+    note = (root / "brain" / "00_Inbox" / "Raw_Research" / f"{task_row['research_id']}.md").read_text(
+        encoding="utf-8"
+    )
+    assert "## Rejected Candidates" in note
+    assert "scam.example" in note
+    # The ledger is prose, deliberately outside the validated JSON contract:
+    # RawResearchPayload forbids extra fields.
+    payload_block = json.loads(note.split("```json")[1].split("```")[0])
+    assert "rejected" not in payload_block
+    assert all("scam.example" not in s["url_or_citation"] for s in payload_block["sources"])
+
+    events = list_events(db_path, run_id="RUN-reject")
+    rejected_events = [e for e in events if e["event_type"] == "discovery_candidates_rejected"]
+    assert len(rejected_events) == 1
+    payload = rejected_events[0]["payload"]
+    assert payload["rejected_count"] == 1
+    assert payload["accepted_count"] == 1
+    assert payload["rejected"][0]["signals"]
+    assert "scam.example" in payload["rejected"][0]["url"]
 
 
 def test_dispatched_live_uses_adapter_without_search_fn(project, monkeypatch):
@@ -351,7 +431,7 @@ def test_post_write_db_failure_leaves_no_orphan_completed_note(project, monkeypa
                         {"title": "RSI docs", "url": "https://example.com/rsi",
                          "source_type": "docs", "source_quality": "primary"}
                     ],
-                    "fetch_fn": lambda url: {"url": url, "content": "Exact evidence passage.",
+                    "fetch_fn": lambda url: {"url": url, "content": PAGE_BODY,
                                              "channel": "web", "backend": "fixture"},
                 },
                 run_id="RUN-postwrite",
@@ -410,7 +490,7 @@ def test_post_write_failure_restores_preexisting_note_bytes(project, monkeypatch
                         {"title": "RSI docs", "url": "https://example.com/rsi",
                          "source_type": "docs", "source_quality": "primary"}
                     ],
-                    "fetch_fn": lambda url: {"url": url, "content": "Exact evidence passage.",
+                    "fetch_fn": lambda url: {"url": url, "content": PAGE_BODY,
                                              "channel": "web", "backend": "fixture"},
                 },
                 run_id="RUN-restore",
@@ -443,7 +523,7 @@ def test_live_discovery_failure_is_retryable_and_leaves_no_orphan_note(project):
                     "backend": "live",
                     "allow_network": False,
                     "search_fn": search_fn,
-                    "fetch_fn": lambda url: {"url": url, "content": "x"},
+                    "fetch_fn": lambda url: {"url": url, "content": PAGE_BODY},
                 },
                 run_id="RUN-fail1",
             ),
@@ -489,7 +569,7 @@ def test_task_max_sources_narrows_but_never_widens(project, monkeypatch):
         ]
 
     def fetch_fn(url):
-        return {"url": url, "content": f"body for {url}", "channel": "web", "backend": "fixture"}
+        return {"url": url, "content": PAGE_BODY, "channel": "web", "backend": "fixture"}
 
     dispatch(
         Task(
@@ -571,7 +651,7 @@ def test_production_live_scout_uses_validated_qwen_and_only_recommends_curation(
                      "title": "RSI docs", "url": "https://example.com/rsi",
                      "source_type": "docs", "source_quality": "primary",
                  }],
-                 "fetch_fn": lambda url: {"url": url, "content": "Exact evidence passage.",
+                 "fetch_fn": lambda url: {"url": url, "content": PAGE_BODY,
                                           "channel": "web", "backend": "fixture"},
              }),
         project_root=root, db_path=db_path,

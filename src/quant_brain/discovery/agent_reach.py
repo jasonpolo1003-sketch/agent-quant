@@ -9,6 +9,7 @@ scraper, never runs ``install``/``uninstall``/``configure``, and never reads
 
 from __future__ import annotations
 
+import inspect
 import json
 import os
 import re
@@ -24,6 +25,7 @@ from quant_brain.discovery.live_discovery import (
     LiveDiscoveryError,
     jina_fetch,
 )
+from quant_brain.discovery.source_quality import normalize_candidate_url
 
 ENABLED_CHANNELS = frozenset({"web", "github", "youtube", "rss", "search", "exa"})
 SEARCH_CHANNELS = ("search", "exa")
@@ -32,6 +34,39 @@ LOGIN_BACKED_CHANNELS = frozenset(
 )
 URL_RE = re.compile(r"https?://[^\s\"'<>]+")
 DEFAULT_WINDOWS_EXE = r"C:\Users\jason\.agent-reach-venv\Scripts\agent-reach.exe"
+
+# Search returns a candidate pool this many times the source cap, so the ranker
+# has something to choose between and post-fetch rejections can be backfilled.
+# The cap on *fetched* sources is unchanged and still enforced downstream.
+CANDIDATE_POOL_FACTOR = 3
+
+
+@dataclass(frozen=True)
+class SearchLane:
+    """One declared acquisition lane and how real it currently is.
+
+    ``operational`` lanes are dispatched by ``search_for_question``.
+    ``fixture-only`` lanes are exercised by recorded tests but not dispatched
+    live. ``deferred`` lanes are declared so doctor output maps cleanly, and are
+    never dispatched. Login-backed channels appear nowhere here by design.
+    """
+
+    name: str
+    channel: str
+    status: str
+
+
+SEARCH_LANES: tuple[SearchLane, ...] = (
+    SearchLane("exa", "search", "operational"),
+    SearchLane("github", "github", "operational"),
+    SearchLane("arxiv-abs", "web", "fixture-only"),
+    SearchLane("youtube", "youtube", "deferred"),
+    SearchLane("rss", "rss", "deferred"),
+)
+
+
+def operational_lanes() -> tuple[SearchLane, ...]:
+    return tuple(lane for lane in SEARCH_LANES if lane.status == "operational")
 
 
 class AgentReachError(LiveDiscoveryError):
@@ -67,6 +102,25 @@ def resolve_agent_reach_exe(explicit: str | None = None) -> str:
         "agent-reach executable not found; set AGENT_REACH_EXE or install Agent Reach. "
         "Refusing to invent a scraper."
     )
+
+
+def _accepts_timeout(fn: Any) -> bool:
+    """Whether ``fn`` declares a ``timeout`` parameter (or accepts **kwargs)."""
+    try:
+        parameters = inspect.signature(fn).parameters
+    except (TypeError, ValueError):
+        return False
+    if "timeout" in parameters:
+        return True
+    return any(p.kind is inspect.Parameter.VAR_KEYWORD for p in parameters.values())
+
+
+def _is_agent_reach_exe(argv0: str) -> bool:
+    """Whether this command invokes agent-reach itself rather than an upstream tool."""
+    stem = Path(str(argv0)).name.lower()
+    for suffix in (".exe", ".cmd", ".bat"):
+        stem = stem.removesuffix(suffix)
+    return stem == "agent-reach"
 
 
 def default_runner(
@@ -192,8 +246,14 @@ def extract_search_hits(raw: str, *, source_type: str) -> list[dict[str, Any]]:
             url = str(item.get("url") or item.get("link") or item.get("href") or "").strip()
             if not url:
                 continue
+            url = prefer_arxiv_abstract(url)
             title = str(item.get("title") or item.get("name") or url)
-            hits.append({"title": title, "url": url, "source_type": source_type})
+            hit = {"title": title, "url": url, "source_type": source_type}
+            if item.get("snippet") or item.get("description") or item.get("text"):
+                hit["snippet"] = str(
+                    item.get("snippet") or item.get("description") or item.get("text")
+                )
+            hits.append(hit)
     if hits:
         return _dedupe_hits(hits)
     for url in URL_RE.findall(text):
@@ -201,14 +261,38 @@ def extract_search_hits(raw: str, *, source_type: str) -> list[dict[str, Any]]:
     return _dedupe_hits(hits)
 
 
+_ARXIV_PDF_RE = re.compile(r"^(https?://(?:www\.)?arxiv\.org)/pdf/([\w.\-/]+?)(?:v\d+)?(?:\.pdf)?$", re.I)
+
+
+def prefer_arxiv_abstract(url: str) -> str:
+    """Rewrite an arXiv PDF link to its abstract page.
+
+    The abstract page carries title, authors, abstract, date and DOI as text --
+    everything classification and traceability need -- while the PDF would need
+    a binary parser and would break the UTF-8 snapshot contract. This is the
+    whole arXiv lane: it promotes hits already found, rather than adding a
+    second network dependency.
+    """
+    match = _ARXIV_PDF_RE.match(url.strip())
+    if not match:
+        return url
+    return f"{match.group(1)}/abs/{match.group(2)}"
+
+
 def _dedupe_hits(hits: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Collapse hits pointing at the same upstream page.
+
+    Compares normalized URLs, so the same page arriving from two channels --
+    or from one channel with and without a trailing slash -- consumes one
+    budget slot rather than two.
+    """
     seen: set[str] = set()
     unique: list[dict[str, Any]] = []
     for hit in hits:
-        url = hit["url"]
-        if url in seen:
+        key = normalize_candidate_url(hit["url"])
+        if key in seen:
             continue
-        seen.add(url)
+        seen.add(key)
         unique.append(hit)
     return unique
 
@@ -241,10 +325,16 @@ class AgentReachAdapter:
     def _run(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
         if not argv:
             raise AgentReachError("refusing to run an empty command")
-        for part in argv:
-            if part in FORBIDDEN_SUBCOMMANDS:
+        # Guard the subcommand *position*, not every token. Scanning all tokens
+        # refused any research question containing the word "install", which is
+        # a false positive on a legitimate query. mcporter and gh are separate
+        # executables that never take these subcommands, so the guard applies
+        # only when we are invoking agent-reach itself.
+        if _is_agent_reach_exe(argv[0]) and len(argv) > 1:
+            subcommand = argv[1]
+            if subcommand in FORBIDDEN_SUBCOMMANDS:
                 raise AgentReachError(
-                    f"refusing Agent Reach subcommand {part!r}; "
+                    f"refusing Agent Reach subcommand {subcommand!r}; "
                     f"forbidden: {sorted(FORBIDDEN_SUBCOMMANDS)}"
                 )
         try:
@@ -311,7 +401,13 @@ class AgentReachAdapter:
         return hits
 
     def fetch_web(self, url: str) -> dict[str, Any]:
-        fetched = self.fetch_impl(url)
+        # Pass the timeout only when the implementation accepts one. Catching
+        # TypeError instead would swallow a genuine TypeError raised inside the
+        # fetch and silently retry it.
+        if _accepts_timeout(self.fetch_impl):
+            fetched = self.fetch_impl(url, timeout=self.timeout)
+        else:
+            fetched = self.fetch_impl(url)
         if isinstance(fetched, dict):
             return fetched
         return {
@@ -329,7 +425,15 @@ class AgentReachAdapter:
         *,
         limit: int = 5,
     ) -> list[dict[str, Any]]:
-        """Health-check, then search usable zero-config channels. No injection required."""
+        """Health-check, then search usable zero-config channels. No injection required.
+
+        Returns a bounded *candidate pool*, not the final source set. Truncating
+        to ``limit`` here would make downstream ranking a no-op -- the caller
+        could only ever reorder the hits the router happened to return first,
+        which is exactly the SEO-favouring behaviour Gate C exists to fix. The
+        pool is capped at ``CANDIDATE_POOL_FACTOR * limit`` so the run stays
+        bounded while leaving the ranker something to choose between.
+        """
         health = self.check_health()
         queries = plan_queries(question, method_family)
         hits: list[dict[str, Any]] = []
@@ -340,15 +444,16 @@ class AgentReachAdapter:
                 "no usable Agent Reach search channel (Exa/mcporter or GitHub); "
                 "run `agent-reach doctor --json` and install a zero-config backend"
             )
+        pool_target = max(1, limit) * CANDIDATE_POOL_FACTOR
         per_query = max(1, limit)
         if search_usable:
             for query in queries:
                 hits.extend(self.search_exa(query, limit=per_query))
-                if len(_dedupe_hits(hits)) >= limit:
+                if len(_dedupe_hits(hits)) >= pool_target:
                     break
-        if github_usable and len(_dedupe_hits(hits)) < limit:
+        if github_usable and len(_dedupe_hits(hits)) < pool_target:
             hits.extend(self.search_github(queries[0], limit=per_query))
-        unique = _dedupe_hits(hits)[:limit]
+        unique = _dedupe_hits(hits)[:pool_target]
         if not unique:
             raise AgentReachError("Agent Reach search returned no URLs")
         return unique

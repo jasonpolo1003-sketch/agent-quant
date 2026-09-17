@@ -4,9 +4,9 @@ type: master_plan
 status: active
 owner: jason
 created: 2026-08-28
-last_updated: 2026-09-07
-revision: 3
-supersedes: revision 2 (harness architecture retained; factual checkpoint reconciled)
+last_updated: 2026-09-16
+revision: 4
+supersedes: revision 3 (harness architecture retained; statistical validation gates strengthened)
 read_first: true
 ---
 
@@ -63,6 +63,7 @@ The goal is *not* an agent that does research. The goal is a **harness that disp
 8. **No overengineering.** A deterministic function beats an LLM call whenever it can do the job. A stub behind a stable interface is legitimate — see §4.
 9. **Observable dispatch.** Every routing decision recorded via `ops.events`.
 10. **Human review is a first-class stage.** Curator, reviewer, and Jason can all say reject.
+11. **Every test is a trial.** Parameter sweeps, robustness variants, discarded configurations, and baseline runs enter the same immutable ledger. Adversarial review must use that complete ledger for multiple-testing adjustment; a raw prop-challenge pass rate is not evidence of edge without same-engine random-entry and buy-and-hold comparisons.
 
 ## 4. Stubs are legitimate; unverified promotions are not
 
@@ -76,7 +77,7 @@ The real issue is narrower and is a **data hygiene** problem, not architecture: 
 
 **Working:** Phases 0–4 are complete. The baseline is green (**149 passed, 1 skipped**); the registry/dispatcher and enforced path boundaries are live; `nomic-embed-text` is the default semantic retrieval backend; and the merged production Scout path routes `discovery` through `quant_brain.discovery`, Agent Reach/upstream tools, snapshots, raw-note validation, and a recommendation-only return to the harness. The Agent Reach adapter and discovery path are covered by recorded fixtures with zero network in pytest.
 
-**Next:** Phase 5 / roadmap **Gate B** is complete, adversarially hardened, and merged to `main` (`fb3ecc3`, PR #2): production live Scout extraction uses the reusable local Qwen boundary (14B → one repair → 27B → fail closed), deterministic evidence validators, strict extractive support before durable promotion, compensating raw-note cleanup, and complete dispatcher failure finalization. Gate C is next and remains authorized but incomplete.
+**Next:** Phase 5 / roadmap **Gate B** is complete, adversarially hardened, and merged to `main` (`fb3ecc3`, PR #2): production live Scout extraction uses the reusable local Qwen boundary (14B → one repair → 27B → fail closed), deterministic evidence validators, strict extractive support before durable promotion, compensating raw-note cleanup, and complete dispatcher failure finalization. **Gate C is complete and verified (2026-09-16):** bounded acquisition now classifies source tiers, ranks by credibility, collapses cross-channel duplicates, and rejects thin/SEO/promotional pages before Qwen. **Gate D is next and needs Jason's explicit authorization.**
 
 **Still pending:** Phase 6 acceptance. The validated Phase 5 runtime is integrated, but the production Scout is not accepted end-to-end until the real child Scout acceptance runs are executed under the roadmap after Gate C. Preserved `research/live_*.py` runs are explicitly experimental history and do not satisfy this gate. No research acceptance, strategy card, backtest, paper trade, or live trade is complete.
 
@@ -193,7 +194,7 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 **Picking this up cold? Read this section, then start.**
 
 ### Where we are
-- Plan **revision 3** reconciled 2026-09-07. Revision 2 established the harness architecture; this revision records the merged Agent Reach/Scout implementation and current gated roadmap without changing that architecture.
+- Plan **revision 4** updated 2026-09-16. Revision 3 reconciled the merged Agent Reach/Scout implementation and gated roadmap; revision 4 preserves that architecture while making immutable trial accounting, multiple-testing adjustment, and same-engine challenge baselines hard requirements.
 - **Phase 0 complete (2026-08-28).** Baseline is green: **51 passed**. `quant_brain/ops/events.py` implements `record_event` / `list_events` / `summarize_run`; `agent_events` table + `idx_agent_events_run` / `idx_agent_events_task` added to `schema.sql`. Existing data verified intact (21 notes / 233 chunks / 233 embeddings). CLI: `python -m quant_brain.ops.events tail --run-id X` and `summary --run-id X`.
 - **Phase 1 complete (2026-08-28).** **71 passed.** `harness/registry.py` loads validated `AgentSpec`s from frontmatter in `agents/*.md`. Both shipped agents migrated: `research_scout` (handles `discovery`, `qwen3:14b`) and `knowledge_curator` (handles `curation`, deterministic). Permissions now flow the right direction — `build_work_packet` takes paths from the agent's declaration; a caller may **narrow** but never **widen** (raises `RegistryError`). Malformed declarations fail loudly at load. CLI: `python -m quant_brain.harness.registry [--task-type X] [--json]`.
 - **Phase 2 complete (2026-08-28) — the harness exists.** **95 passed, 1 skipped.** `harness/dispatcher.py` routes typed tasks to the one qualified enabled agent (zero candidates → `NoCapableAgent`, multiple → `AmbiguousDispatch`; never a heuristic pick). `harness/paths.py` is the single enforcement implementation, comparing **resolved** paths so `..` and symlinks cannot smuggle a write out. Handlers cannot dispatch handlers (`ReentrantDispatch`). Every dispatch emits events; `summarize_run` reconstructs a run without reading files. `harness/migrations.py` added `agent_tasks.task_type` + `run_id` guarded by `PRAGMA table_info`. Verified live on a scratch copy: `discovery` → `research_scout` → wrote its raw note → recommended `curation`; `curation` → `knowledge_curator` → promoted 5 source notes. CLI: `scripts/dispatch_task.py --type X [--dry-run]`.
@@ -205,6 +206,16 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 - **Phase 4 complete (merged 2026-09-07).** The thin Agent Reach adapter, recorded-fixture tests, source snapshots, raw-research schema, and production discovery handler are present. Registry and dry-run verification route `discovery` to `research_scout`; the handler returns a recommendation rather than dispatching another agent. Agent Reach health is inspectable. This does **not** accept the Qwen-backed Scout or any research result.
 - **Gate B final verification (2026-09-11):** **201 passed, 1 skipped**; full-tree and scoped Ruff clean. Adversarial tests cover value/polarity preservation, generic ungrounded claims and rules, model-controlled promotion, post-write rollback, and dispatcher failure finalization. Child research questions remain queued and `price_datasets = 0`.
 - **Gate B merged and reconciled (2026-09-15):** PR #2 merged to `main` as `fb3ecc3`; local `main` fast-forwarded with no upstream edits, so accepted Gate A/B code is byte-identical to the reviewed checkpoint. **210 passed, 1 skipped**; Ruff clean on both invocations. The final grounding fix replaced substring containment with whole-token matching at matching polarity, closing meaning reversal in both directions (`commission-free` out of `not commission-free`; `profit` out of `unprofitable`). Child RQs queued, `RQ-66078766` rejected, `strategy_cards`/`backtests`/`price_datasets`/`reviews` all zero. Recovery tag `pre-gatec-reconcile-20260915`. Gate C-adjacent scaffolding and Phase 3 indexing edits remained deliberately uncommitted pending their own review; both were resolved on 2026-09-16 (see the Phase 3 indexing checkpoint entry above). Note the **210** figure includes 13 tests from the then-untracked experimental files; the tracked-only baseline at that commit was **197 passed, 1 skipped**.
+- **Gate C complete (2026-09-16).** Bounded source acquisition now discriminates by credibility before spending a fetch or a model call. **269 passed, 1 skipped**; Ruff clean on both invocations. PR #3 was merged first (`2a876f7`) because excluding `Source_Snapshots` from the index is a prerequisite for a gate that multiplies snapshot volume.
+  - `discovery/source_quality.py` makes the written Tier A/B/C/D policy executable via three signal families: structural host/path shapes (arXiv `/abs/`, DOI, SSRN), allowlists for named institutions and practitioners, and a commercial-intent reject detector that runs **first** so promotional material on a credible host is still rejected. **A bare TLD is never a primary signal** — `.edu` qualifies only on a research/publication/repository path, `.gov` only via a recognized regulator/exchange set. Policy lives in code, not `brain/`, because that tree is agent-readable and a tier list there would let an agent widen its own promotion criteria.
+  - `discovery/acquisition.py` adds normalize → dedupe → classify → rank → budget. Rejected candidates score `-inf` (a finite penalty lets topical slop climb back into the budget); topical overlap is capped below the practitioner bonus because keyword density is the one signal an SEO page fully controls.
+  - **The unlock:** live discovery hardcoded `source_quality="discovery-only"` for every source while the curator only promotes `primary`/`practitioner`, so the live path could never promote anything it found. Tiers are now assigned discovery-side, which is the only correct placement since `llm/validators.py` treats `source_quality` as a protected field.
+  - Pre-extraction content floor (600 chars / 120 words) rejects empty bodies, cookie banners, JavaScript shells, paywall stubs and promotional prose. Rejected pages are **not** snapshotted: the invariant is that nothing reaches the model unpersisted, not that everything fetched is persisted. A failed run discards the snapshots it wrote rather than leaving orphans.
+  - Rejections are recorded twice: a `## Rejected Candidates` table in the raw note for the curator, and a `discovery_candidates_rejected` event for audit. The ledger stays outside the validated JSON block because `RawResearchPayload` is `extra="forbid"`.
+  - Fixed a live bug: the forbidden-subcommand guard scanned every argv token, so any research question containing the word "install" was refused. It now guards the subcommand position, only for agent-reach itself.
+  - Acceptance demonstration: `uv run python scripts/acquisition_report.py` runs the real pipeline over recorded fixtures with zero network and finds **3 primary + 1 practitioner** sources, rejecting promotional material pre-fetch, a cookie banner post-fetch/pre-model, and collapsing a cross-channel duplicate. Exits non-zero if any Gate C check fails.
+  - **Lane status:** operational = Exa (mcporter), GitHub (`gh`). Fixture-only = arXiv `/abs/` (a `/pdf/` → `/abs/` rewrite promoting hits already found; no new dependency, no PDF parser). Deferred = YouTube, RSS. Never = all login-backed social channels.
+  - Gate C did **not** run any child research question. `RQ-6d9c12f4`, `RQ-c920baeb`, `RQ-80be8cf7` remain `queued`; `strategy_cards`/`backtests`/`price_datasets`/`reviews` all remain 0.
 - Note for whoever runs the indexer: `scripts/index_markdown.py index` re-chunks and resets all chunks to `embedding_status='pending'`, dropping embeddings. Follow it with `scripts/embed_chunks.py embed`. Pre-existing behavior, not introduced by Phase 0.
 
 ### What Jason decided (2026-08-28)
@@ -216,7 +227,7 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 6. The plan must be saved and portable enough for Claude Desktop to resume cold.
 
 ### What to do next
-Execute authorized roadmap **Gate C** to improve bounded source acquisition. Phase 5 / Gate B is complete. Do **not** claim Phase 6 or research acceptance until Gate C is verified and the real child Scout acceptance runs are performed under the roadmap.
+Gate C is complete and verified (2026-09-16). **Gate D is the next gate and requires Jason's explicit authorization** — it runs the three queued child research questions one at a time (`RQ-6d9c12f4` exit rules, then `RQ-c920baeb` maximum holding periods, then `RQ-80be8cf7` commission/slippage), each with its own dispatch, snapshots, validated raw note, events and separately dispatched curator verdict. Zero promotions is an acceptable Gate D outcome. Do **not** claim Phase 6 or research acceptance until those runs are performed and reviewed.
 
 | Phase | Status | Done on | Notes |
 |---|---|---|---|
@@ -226,7 +237,8 @@ Execute authorized roadmap **Gate C** to improve bounded source acquisition. Pha
 | 3 — Semantic RAG | **done** | 2026-08-28 | 97 passed. Recall@5 1.00 vs 0.71 lexical (+0.29) |
 | 4 — Agent Reach adapter | **done** | 2026-09-07 | Merged adapter + production discovery handler; fixture tests use zero network |
 | 5 — Qwen runtime + validators | **done** | 2026-09-07 | Gate B: hermetic ladder tests + bounded 14B live smoke; per-attempt hashes/timing recorded |
-| 6 — Research Scout agent | pending | — | Requires validated Qwen integration and real child Scout acceptance runs; experimental runs do not count |
+| 5b — Gate C bounded acquisition | **done** | 2026-09-16 | 269 passed. Tier classifier, ranking, dedupe, pre-Qwen content floor, rejection ledger. Live sources can finally be promotable |
+| 6 — Research Scout agent | pending | — | Gate D: run the three child questions. Needs Jason's authorization; experimental runs do not count |
 | 7 — Re-verify 5 source notes | pending | — | See §4 |
 | 8 — Strategy card + backtest | pending | — | Needs Jason's explicit approval |
 | 9 — Second market door | pending | — | Do not scope until 8 done |

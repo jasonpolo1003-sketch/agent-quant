@@ -171,3 +171,110 @@ def test_production_live_backend_discovers_without_search_fn_injection(tmp_path:
 def test_live_backend_without_injection_requires_network_flag() -> None:
     with pytest.raises(LiveDiscoveryError, match="network is disabled"):
         LiveDiscoveryBackend(allow_network=False).discover("ETF RSI", "mean_reversion")
+
+
+def test_a_research_question_containing_the_word_install_is_not_refused() -> None:
+    """The guard protects the subcommand slot, not every token in the argv."""
+    from quant_brain.discovery.agent_reach import plan_queries
+
+    adapter = AgentReachAdapter(runner=_fake_runner, skip_exe_check=True)
+    query = plan_queries("how do I install and configure a backtesting library", None)[0]
+
+    hits = adapter.search_exa(query, limit=2)
+    assert hits
+
+
+def test_agent_reach_install_subcommand_is_still_refused() -> None:
+    adapter = AgentReachAdapter(exe="agent-reach", runner=_fake_runner, skip_exe_check=True)
+    for forbidden in ("install", "uninstall", "configure"):
+        with pytest.raises(AgentReachError, match=forbidden):
+            adapter._run(["agent-reach", forbidden, "web"])
+
+
+def test_hits_differing_only_by_a_trailing_slash_are_deduped() -> None:
+    from quant_brain.discovery.agent_reach import _dedupe_hits
+
+    hits = [
+        {"title": "A", "url": "https://example.com/terms/rsi.asp"},
+        {"title": "B", "url": "https://example.com/terms/rsi.asp/"},
+        {"title": "C", "url": "https://EXAMPLE.com/terms/rsi.asp"},
+    ]
+    assert len(_dedupe_hits(hits)) == 1
+
+
+def test_an_arxiv_pdf_link_is_rewritten_to_its_abstract_page() -> None:
+    from quant_brain.discovery.agent_reach import prefer_arxiv_abstract
+
+    assert prefer_arxiv_abstract("https://arxiv.org/pdf/2301.04567") == (
+        "https://arxiv.org/abs/2301.04567"
+    )
+    assert prefer_arxiv_abstract("https://arxiv.org/pdf/2301.04567v2.pdf") == (
+        "https://arxiv.org/abs/2301.04567"
+    )
+    # Non-arXiv URLs and existing abstract links pass through untouched.
+    assert prefer_arxiv_abstract("https://arxiv.org/abs/2301.04567") == (
+        "https://arxiv.org/abs/2301.04567"
+    )
+    assert prefer_arxiv_abstract("https://example.com/pdf/x") == "https://example.com/pdf/x"
+
+
+def test_search_returns_a_candidate_pool_larger_than_the_source_cap() -> None:
+    """Truncating to the cap in the adapter would make downstream ranking a no-op."""
+    from quant_brain.discovery.agent_reach import CANDIDATE_POOL_FACTOR
+
+    assert CANDIDATE_POOL_FACTOR > 1
+
+    many = json.dumps(
+        {"results": [{"title": f"h{i}", "url": f"https://e{i}.example/p"} for i in range(12)]}
+    )
+
+    def runner(argv: list[str], timeout: int = 60) -> tuple[int, str, str]:
+        del timeout
+        if "doctor" in argv:
+            return 0, DOCTOR_JSON, ""
+        return 0, many, ""
+
+    adapter = AgentReachAdapter(runner=runner, skip_exe_check=True)
+    hits = adapter.search_for_question("exit rules", "mean_reversion", limit=2)
+
+    assert len(hits) > 2
+    assert len(hits) <= 2 * CANDIDATE_POOL_FACTOR
+
+
+def test_only_operational_lanes_are_dispatched() -> None:
+    """Declared lanes state what is real; login-backed channels appear nowhere."""
+    from quant_brain.discovery.agent_reach import (
+        LOGIN_BACKED_CHANNELS,
+        SEARCH_LANES,
+        operational_lanes,
+    )
+
+    assert {lane.name for lane in operational_lanes()} == {"exa", "github"}
+    assert {lane.status for lane in SEARCH_LANES} <= {
+        "operational",
+        "fixture-only",
+        "deferred",
+    }
+    assert all(lane.channel not in LOGIN_BACKED_CHANNELS for lane in SEARCH_LANES)
+
+
+def test_fetch_web_passes_its_timeout_to_a_fetcher_that_accepts_one() -> None:
+    seen: dict[str, object] = {}
+
+    def fetch_impl(url, *, timeout=None):
+        seen["timeout"] = timeout
+        return {"url": url, "content": "body", "channel": "web"}
+
+    AgentReachAdapter(
+        runner=_fake_runner, fetch_impl=fetch_impl, timeout=45, skip_exe_check=True
+    ).fetch_web("https://example.com/x")
+
+    assert seen["timeout"] == 45
+
+
+def test_fetch_web_still_supports_a_fetcher_that_takes_only_a_url() -> None:
+    result = AgentReachAdapter(
+        runner=_fake_runner, fetch_impl=lambda url: PAGE_MD, skip_exe_check=True
+    ).fetch_web("https://example.com/x")
+
+    assert result["content"] == PAGE_MD

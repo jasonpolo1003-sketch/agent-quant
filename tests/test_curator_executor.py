@@ -193,6 +193,54 @@ def test_model_judgment_alone_cannot_authorize_promotion(tmp_path):
     assert not (tmp_path / "brain" / "01_Sources").exists()
 
 
+def test_a_gate_c_classified_primary_tier_is_not_itself_promotion_authority(tmp_path):
+    """Gate C made live sources promotable by tier for the first time.
+
+    A credible publisher is provenance, not proof: the extractive-support gate
+    must still block a claim the source's own evidence does not contain. This
+    pins that the tier classifier widened what *can* be promoted without
+    weakening what *must* be true before promotion happens.
+    """
+    from quant_brain.discovery.source_quality import classify_source
+
+    verdict = classify_source("https://arxiv.org/abs/2301.04567")
+    assert verdict.tier == "primary", "fixture must use a genuinely primary URL"
+
+    db_path = tmp_path / "brain.sqlite"
+    init_database(db_path)
+    task = add_research_question(db_path, "Research ETF mean reversion", "mean_reversion")
+    payload = sample_payload(task["research_id"])
+    payload["sources"] = [
+        {
+            "title": "Mean Reversion Exit Rules in ETF Markets",
+            "source_type": "paper",
+            "url_or_citation": "https://arxiv.org/abs/2301.04567",
+            # The evidence is a real quotation; the claim goes beyond it.
+            "main_claim": "Exit after exactly five trading days maximizes returns.",
+            "evidence": "We compare fixed horizon exits and threshold based exits.",
+            "possible_strategy_rule": "Exit after five trading days.",
+            "risks": ["Interpretation not stated by the source."],
+            "confidence": "high",
+            "source_quality": verdict.tier,
+            "asset_classes": ["etf"],
+            "data_required": ["daily close"],
+            "data_access": "available-now",
+            "mvp_testable": True,
+        }
+    ]
+    payload["curator_recommendation"] = "promote_source"
+    raw_note = tmp_path / "brain" / "00_Inbox" / "Raw_Research" / f"{task['research_id']}.md"
+    write_raw_note(raw_note, task["research_id"], payload)
+    update_research_status(db_path, task["research_id"], "raw_saved", raw_note_path=str(raw_note))
+
+    result = execute_curator_task(tmp_path, db_path, task["research_id"])
+
+    assert result.promoted_sources_count == 0
+    assert result.status == "rejected"
+    with connect(db_path) as conn:
+        assert conn.execute("select count(*) from sources").fetchone()[0] == 0
+
+
 def test_generic_ungrounded_claim_cannot_authorize_promotion(tmp_path):
     """Promotion requires extractive support even without known risk keywords."""
     db_path = tmp_path / "brain.sqlite"

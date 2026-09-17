@@ -1,5 +1,11 @@
 # Quant Agent Brain — Session Handoff
 
+> **Gate C verified 2026-09-16.** Bounded source acquisition now discriminates by credibility before spending a fetch or a model call. `discovery/source_quality.py` makes the written Tier A/B/C/D policy executable (structural host/path signals + allowlists + a commercial-intent reject detector that runs first); `discovery/acquisition.py` adds normalize → dedupe → classify → rank → budget plus a 600-char/120-word content floor. The central unlock: live discovery previously hardcoded `source_quality="discovery-only"` while the curator only promotes `primary`/`practitioner`, so the live path could never promote anything it found. Tiers are now assigned discovery-side, the only correct placement given the validators' protected-field guard. **269 passed, 1 skipped**; Ruff clean on both invocations. PR #3 was merged first (`2a876f7`). The three child questions remain **queued** — Gate C ran none of them.
+>
+> Acceptance demonstration: `uv run python scripts/acquisition_report.py` — zero network, finds 3 primary + 1 practitioner, rejects promotional material pre-fetch and a cookie banner post-fetch/pre-model, collapses a cross-channel duplicate, exits non-zero on any failed check.
+>
+> **Gate D is next and requires Jason's explicit authorization.**
+>
 > **Gate B verified 2026-09-11.** The production live Research Scout passes fetched snapshots through `quant_brain.llm.qwen_call`: qwen3:14b at temperature 0/schema mode, deterministic validation, exactly one 14B repair, qwen3.8:27b escalation, then structured fail closed. Every attempt records model, duration, prompt/response SHA-256 hashes, and validator verdict/reasons in `agent_events`. Durable promotion requires fully extractive main claims and strategy rules; late write failures restore/delete notes consistently; dispatcher validation failures finalize tasks as failed. Hermetic and adversarial tests pass (**201 passed, 1 skipped**), with full-tree/scoped Ruff clean. Phase 6 remains pending; Gate C is next.
 >
 > **Gate A verified 2026-09-07.** Desktop `main` was safely fast-forwarded from `f053341` to merged PR #1 commit `feaa84e86db5b435cf12a21d65e7e924cd116bbb`, then the pre-existing tracked and untracked work was reapplied. The exact backup directory is `C:\Users\jason\quant-agent-brain-gate-a-backup-20260907-171959`; it contains `tracked-worktree.patch`, `tracked-index.patch`, `untracked.tar.gz`, `untracked-list.txt`, `head-before.txt`, `status-before.z`, and related inventory files. The backup branch and retained stash also preserve the pre-integration state.
@@ -600,12 +606,28 @@ single-model run that gates Phase 3 is unaffected.
 
 ## Gate Status and Resume Rule
 
-Gate A reconciliation and Gate B / master-plan Phase 5 are complete and merged. Jason has
-authorized roadmap Gate C, which is next. This does not authorize research
-execution (Gate D), a strategy card, a backtest, or paper trading. Follow the explicit
-gated roadmap and do not infer a production step from the experimental run history.
-Preserve the queued child research
-questions `RQ-6d9c12f4`, `RQ-c920baeb`, and `RQ-80be8cf7` without executing them.
+Gate A reconciliation, Gate B / master-plan Phase 5, and Gate C are complete. **Gate D is
+next and is NOT yet authorized** — it requires Jason's explicit go-ahead. Gate D runs the
+three child research questions one at a time, in order: `RQ-6d9c12f4` (exit rules),
+`RQ-c920baeb` (maximum holding periods), `RQ-80be8cf7` (commission/slippage). Each needs
+its own dispatch, snapshot set, validated raw note, event trail, and a **separately
+dispatched** curator verdict, with tests run before the next child starts. Zero promotions
+is an acceptable outcome.
+
+Nothing here authorizes a strategy card, market-data download, backtest, or paper trading.
+Follow the explicit gated roadmap and do not infer a production step from the experimental
+run history. Until Gate D is authorized, preserve `RQ-6d9c12f4`, `RQ-c920baeb`, and
+`RQ-80be8cf7` in `queued` without executing them.
+
+### Acquisition lane status (Gate C)
+
+| Lane | Status | Notes |
+|---|---|---|
+| Exa via mcporter | operational | Primary search channel |
+| GitHub via `gh` | operational | Top-up only when search is short of the cap |
+| arXiv `/abs/` | fixture-only | `/pdf/` → `/abs/` rewrite; promotes hits already found. No API client, no PDF parser |
+| YouTube, RSS | deferred | Declared so doctor output maps cleanly; never dispatched |
+| Reddit, X, Facebook, Instagram, XiaoHongShu, LinkedIn | never | Login-backed; appear in no lane |
 
 ## Commands To Verify State
 
@@ -616,6 +638,9 @@ uv run ruff check . --no-cache
 uv run ruff check src tests scripts
 uv run python -m quant_brain.harness.registry --task-type discovery --json
 uv run python scripts/dispatch_task.py --type discovery --research-id RQ-6d9c12f4 --dry-run
+
+# Gate C acceptance demonstration (offline, no database writes)
+uv run python scripts/acquisition_report.py
 ```
 
 ## Important Design Rule

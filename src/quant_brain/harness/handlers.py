@@ -122,6 +122,7 @@ def run_discovery(task: Task, agent: AgentSpec, context: WorkPacketContext) -> H
             "sources_count": result.get("sources_count"),
             "backend": result.get("backend"),
             "snapshots": list(result.get("snapshots") or []),
+            "rejected_count": result.get("rejected_count", 0),
             "model_used": result.get("model_used"),
             "repaired": result.get("repaired", False),
             "escalated": result.get("escalated", False),
