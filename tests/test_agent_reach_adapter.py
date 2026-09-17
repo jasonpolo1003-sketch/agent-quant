@@ -362,3 +362,61 @@ def test_the_search_channel_consulted_is_the_real_doctor_key() -> None:
     # The general invariant: every dispatched lane names an enabled channel.
     # This catches the whole defect class, not just this instance.
     assert {lane.channel for lane in operational_lanes()} <= ENABLED_CHANNELS
+
+
+def test_a_channel_reported_off_is_not_usable() -> None:
+    """The verbatim exa_search record from the real doctor on this machine."""
+    health = parse_channel_health(
+        {
+            "exa_search": {
+                "status": "off",
+                "active_backend": None,
+                # Verbatim doctor text. The fullwidth punctuation is real
+                # output, so RUF001 is suppressed rather than the text edited.
+                "message": (
+                    "mcporter 已装但 Exa 未配置。运行：\n"  # noqa: RUF001
+                    "  mcporter config add exa https://mcp.exa.ai/mcp --scope home"
+                ),
+                "name": "全网语义搜索",
+            }
+        }
+    )
+
+    assert is_channel_usable(health, "exa_search") is False
+
+
+def test_search_fails_closed_when_the_only_search_channel_is_unconfigured() -> None:
+    """The real machine state must fail closed cleanly, never crash.
+
+    With exa_search off but github usable, search proceeds GitHub-only. With
+    both unavailable it raises. Neither path may raise an encoding or type
+    error.
+    """
+    base = json.loads(DOCTOR_LIVE_JSON)
+    assert base["exa_search"]["status"] == "off"
+
+    def runner(argv: list[str], timeout: int = 60) -> tuple[int, str, str]:
+        del timeout
+        if "doctor" in argv:
+            return 0, json.dumps(base, ensure_ascii=False), ""
+        if argv and argv[0] == "gh":
+            return 0, json.dumps([{"url": "https://github.com/x/y", "name": "y"}]), ""
+        return 1, "", "exa is off; must not be called"
+
+    hits = AgentReachAdapter(runner=runner, skip_exe_check=True).search_for_question(
+        "exit rules", None, limit=2
+    )
+    assert [hit["url"] for hit in hits] == ["https://github.com/x/y"]
+
+    both_off = json.loads(DOCTOR_LIVE_JSON)
+    both_off["github"]["status"] = "off"
+
+    def runner_both_off(argv: list[str], timeout: int = 60) -> tuple[int, str, str]:
+        del timeout
+        if "doctor" in argv:
+            return 0, json.dumps(both_off, ensure_ascii=False), ""
+        return 1, "", "no channel should be called"
+
+    adapter = AgentReachAdapter(runner=runner_both_off, skip_exe_check=True)
+    with pytest.raises(AgentReachError, match="no usable Agent Reach search channel"):
+        adapter.search_for_question("exit rules", None, limit=2)

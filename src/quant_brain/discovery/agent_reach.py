@@ -235,9 +235,15 @@ def is_channel_usable(health: dict[str, ChannelHealth], channel: str) -> bool:
     info = health.get(channel)
     if info is None:
         return False
+    if info.status == "off":
+        # Not configured upstream (e.g. exa_search before `mcporter config add`).
+        # Rejected by statement rather than by falling through the warn branch,
+        # so a future status value cannot become usable by accident.
+        return False
     if info.status == "ok":
         return True
-    return info.status == "warn" and channel in ENABLED_CHANNELS
+    # Anything not ok/warn stays unusable: the default is deny.
+    return info.status == "warn"
 
 
 def extract_search_hits(raw: str, *, source_type: str) -> list[dict[str, Any]]:
