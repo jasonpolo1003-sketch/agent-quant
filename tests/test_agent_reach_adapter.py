@@ -420,3 +420,49 @@ def test_search_fails_closed_when_the_only_search_channel_is_unconfigured() -> N
     adapter = AgentReachAdapter(runner=runner_both_off, skip_exe_check=True)
     with pytest.raises(AgentReachError, match="no usable Agent Reach search channel"):
         adapter.search_for_question("exit rules", None, limit=2)
+
+
+def test_a_long_research_question_is_trimmed_to_githubs_query_limit() -> None:
+    """GitHub rejects >=256 chars, turning an empty result into a query error.
+
+    Trimming does not make a long question answerable by GitHub; it makes the
+    reported reason truthful.
+    """
+    from quant_brain.discovery.agent_reach import (
+        GITHUB_QUERY_MAX_CHARS,
+        bound_github_query,
+    )
+
+    long_question = (
+        "What source-supported EXIT rules pair with daily ETF RSI oversold "
+        "entries (locked candidates: Wilder RSI(14)<30 at close or RSI(2)<20 "
+        "at close; next-bar fill) for SPY/QQQ/IWM, without optimizing? Return "
+        "at most TWO exit candidates, each with exact rule text, upstream "
+        "citation, and instrument/timeframe assumptions. OUT OF SCOPE: "
+        "changing entries, backtests, best RSI settings."
+    )
+    assert len(long_question) > GITHUB_QUERY_MAX_CHARS
+
+    bounded = bound_github_query(long_question)
+    assert len(bounded) < GITHUB_QUERY_MAX_CHARS
+    assert not bounded.endswith(" ")
+    assert long_question.startswith(bounded)
+
+    short = "ETF mean reversion exit rules"
+    assert bound_github_query(short) == short
+
+
+def test_search_github_sends_the_bounded_query() -> None:
+    sent: list[str] = []
+
+    def runner(argv: list[str], timeout: int = 60) -> tuple[int, str, str]:
+        del timeout
+        sent.append(argv[3])
+        return 0, json.dumps([]), ""
+
+    adapter = AgentReachAdapter(runner=runner, skip_exe_check=True)
+    adapter.search_github("word " * 200, limit=3)
+
+    from quant_brain.discovery.agent_reach import GITHUB_QUERY_MAX_CHARS
+
+    assert sent and len(sent[0]) < GITHUB_QUERY_MAX_CHARS

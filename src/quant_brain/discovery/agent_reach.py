@@ -46,6 +46,14 @@ DEFAULT_WINDOWS_EXE = r"C:\Users\jason\.agent-reach-venv\Scripts\agent-reach.exe
 # The cap on *fetched* sources is unchanged and still enforced downstream.
 CANDIDATE_POOL_FACTOR = 3
 
+# GitHub's search API rejects long queries with "Invalid search query". The
+# documented cap is 256 characters, but the effective limit is lower and varies
+# with content because GitHub also counts operators and terms -- one real
+# research question was rejected at 252 and accepted at 230. We trim well below
+# the documented cap rather than trying to reproduce GitHub's parser; a query
+# this long is already a poor fit for a code-repository search.
+GITHUB_QUERY_MAX_CHARS = 200
+
 
 @dataclass(frozen=True)
 class SearchLane:
@@ -177,6 +185,25 @@ def plan_queries(
         if tagged not in queries:
             queries.append(tagged)
     return queries[:max_queries]
+
+
+def bound_github_query(query: str) -> str:
+    """Trim a query to GitHub's search-API length limit, on a word boundary.
+
+    GitHub rejects queries at or above 256 characters with "Invalid search
+    query". A research question is routinely longer than that, so an unbounded
+    query turns every GitHub search into a *malformed-query error* rather than
+    an honest empty result -- which misreports why a lane found nothing.
+
+    Trimming does not make a long question answerable by GitHub; it makes the
+    answer truthful.
+    """
+    cleaned = " ".join((query or "").split())
+    if len(cleaned) < GITHUB_QUERY_MAX_CHARS:
+        return cleaned
+    trimmed = cleaned[: GITHUB_QUERY_MAX_CHARS - 1]
+    head, _, _tail = trimmed.rpartition(" ")
+    return head or trimmed
 
 
 def _as_completed(argv: list[str], result: Any) -> subprocess.CompletedProcess[str]:
@@ -417,7 +444,7 @@ class AgentReachAdapter:
                 "gh",
                 "search",
                 "repos",
-                query,
+                bound_github_query(query),
                 "--json",
                 "url,name,description",
                 "--limit",
