@@ -126,6 +126,21 @@ def test_cookie_banner_boilerplate_is_rejected_as_thin_content():
     assert verdict.signals[0] in {"cookie-banner", "thin-content"}
 
 
+def test_a_nav_prefix_cannot_hide_a_cookie_banner():
+    """Anchored patterns let "Home About Contact" defeat the detector."""
+    body = "Home About Contact Privacy " + FETCH_BODIES["https://seo-farm.example/rsi-guide"]
+    verdict = assess_fetched_content("https://seo-farm.example/x", body)
+    assert verdict is not None and verdict.is_rejected
+
+
+def test_a_long_article_mentioning_cookies_is_not_treated_as_a_banner():
+    """Boilerplate detection applies to short shells, not to real content."""
+    article = FETCH_BODIES["https://arxiv.org/abs/2301.04567"]
+    body = "We use cookies on this site. " + article * 2
+    assert len(" ".join(body.split())) > 2000
+    assert assess_fetched_content("https://arxiv.org/abs/2301.04567", body) is None
+
+
 def test_a_javascript_shell_page_is_rejected():
     body = FETCH_BODIES["https://spa.example/app"]
     verdict = assess_fetched_content("https://spa.example/app", body)

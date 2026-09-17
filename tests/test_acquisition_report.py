@@ -65,6 +65,18 @@ def test_the_demonstration_respects_a_narrowed_source_cap():
     assert report["gate_c_checks"]["within_source_cap"]
 
 
+def test_every_gate_c_check_still_passes_at_a_narrowed_cap():
+    """A narrowed cap is an explicitly supported narrowing, not a failure."""
+    for limit in (1, 2, 3):
+        report = _module().build_report(FIXTURES, QUESTION, limit)
+        failed = [
+            name
+            for name, value in report["gate_c_checks"].items()
+            if isinstance(value, bool) and not value
+        ]
+        assert failed == [], f"limit={limit} failed {failed}"
+
+
 def test_the_demonstration_writes_nothing_into_the_project_tree():
     """It snapshots to a scratch directory; a demo is not a run."""
     project_root = SCRIPT.parents[1]

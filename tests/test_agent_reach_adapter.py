@@ -218,6 +218,29 @@ def test_an_arxiv_pdf_link_is_rewritten_to_its_abstract_page() -> None:
     assert prefer_arxiv_abstract("https://example.com/pdf/x") == "https://example.com/pdf/x"
 
 
+def test_search_returns_a_candidate_pool_larger_than_the_source_cap() -> None:
+    """Truncating to the cap in the adapter would make downstream ranking a no-op."""
+    from quant_brain.discovery.agent_reach import CANDIDATE_POOL_FACTOR
+
+    assert CANDIDATE_POOL_FACTOR > 1
+
+    many = json.dumps(
+        {"results": [{"title": f"h{i}", "url": f"https://e{i}.example/p"} for i in range(12)]}
+    )
+
+    def runner(argv: list[str], timeout: int = 60) -> tuple[int, str, str]:
+        del timeout
+        if "doctor" in argv:
+            return 0, DOCTOR_JSON, ""
+        return 0, many, ""
+
+    adapter = AgentReachAdapter(runner=runner, skip_exe_check=True)
+    hits = adapter.search_for_question("exit rules", "mean_reversion", limit=2)
+
+    assert len(hits) > 2
+    assert len(hits) <= 2 * CANDIDATE_POOL_FACTOR
+
+
 def test_only_operational_lanes_are_dispatched() -> None:
     """Declared lanes state what is real; login-backed channels appear nowhere."""
     from quant_brain.discovery.agent_reach import (

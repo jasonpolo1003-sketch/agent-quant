@@ -179,6 +179,10 @@ def _source_from_fetch(
     # ``confidence`` stays low and ``mvp_testable`` stays false regardless of
     # tier: a credible publisher is provenance, not a tested claim. Only the
     # model, under validation, may raise those.
+    #
+    # ``source_quality`` is NOT read from the candidate. Upstream search results
+    # are untrusted input, and letting a hit carry its own tier would let any
+    # result claim `primary` and bypass the classifier entirely.
     return {
         "title": candidate.get("title") or fetched.get("title") or candidate["url"],
         "source_type": candidate.get("source_type") or "web",
@@ -188,7 +192,7 @@ def _source_from_fetch(
         "possible_strategy_rule": candidate.get("possible_strategy_rule") or "",
         "risks": list(candidate.get("risks") or ["Live fetch is provenance, not proof of edge."]),
         "confidence": candidate.get("confidence") or "low",
-        "source_quality": candidate.get("source_quality") or tier,
+        "source_quality": tier,
         "asset_classes": list(candidate.get("asset_classes") or []),
         "data_required": list(candidate.get("data_required") or []),
         "data_access": candidate.get("data_access") or "available-now",
@@ -316,9 +320,20 @@ class LiveDiscoveryBackend:
 
         sources: list[dict[str, Any]] = []
         snapshots: list[str] = []
-        by_url = {str(hit.get("url") or ""): hit for hit in hits}
+        # Key on the same fields the candidate builder reads, so a hit using
+        # ``url_or_citation`` still finds its own record instead of collapsing
+        # onto the empty-string key and losing its claim/evidence fields.
+        by_url = {
+            str(hit.get("url") or hit.get("url_or_citation") or ""): hit for hit in hits
+        }
+        # Candidates that lost the budget but were not rejected on quality, kept
+        # in rank order so a post-fetch rejection can be backfilled rather than
+        # silently shrinking the yield.
+        backfill = [c for c in rejected if c.tier != "reject"]
+        queue = list(accepted)
         try:
-            for candidate in accepted:
+            while queue and len(sources) < limit:
+                candidate = queue.pop(0)
                 url = candidate.url
                 fetched = fetch_fn(url)
                 content = str(fetched.get("content") or "")
@@ -334,6 +349,14 @@ class LiveDiscoveryBackend:
                         signals=list(content_verdict.signals),
                     )
                     rejected_records.append(record)
+                    # Replace it from the next-best candidate rather than
+                    # letting a thin page quietly cost a slot.
+                    if backfill:
+                        promoted = backfill.pop(0)
+                        rejected_records = [
+                            r for r in rejected_records if r["url"] != promoted.url
+                        ]
+                        queue.append(promoted)
                     continue
 
                 snapshot_path = save_source_snapshot(

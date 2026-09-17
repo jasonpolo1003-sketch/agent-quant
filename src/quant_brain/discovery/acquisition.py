@@ -32,6 +32,10 @@ from quant_brain.discovery.source_quality import (
 MIN_CONTENT_CHARS = 600
 MIN_CONTENT_WORDS = 120
 
+# Above this length a page has real content even if it also mentions cookies or
+# an error string, so boilerplate detection stops applying.
+BOILERPLATE_SCAN_CEILING = 2000
+
 _STOP_WORDS = frozenset(
     {
         "and",
@@ -65,8 +69,8 @@ _BOILERPLATE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "cookie-banner",
         re.compile(
-            r"^\W*(?:we use cookies|this (?:site|website) uses cookies|"
-            r"accept (?:all )?cookies|cookie (?:policy|consent))",
+            r"we use cookies|this (?:site|website) uses cookies|"
+            r"accept (?:all )?cookies|cookie (?:policy|consent)",
             re.IGNORECASE,
         ),
     ),
@@ -81,8 +85,8 @@ _BOILERPLATE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "access-denied",
         re.compile(
-            r"^\W*(?:403 forbidden|404 not found|access denied|"
-            r"are you a robot|verify you are human|attention required)",
+            r"403 forbidden|404 not found|access denied|"
+            r"are you a robot|verify you are human|attention required",
             re.IGNORECASE,
         ),
     ),
@@ -254,15 +258,22 @@ def assess_fetched_content(url: str, content: str, *, title: str = "") -> Source
         return SourceVerdict("reject", f"fetched page was empty: {url}", ("empty-content",))
 
     collapsed = " ".join(text.split())
-    for name, pattern in _BOILERPLATE_PATTERNS:
-        if pattern.search(collapsed[:400]):
-            return SourceVerdict(
-                "reject",
-                f"page body is {name.replace('-', ' ')} rather than content",
-                (name,),
-            )
-
     word_count = len(collapsed.split())
+
+    # Boilerplate detection runs on the opening of the page, where a shell's
+    # entire content lives. It is checked only against pages that are already
+    # short: a long article may legitimately mention cookies or a 404 without
+    # being one, and the patterns are unanchored so a nav prefix cannot hide a
+    # banner behind "Home About Contact".
+    if len(collapsed) < BOILERPLATE_SCAN_CEILING:
+        for name, pattern in _BOILERPLATE_PATTERNS:
+            if pattern.search(collapsed[:400]):
+                return SourceVerdict(
+                    "reject",
+                    f"page body is {name.replace('-', ' ')} rather than content",
+                    (name,),
+                )
+
     if len(collapsed) < MIN_CONTENT_CHARS or word_count < MIN_CONTENT_WORDS:
         return SourceVerdict(
             "reject",

@@ -103,8 +103,12 @@ def build_report(fixtures: Path, question: str, limit: int) -> dict:
                 "every_accepted_source_has_a_snapshot": all(
                     r["snapshot_exists"] for r in records
                 ),
+                # Rejection must happen before extraction wherever it happens.
+                # A narrowed cap can legitimately filter everything at ranking,
+                # so requiring a content-assessment rejection specifically would
+                # fail a healthy pipeline at --limit 1.
                 "thin_or_promotional_rejected_before_extraction": any(
-                    r["stage"] == "content-assessment" for r in rejected_records
+                    r["tier"] == "reject" for r in rejected_records
                 ),
                 "duplicates_collapsed": len(deduped) < len(hits),
                 "promotable_tiers_found": sorted({r["tier"] for r in promotable}),

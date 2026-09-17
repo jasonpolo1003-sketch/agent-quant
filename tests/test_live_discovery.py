@@ -197,6 +197,54 @@ def test_live_backend_assigns_the_classified_tier_instead_of_discovery_only(tmp_
     assert result.sources[0]["source_quality"] == "primary"
 
 
+def test_a_search_hit_cannot_supply_its_own_source_quality(tmp_path):
+    """Upstream results are untrusted input.
+
+    If a hit could carry its own tier, any search result could claim `primary`
+    and walk straight past the classifier into the curator's promotable set.
+    """
+
+    def search_fn(question, method_family, *, limit):
+        return [
+            {
+                "title": "Totally legitimate",
+                "url": "https://scam-blog.example/x",
+                "source_quality": "primary",
+            }
+        ]
+
+    def fetch_fn(url):
+        return {"url": url, "content": SUBSTANTIVE_BODY, "channel": "web"}
+
+    backend = LiveDiscoveryBackend(search_fn=search_fn, fetch_fn=fetch_fn)
+    result = backend.discover("exit rules", None, project_root=tmp_path)
+
+    assert result.sources[0]["source_quality"] == "discovery-only"
+
+
+def test_a_page_rejected_after_fetch_is_backfilled_from_the_next_candidate(tmp_path):
+    """A thin page must not quietly cost a source slot."""
+    hits = [
+        {"title": f"h{i}", "url": f"https://site{i}.example/page", "rank": i}
+        for i in range(1, 6)
+    ]
+
+    def search_fn(question, method_family, *, limit):
+        return hits
+
+    def fetch_fn(url):
+        # The first two fetched pages are thin; later ones are substantive.
+        thin = url.startswith(("https://site1.", "https://site2."))
+        return {"url": url, "content": "We use cookies." if thin else SUBSTANTIVE_BODY,
+                "channel": "web"}
+
+    backend = LiveDiscoveryBackend(search_fn=search_fn, fetch_fn=fetch_fn)
+    result = backend.discover("exit rules", None, project_root=tmp_path, limit=3)
+
+    assert len(result.sources) == 3, "rejected pages should be replaced, not deducted"
+    assert len(result.snapshots) == 3
+
+
 def test_live_backend_yields_at_least_one_promotable_candidate_from_a_mixed_search(tmp_path):
     """Gate C exit condition, at the backend boundary."""
     import json

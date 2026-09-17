@@ -35,6 +35,11 @@ LOGIN_BACKED_CHANNELS = frozenset(
 URL_RE = re.compile(r"https?://[^\s\"'<>]+")
 DEFAULT_WINDOWS_EXE = r"C:\Users\jason\.agent-reach-venv\Scripts\agent-reach.exe"
 
+# Search returns a candidate pool this many times the source cap, so the ranker
+# has something to choose between and post-fetch rejections can be backfilled.
+# The cap on *fetched* sources is unchanged and still enforced downstream.
+CANDIDATE_POOL_FACTOR = 3
+
 
 @dataclass(frozen=True)
 class SearchLane:
@@ -420,7 +425,15 @@ class AgentReachAdapter:
         *,
         limit: int = 5,
     ) -> list[dict[str, Any]]:
-        """Health-check, then search usable zero-config channels. No injection required."""
+        """Health-check, then search usable zero-config channels. No injection required.
+
+        Returns a bounded *candidate pool*, not the final source set. Truncating
+        to ``limit`` here would make downstream ranking a no-op -- the caller
+        could only ever reorder the hits the router happened to return first,
+        which is exactly the SEO-favouring behaviour Gate C exists to fix. The
+        pool is capped at ``CANDIDATE_POOL_FACTOR * limit`` so the run stays
+        bounded while leaving the ranker something to choose between.
+        """
         health = self.check_health()
         queries = plan_queries(question, method_family)
         hits: list[dict[str, Any]] = []
@@ -431,15 +444,16 @@ class AgentReachAdapter:
                 "no usable Agent Reach search channel (Exa/mcporter or GitHub); "
                 "run `agent-reach doctor --json` and install a zero-config backend"
             )
+        pool_target = max(1, limit) * CANDIDATE_POOL_FACTOR
         per_query = max(1, limit)
         if search_usable:
             for query in queries:
                 hits.extend(self.search_exa(query, limit=per_query))
-                if len(_dedupe_hits(hits)) >= limit:
+                if len(_dedupe_hits(hits)) >= pool_target:
                     break
-        if github_usable and len(_dedupe_hits(hits)) < limit:
+        if github_usable and len(_dedupe_hits(hits)) < pool_target:
             hits.extend(self.search_github(queries[0], limit=per_query))
-        unique = _dedupe_hits(hits)[:limit]
+        unique = _dedupe_hits(hits)[:pool_target]
         if not unique:
             raise AgentReachError("Agent Reach search returned no URLs")
         return unique
