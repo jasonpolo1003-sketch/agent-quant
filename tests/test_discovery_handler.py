@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -289,6 +290,64 @@ def test_dispatched_live_path_writes_snapshots_without_curation(project, monkeyp
     assert not (root / "brain" / "01_Sources").exists()
     reviews = root / "brain" / "00_Inbox" / "Curator_Reviews"
     assert not any(reviews.glob("*.md"))
+
+
+def test_rejected_candidates_are_recorded_in_the_note_and_the_event_ledger(project, monkeypatch):
+    """Honest rejection is reported two ways: prose for the curator, events for audit."""
+    from quant_brain.ops.events import list_events
+
+    root, db_path = project
+    task_row = add_research_question(db_path, "Research ETF RSI mean reversion", "mean_reversion")
+    register_default_handlers()
+    stub_validated_qwen(monkeypatch)
+
+    def search_fn(question, method_family, *, limit):
+        return [
+            {"title": "Paper", "url": "https://arxiv.org/abs/2301.04567", "source_type": "paper"},
+            {"title": "Guaranteed returns", "url": "https://scam.example/go/x?ref=1"},
+        ]
+
+    def fetch_fn(url):
+        return {"url": url, "title": "P", "content": PAGE_BODY, "channel": "web"}
+
+    result = dispatch(
+        Task(
+            task_id="T-reject",
+            task_type="discovery",
+            run_id="RUN-reject",
+            payload={
+                "research_id": task_row["research_id"],
+                "backend": "live",
+                "allow_network": False,
+                "search_fn": search_fn,
+                "fetch_fn": fetch_fn,
+            },
+        ),
+        project_root=root,
+        db_path=db_path,
+    )
+
+    assert result.detail["rejected_count"] == 1
+
+    note = (root / "brain" / "00_Inbox" / "Raw_Research" / f"{task_row['research_id']}.md").read_text(
+        encoding="utf-8"
+    )
+    assert "## Rejected Candidates" in note
+    assert "scam.example" in note
+    # The ledger is prose, deliberately outside the validated JSON contract:
+    # RawResearchPayload forbids extra fields.
+    payload_block = json.loads(note.split("```json")[1].split("```")[0])
+    assert "rejected" not in payload_block
+    assert all("scam.example" not in s["url_or_citation"] for s in payload_block["sources"])
+
+    events = list_events(db_path, run_id="RUN-reject")
+    rejected_events = [e for e in events if e["event_type"] == "discovery_candidates_rejected"]
+    assert len(rejected_events) == 1
+    payload = rejected_events[0]["payload"]
+    assert payload["rejected_count"] == 1
+    assert payload["accepted_count"] == 1
+    assert payload["rejected"][0]["signals"]
+    assert "scam.example" in payload["rejected"][0]["url"]
 
 
 def test_dispatched_live_uses_adapter_without_search_fn(project, monkeypatch):
