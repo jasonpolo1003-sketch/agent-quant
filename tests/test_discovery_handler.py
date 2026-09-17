@@ -65,6 +65,27 @@ Promote useful sources.
 """
 
 
+# A fetched page must clear the acquisition content floor to reach the model.
+# These tests pin dispatch, capping and rollback behaviour, not thin-content
+# rejection, so they use a realistic page body rather than a placeholder.
+PAGE_BODY = " ".join(
+    [
+        "Wilder's relative strength index compares the average magnitude of recent",
+        "gains to the average magnitude of recent losses over a fixed lookback of",
+        "fourteen periods by default. The value is bounded between zero and one",
+        "hundred, and readings below thirty are conventionally described as",
+        "oversold. Exact evidence passage. The documentation treats these levels as",
+        "conventions rather than tested decision rules, and does not establish an",
+        "exit condition, a maximum holding period, or any cost assumption. A signal",
+        "derived from a closing price is not observable until that close has",
+        "occurred, so execution must happen no earlier than the following bar.",
+        "Treating a close-derived signal as executable at the same close introduces",
+        "lookahead bias and overstates measured performance on any instrument.",
+    ]
+    * 2
+)
+
+
 @pytest.fixture
 def project(tmp_path):
     db_path = tmp_path / "brain.sqlite"
@@ -239,7 +260,7 @@ def test_dispatched_live_path_writes_snapshots_without_curation(project, monkeyp
         return {
             "url": url,
             "title": "RSI",
-            "content": "Wilder RSI documentation body.",
+            "content": PAGE_BODY,
             "channel": "web",
             "backend": "fixture",
         }
@@ -351,7 +372,7 @@ def test_post_write_db_failure_leaves_no_orphan_completed_note(project, monkeypa
                         {"title": "RSI docs", "url": "https://example.com/rsi",
                          "source_type": "docs", "source_quality": "primary"}
                     ],
-                    "fetch_fn": lambda url: {"url": url, "content": "Exact evidence passage.",
+                    "fetch_fn": lambda url: {"url": url, "content": PAGE_BODY,
                                              "channel": "web", "backend": "fixture"},
                 },
                 run_id="RUN-postwrite",
@@ -410,7 +431,7 @@ def test_post_write_failure_restores_preexisting_note_bytes(project, monkeypatch
                         {"title": "RSI docs", "url": "https://example.com/rsi",
                          "source_type": "docs", "source_quality": "primary"}
                     ],
-                    "fetch_fn": lambda url: {"url": url, "content": "Exact evidence passage.",
+                    "fetch_fn": lambda url: {"url": url, "content": PAGE_BODY,
                                              "channel": "web", "backend": "fixture"},
                 },
                 run_id="RUN-restore",
@@ -443,7 +464,7 @@ def test_live_discovery_failure_is_retryable_and_leaves_no_orphan_note(project):
                     "backend": "live",
                     "allow_network": False,
                     "search_fn": search_fn,
-                    "fetch_fn": lambda url: {"url": url, "content": "x"},
+                    "fetch_fn": lambda url: {"url": url, "content": PAGE_BODY},
                 },
                 run_id="RUN-fail1",
             ),
@@ -489,7 +510,7 @@ def test_task_max_sources_narrows_but_never_widens(project, monkeypatch):
         ]
 
     def fetch_fn(url):
-        return {"url": url, "content": f"body for {url}", "channel": "web", "backend": "fixture"}
+        return {"url": url, "content": PAGE_BODY, "channel": "web", "backend": "fixture"}
 
     dispatch(
         Task(
@@ -571,7 +592,7 @@ def test_production_live_scout_uses_validated_qwen_and_only_recommends_curation(
                      "title": "RSI docs", "url": "https://example.com/rsi",
                      "source_type": "docs", "source_quality": "primary",
                  }],
-                 "fetch_fn": lambda url: {"url": url, "content": "Exact evidence passage.",
+                 "fetch_fn": lambda url: {"url": url, "content": PAGE_BODY,
                                           "channel": "web", "backend": "fixture"},
              }),
         project_root=root, db_path=db_path,

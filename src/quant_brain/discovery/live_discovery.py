@@ -23,6 +23,7 @@ from quant_brain.config import PROJECT_ROOT
 SNAPSHOT_DIR = "brain/00_Inbox/Source_Snapshots"
 JINA_READER_PREFIX = "https://r.jina.ai/"
 FORBIDDEN_SUBCOMMANDS = frozenset({"install", "uninstall", "configure"})
+MAX_FETCH_BYTES = 2_000_000
 
 SearchFn = Callable[..., list[dict[str, Any]]]
 FetchFn = Callable[[str], dict[str, Any]]
@@ -38,6 +39,10 @@ class DiscoverResult:
     sources: list[dict[str, Any]]
     snapshots: tuple[str, ...] = ()
     backend: str = "live"
+    # Candidates considered and deliberately not used, as JSON-safe records.
+    # Honest rejection is a valid outcome, so it travels with the result rather
+    # than being dropped.
+    rejected: tuple[dict[str, Any], ...] = ()
 
 
 class DiscoveryBackend(Protocol):
@@ -132,7 +137,9 @@ def jina_fetch(url: str, *, timeout: int = 30) -> dict[str, Any]:
         method="GET",
     )
     with urlopen(request, timeout=timeout) as response:
-        body = response.read().decode("utf-8", errors="replace")
+        # Bounded read: an unbounded one lets a single oversized or streaming
+        # response exhaust memory on a run that is otherwise capped at 5 pages.
+        body = response.read(MAX_FETCH_BYTES).decode("utf-8", errors="replace")
     return {
         "url": url,
         "title": None,
@@ -146,15 +153,32 @@ def _source_from_fetch(
     candidate: dict[str, Any],
     fetched: dict[str, Any],
     snapshot_path: str,
+    tier: str = "discovery-only",
 ) -> dict[str, Any]:
     """Map a fetched page onto the raw-research source contract.
 
     Extraction quality is intentionally conservative: live wiring must produce
     a schema-valid source, not a durable claim. The curator quality gate still
     decides promotion.
+
+    ``tier`` comes from ``source_quality.classify_source`` and is assigned here,
+    on the discovery side, because ``llm.validators`` treats ``source_quality``
+    as a protected field the model may not alter. Classifying later would be
+    rejected; classifying here is the only correct placement.
+
+    Thin and empty pages never reach this function -- ``assess_fetched_content``
+    rejects them first -- so there is no placeholder-excerpt path that would
+    turn a blank page into a ``main_claim``.
     """
     content = fetched.get("content") or ""
-    excerpt = " ".join(content.split())[:500] or "Fetched page contained no extractable text."
+    excerpt = " ".join(content.split())[:500]
+    if not excerpt:
+        raise LiveDiscoveryError(
+            f"refusing to build a source from empty content: {candidate['url']}"
+        )
+    # ``confidence`` stays low and ``mvp_testable`` stays false regardless of
+    # tier: a credible publisher is provenance, not a tested claim. Only the
+    # model, under validation, may raise those.
     return {
         "title": candidate.get("title") or fetched.get("title") or candidate["url"],
         "source_type": candidate.get("source_type") or "web",
@@ -164,7 +188,7 @@ def _source_from_fetch(
         "possible_strategy_rule": candidate.get("possible_strategy_rule") or "",
         "risks": list(candidate.get("risks") or ["Live fetch is provenance, not proof of edge."]),
         "confidence": candidate.get("confidence") or "low",
-        "source_quality": candidate.get("source_quality") or "discovery-only",
+        "source_quality": candidate.get("source_quality") or tier,
         "asset_classes": list(candidate.get("asset_classes") or []),
         "data_required": list(candidate.get("data_required") or []),
         "data_access": candidate.get("data_access") or "available-now",
@@ -252,33 +276,121 @@ class LiveDiscoveryBackend:
         project_root: str | Path = PROJECT_ROOT,
         resolve_write: ResolveWriteFn | None = None,
     ) -> DiscoverResult:
+        """Acquire at most ``limit`` credible sources, with snapshots.
+
+        Pipeline order: search, normalize, dedupe, classify, rank, budget,
+        fetch, assess, snapshot. Everything cheap happens before anything
+        expensive, so promotional and duplicate URLs never cost a fetch.
+
+        On snapshot ordering: the invariant is that nothing reaches the model
+        unpersisted -- not that everything fetched is persisted. A page rejected
+        for thin or promotional content never reaches the model, so it is
+        deliberately *not* snapshotted; its audit trail is the rejection record.
+        Do not reorder this to snapshot before assessing.
+        """
+        from quant_brain.discovery.acquisition import (
+            assess_fetched_content,
+            dedupe_candidates,
+            rank_candidates,
+        )
+
         search_fn = self._resolve_search_fn()
         fetch_fn = self._resolve_fetch_fn()
         raw_candidates = search_fn(question, method_family, limit=limit)
-        candidates = list(raw_candidates)[:limit]
-        if not candidates:
+        hits = [dict(hit) for hit in raw_candidates]
+        if not hits:
             raise LiveDiscoveryError("live discovery search returned no candidates")
+
+        deduped = dedupe_candidates(hits)
+        if not deduped:
+            raise LiveDiscoveryError("live discovery search returned no usable urls")
+        accepted, rejected = rank_candidates(deduped, question, limit=limit)
+        rejected_records = [candidate.as_record() for candidate in rejected]
+        if not accepted:
+            reasons = "; ".join(
+                f"{record['url']}: {record['reason']}" for record in rejected_records[:5]
+            )
+            raise LiveDiscoveryError(
+                f"no credible candidate survived acquisition for this question. {reasons}"
+            )
+
         sources: list[dict[str, Any]] = []
         snapshots: list[str] = []
-        for candidate in candidates:
-            url = str(candidate.get("url") or candidate.get("url_or_citation") or "")
-            if not url:
-                raise LiveDiscoveryError(f"live candidate is missing a url: {candidate!r}")
-            fetched = fetch_fn(url)
-            snapshot_path = save_source_snapshot(
-                project_root,
-                url=url,
-                content=str(fetched.get("content") or ""),
-                channel=str(fetched.get("channel") or "web"),
-                backend=str(fetched.get("backend") or "jina"),
-                title=fetched.get("title") or candidate.get("title"),
-                resolve_write=resolve_write,
+        by_url = {str(hit.get("url") or ""): hit for hit in hits}
+        try:
+            for candidate in accepted:
+                url = candidate.url
+                fetched = fetch_fn(url)
+                content = str(fetched.get("content") or "")
+                title = str(fetched.get("title") or candidate.title or "")
+
+                # Assess before snapshotting: a rejected page leaves no file.
+                content_verdict = assess_fetched_content(url, content, title=title)
+                if content_verdict is not None:
+                    record = candidate.as_record()
+                    record.update(
+                        tier=content_verdict.tier,
+                        reason=content_verdict.reason,
+                        signals=list(content_verdict.signals),
+                    )
+                    rejected_records.append(record)
+                    continue
+
+                snapshot_path = save_source_snapshot(
+                    project_root,
+                    url=url,
+                    content=content,
+                    channel=str(fetched.get("channel") or "web"),
+                    backend=str(fetched.get("backend") or "jina"),
+                    title=fetched.get("title") or candidate.title,
+                    resolve_write=resolve_write,
+                )
+                snapshots.append(snapshot_path)
+                mapped = dict(by_url.get(url) or {})
+                mapped["url"] = url
+                mapped.setdefault("title", candidate.title)
+                mapped.setdefault("source_type", candidate.source_type)
+                sources.append(
+                    _source_from_fetch(mapped, fetched, snapshot_path, tier=candidate.tier)
+                )
+        except Exception:
+            # This attempt owns exactly these files, and resolve_write may have
+            # redirected them, so cleanup belongs here rather than in the
+            # executor's fail-closed path.
+            self._discard_snapshots(snapshots, project_root, resolve_write)
+            raise
+
+        if not sources:
+            self._discard_snapshots(snapshots, project_root, resolve_write)
+            reasons = "; ".join(
+                f"{record['url']}: {record['reason']}" for record in rejected_records[:5]
             )
-            snapshots.append(snapshot_path)
-            mapped = dict(candidate)
-            mapped["url"] = url
-            sources.append(_source_from_fetch(mapped, fetched, snapshot_path))
-        return DiscoverResult(sources=sources, snapshots=tuple(snapshots), backend=self.name)
+            raise LiveDiscoveryError(
+                f"every fetched page was rejected before extraction. {reasons}"
+            )
+
+        return DiscoverResult(
+            sources=sources,
+            snapshots=tuple(snapshots),
+            backend=self.name,
+            rejected=tuple(rejected_records),
+        )
+
+    @staticmethod
+    def _discard_snapshots(
+        snapshots: list[str],
+        project_root: str | Path,
+        resolve_write: ResolveWriteFn | None,
+    ) -> None:
+        """Remove snapshots this attempt wrote, so a failure leaves no orphans."""
+        root = Path(project_root)
+        for relative in snapshots:
+            try:
+                path = resolve_write(relative) if resolve_write else root / relative
+                Path(path).unlink(missing_ok=True)
+            except OSError:
+                # Cleanup is best effort; the original failure is what matters.
+                continue
 
 
 def get_discovery_backend(
@@ -292,11 +404,3 @@ def get_discovery_backend(
     if key in {"live", "agent-reach", "jina"}:
         return LiveDiscoveryBackend(**kwargs)
     raise ValueError(f"unknown discovery backend {key!r}; expected 'live' or 'seeded'")
-
-
-def assert_not_forbidden_subcommand(subcommand: str) -> None:
-    if subcommand in FORBIDDEN_SUBCOMMANDS:
-        raise LiveDiscoveryError(
-            f"refusing Agent Reach subcommand {subcommand!r}; "
-            f"forbidden: {sorted(FORBIDDEN_SUBCOMMANDS)}"
-        )
