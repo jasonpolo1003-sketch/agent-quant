@@ -1,5 +1,15 @@
 # Quant Agent Brain — Session Handoff
 
+> **Gate D attempted 2026-09-17 — BLOCKED, no child question executed.** Prerequisites were checked before any run. `RQ-6d9c12f4`, `RQ-c920baeb`, `RQ-80be8cf7` remain `queued` with no raw note; `strategy_cards`/`backtests`/`price_datasets`/`reviews` all remain 0. **284 passed, 1 skipped**; Ruff clean. Work is on `testing`, **not merged to `main`**.
+>
+> **Three code defects found and fixed.** (1) `default_runner` decoded subprocess output with the locale codec (`cp1252`) while `agent-reach doctor --json` emits UTF-8 — the `UnicodeDecodeError` fired on subprocess's reader thread, nulled `stdout`, and surfaced as a misleading `TypeError`. Every live discovery call was broken on this machine. (2) The adapter looked for channels `"search"`/`"exa"`; the real doctor key is `exa_search`, so the Exa lane could never be selected. The recorded fixture repeated the same invented names — which is why a green suite carried this through a whole gate. (3) `plan_queries` sent the full 440-character question to `gh search`, which rejects long queries as malformed, misreporting a query error as an empty result.
+>
+> **The blocker is not a defect and was not fixed:** `exa_search` reports `status: "off"` — mcporter installed, Exa not configured, no config and no `EXA_*` env vars. That is Jason's decision; project code must never call `agent-reach`/`mcporter configure`.
+>
+> **Say the blocker precisely.** It is *not* "no usable lane". `github` is `warn`, which the code correctly treats as usable, so discovery would run **GitHub-only** — the sweep Gate C exists to prevent. The blocker is that the only lane able to answer these questions is `off`, GitHub returns **0 results for all three children**, and Phase 6 requires **≥3 upstream sources per raw note**.
+>
+> **Reproduce:** `uv run python scripts/gate_readiness.py --research-id RQ-6d9c12f4` → exit **4**. Read-only: no fetch, no snapshot, no model, and `db/brain.sqlite` is byte-identical afterwards. The general `agent_reach_check.py` exits **0**, correctly — GitHub genuinely is usable, and a lane is not unhealthy merely because it suits a question poorly. **Do not mistake that 0 for Gate D readiness.**
+>
 > **Gate C verified 2026-09-16.** Bounded source acquisition now discriminates by credibility before spending a fetch or a model call. `discovery/source_quality.py` makes the written Tier A/B/C/D policy executable (structural host/path signals + allowlists + a commercial-intent reject detector that runs first); `discovery/acquisition.py` adds normalize → dedupe → classify → rank → budget plus a 600-char/120-word content floor. The central unlock: live discovery previously hardcoded `source_quality="discovery-only"` while the curator only promotes `primary`/`practitioner`, so the live path could never promote anything it found. Tiers are now assigned discovery-side, the only correct placement given the validators' protected-field guard. **269 passed, 1 skipped**; Ruff clean on both invocations. PR #3 was merged first (`2a876f7`). The three child questions remain **queued** — Gate C ran none of them.
 >
 > Acceptance demonstration: `uv run python scripts/acquisition_report.py` — zero network, finds 3 primary + 1 practitioner, rejects promotional material pre-fetch and a cookie banner post-fetch/pre-model, collapses a cross-channel duplicate, exits non-zero on any failed check.
@@ -606,13 +616,22 @@ single-model run that gates Phase 3 is unaffected.
 
 ## Gate Status and Resume Rule
 
-Gate A reconciliation, Gate B / master-plan Phase 5, and Gate C are complete. **Gate D is
-next and is NOT yet authorized** — it requires Jason's explicit go-ahead. Gate D runs the
-three child research questions one at a time, in order: `RQ-6d9c12f4` (exit rules),
-`RQ-c920baeb` (maximum holding periods), `RQ-80be8cf7` (commission/slippage). Each needs
-its own dispatch, snapshot set, validated raw note, event trail, and a **separately
-dispatched** curator verdict, with tests run before the next child starts. Zero promotions
-is an acceptable outcome.
+Gate A reconciliation, Gate B / master-plan Phase 5, and Gate C are complete. **Gate D was
+authorized and attempted on 2026-09-17, and is blocked on an unconfigured search lane — not
+on authorization.** No child question was executed; all three remain `queued`.
+
+**Re-attempting Gate D requires a usable search lane that can answer documentation and
+academic questions.** That is Jason's decision: Exa is a third-party service, and he has
+said to enable it only if it is genuinely free with no API key. Project code must never run
+`agent-reach`/`mcporter configure`. Before assuming the blocker still stands, run
+`uv run python scripts/gate_readiness.py --research-id RQ-6d9c12f4` — exit 4 means still
+blocked, exit 0 means the lanes can now reach the minimum.
+
+When a lane is available, Gate D runs the three child research questions one at a time, in
+order: `RQ-6d9c12f4` (exit rules), `RQ-c920baeb` (maximum holding periods), `RQ-80be8cf7`
+(commission/slippage). Each needs its own dispatch, snapshot set, validated raw note, event
+trail, and a **separately dispatched** curator verdict, with tests run before the next child
+starts. Zero promotions is an acceptable outcome.
 
 Nothing here authorizes a strategy card, market-data download, backtest, or paper trading.
 Follow the explicit gated roadmap and do not infer a production step from the experimental
@@ -623,7 +642,7 @@ run history. Until Gate D is authorized, preserve `RQ-6d9c12f4`, `RQ-c920baeb`, 
 
 | Lane | Status | Notes |
 |---|---|---|
-| Exa via mcporter | operational | Primary search channel |
+| Exa via mcporter | declared operational, **currently off** | Primary search channel. `exa_search` reports `status: off` (Exa not configured) as of 2026-09-17 — this is the Gate D blocker |
 | GitHub via `gh` | operational | Top-up only when search is short of the cap |
 | arXiv `/abs/` | fixture-only | `/pdf/` → `/abs/` rewrite; promotes hits already found. No API client, no PDF parser |
 | YouTube, RSS | deferred | Declared so doctor output maps cleanly; never dispatched |
@@ -641,6 +660,12 @@ uv run python scripts/dispatch_task.py --type discovery --research-id RQ-6d9c12f
 
 # Gate C acceptance demonstration (offline, no database writes)
 uv run python scripts/acquisition_report.py
+
+# Which lanes are usable right now? (exit 0 = at least one; 3 = none)
+uv run python scripts/agent_reach_check.py
+
+# Can those lanes answer a specific question? (exit 0 = ready; 4 = not)
+uv run python scripts/gate_readiness.py --research-id RQ-6d9c12f4
 ```
 
 ## Important Design Rule

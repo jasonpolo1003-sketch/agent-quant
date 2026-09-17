@@ -30,8 +30,13 @@ Resolved in this order:
 ## Run a real dispatcher Scout command (no Python injection)
 
 ```bash
-# 1. Confirm Agent Reach doctor is healthy.
+# 1. Confirm Agent Reach doctor is healthy and see which lanes are usable.
+#    Exit 0 = at least one search lane usable, 2 = doctor unusable, 3 = none usable.
 uv run python scripts/agent_reach_check.py
+
+# 1b. A usable lane is not the same as a lane that can answer YOUR question.
+#     Exit 0 = the lanes can reach the Phase 6 minimum, 4 = they cannot.
+uv run python scripts/gate_readiness.py --research-id RQ-xxxxxxxx
 
 # 2. Queue a research question if you do not already have one.
 uv run python scripts/research_intake.py add "What published papers cover overnight reversal?" --family mean_reversion
@@ -86,7 +91,23 @@ src/quant_brain/discovery/live_discovery.py
 scripts/agent_reach_check.py
 scripts/dispatch_task.py
 tests/test_agent_reach_adapter.py
-tests/fixtures/agent_reach_doctor.json
+tests/fixtures/agent_reach_doctor_live.json      # verbatim capture; do not edit
+tests/fixtures/agent_reach_doctor_healthy.json   # explicitly synthetic
+tests/fixtures/README_agent_reach_doctor.md      # why there are two
 tests/fixtures/agent_reach_search.json
 tests/fixtures/jina_web_page.md
 ```
+
+## Fixtures: two files, deliberately
+
+`agent_reach_doctor_live.json` is a **verbatim** capture of real `doctor --json`
+output. `exa_search` really is `"off"` in it, and its non-ASCII names are literal
+UTF-8 — an escaped file would be pure ASCII and would decode cleanly under cp1252,
+defeating the test that pins the encoding fix.
+
+`agent_reach_doctor_healthy.json` is **synthetic**, with `exa_search` forced to
+`"ok"` so dispatch tests exercise dispatch.
+
+Do not merge them, and do not edit the live capture to make a test pass. A single
+file blending observed and edited state, while still called a recording, is exactly
+what let the `search`/`exa` channel-name defect survive an entire gate.
