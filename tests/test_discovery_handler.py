@@ -358,7 +358,7 @@ def test_dispatched_live_uses_adapter_without_search_fn(project, monkeypatch):
     register_default_handlers()
     stub_validated_qwen(monkeypatch)
     fixtures = Path(__file__).parent / "fixtures"
-    doctor = (fixtures / "agent_reach_doctor.json").read_text(encoding="utf-8")
+    doctor = (fixtures / "agent_reach_doctor_healthy.json").read_text(encoding="utf-8")
     search = (fixtures / "agent_reach_search.json").read_text(encoding="utf-8")
     page = (fixtures / "jina_web_page.md").read_text(encoding="utf-8")
 

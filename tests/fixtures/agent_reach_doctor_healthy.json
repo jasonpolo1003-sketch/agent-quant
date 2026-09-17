@@ -1,0 +1,161 @@
+{
+  "github": {
+    "status": "warn",
+    "name": "GitHub 仓库和代码",
+    "message": "gh CLI 可执行，且检测到显式认证配置；Doctor 不执行会写 device-id 的 `gh auth status`，因此未实时验证，未标记为可用。",
+    "tier": 0,
+    "backends": [
+      "gh CLI"
+    ],
+    "active_backend": null
+  },
+  "twitter": {
+    "status": "warn",
+    "name": "Twitter/X 推文",
+    "message": "检测到 Chrome/Edge 的 OpenCLI 扩展文件，但扩展当前未连接；仅凭磁盘文件无法确认它已加载或启用。\n  打开浏览器扩展页确认 OpenCLI 已启用，再运行一个 opencli 命令验证",
+    "tier": 1,
+    "backends": [
+      "twitter-cli",
+      "OpenCLI",
+      "bird CLI (legacy)"
+    ],
+    "active_backend": null
+  },
+  "youtube": {
+    "status": "warn",
+    "name": "YouTube 视频和字幕",
+    "message": "yt-dlp 已安装但未配置 JS runtime。运行：\n  $cfg = '<HOME>/.config/yt-dlp/config'\nNew-Item -ItemType Directory -Force -Path (Split-Path $cfg) | Out-Null\nif (-not (Test-Path $cfg) -or -not (Select-String -Path $cfg -Pattern '--js-runtimes' -Quiet)) {\n  Add-Content -Path $cfg -Value '--js-runtimes node'\n}",
+    "tier": 0,
+    "backends": [
+      "yt-dlp"
+    ],
+    "active_backend": "yt-dlp"
+  },
+  "reddit": {
+    "status": "warn",
+    "name": "Reddit 帖子和评论",
+    "message": "检测到 Chrome/Edge 的 OpenCLI 扩展文件，但扩展当前未连接；仅凭磁盘文件无法确认它已加载或启用。\n  打开浏览器扩展页确认 OpenCLI 已启用，再运行一个 opencli 命令验证",
+    "tier": 1,
+    "backends": [
+      "OpenCLI",
+      "rdt-cli"
+    ],
+    "active_backend": null
+  },
+  "facebook": {
+    "status": "warn",
+    "name": "Facebook 帖子、主页和群组",
+    "message": "检测到 Chrome/Edge 的 OpenCLI 扩展文件，但扩展当前未连接；仅凭磁盘文件无法确认它已加载或启用。\n  打开浏览器扩展页确认 OpenCLI 已启用，再运行一个 opencli 命令验证",
+    "tier": 1,
+    "backends": [
+      "OpenCLI"
+    ],
+    "active_backend": null
+  },
+  "instagram": {
+    "status": "warn",
+    "name": "Instagram 用户、主页和指定用户帖子",
+    "message": "检测到 Chrome/Edge 的 OpenCLI 扩展文件，但扩展当前未连接；仅凭磁盘文件无法确认它已加载或启用。\n  打开浏览器扩展页确认 OpenCLI 已启用，再运行一个 opencli 命令验证",
+    "tier": 1,
+    "backends": [
+      "OpenCLI"
+    ],
+    "active_backend": null
+  },
+  "bilibili": {
+    "status": "ok",
+    "name": "B站视频、字幕和搜索",
+    "message": "B站搜索 API 可达（仅搜索，curl 直连）。完整功能建议安装 bili-cli：pipx install bilibili-cli",
+    "tier": 1,
+    "backends": [
+      "bili-cli",
+      "OpenCLI",
+      "B站搜索 API"
+    ],
+    "active_backend": "B站搜索 API"
+  },
+  "xiaohongshu": {
+    "status": "warn",
+    "name": "小红书笔记",
+    "message": "检测到 Chrome/Edge 的 OpenCLI 扩展文件，但扩展当前未连接；仅凭磁盘文件无法确认它已加载或启用。\n  打开浏览器扩展页确认 OpenCLI 已启用，再运行一个 opencli 命令验证",
+    "tier": 1,
+    "backends": [
+      "OpenCLI",
+      "xiaohongshu-mcp",
+      "xhs-cli (xiaohongshu-cli)"
+    ],
+    "active_backend": null
+  },
+  "linkedin": {
+    "status": "off",
+    "name": "LinkedIn 职业社交",
+    "message": "mcporter 已装但 LinkedIn MCP 未配置。运行：\n  先安装 uv/uvx：https://docs.astral.sh/uv/getting-started/installation/\n  uvx mcp-server-linkedin@latest --login\n  mcporter config add linkedin --command uvx --arg mcp-server-linkedin@latest --env UV_HTTP_TIMEOUT=300 --scope home",
+    "tier": 2,
+    "backends": [
+      "mcp-server-linkedin",
+      "Jina Reader"
+    ],
+    "active_backend": null
+  },
+  "xiaoyuzhou": {
+    "status": "off",
+    "name": "小宇宙播客转文字",
+    "message": "转录脚本未安装。运行：\n  agent-reach install --env=auto --system --channels=xiaoyuzhou\n  或手动复制 transcribe.sh 到 ~/.agent-reach/tools/xiaoyuzhou/",
+    "tier": 1,
+    "backends": [
+      "groq-whisper",
+      "ffmpeg"
+    ],
+    "active_backend": null
+  },
+  "v2ex": {
+    "status": "ok",
+    "name": "V2EX 节点、主题与回复",
+    "message": "公开 API 可用（热门主题、节点浏览、主题详情、用户信息）",
+    "tier": 0,
+    "backends": [
+      "V2EX API (public)"
+    ],
+    "active_backend": "V2EX API (public)"
+  },
+  "xueqiu": {
+    "status": "warn",
+    "name": "雪球股票行情与社区动态",
+    "message": "Xueqiu API 连接失败：HTTP Error 400。如需登录 Cookie，请运行：agent-reach configure --from-browser chrome --platform xueqiu；doctor 不会自动读取浏览器 Cookie。",
+    "tier": 1,
+    "backends": [
+      "Xueqiu API (需要登录 Cookie)"
+    ],
+    "active_backend": null
+  },
+  "rss": {
+    "status": "ok",
+    "name": "RSS/Atom 订阅源",
+    "message": "可读取 RSS/Atom 源",
+    "tier": 0,
+    "backends": [
+      "feedparser"
+    ],
+    "active_backend": "feedparser"
+  },
+  "exa_search": {
+    "status": "ok",
+    "name": "全网语义搜索",
+    "message": "SYNTHETIC: Exa configured. This fixture is constructed, not observed.",
+    "tier": 0,
+    "backends": [
+      "Exa via mcporter"
+    ],
+    "active_backend": "mcporter/exa"
+  },
+  "web": {
+    "status": "ok",
+    "name": "任意网页",
+    "message": "通过 Jina Reader 读取任意网页（curl https://r.jina.ai/URL）",
+    "tier": 0,
+    "backends": [
+      "Jina Reader"
+    ],
+    "active_backend": "Jina Reader"
+  }
+}

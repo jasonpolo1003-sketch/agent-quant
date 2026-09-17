@@ -10,18 +10,24 @@ from pathlib import Path
 import pytest
 
 from quant_brain.discovery.agent_reach import (
+    ENABLED_CHANNELS,
+    SEARCH_CHANNELS,
     AgentReachAdapter,
     AgentReachError,
     AgentReachUnavailable,
     default_runner,
     is_channel_usable,
+    operational_lanes,
     parse_channel_health,
     plan_queries,
 )
 from quant_brain.discovery.live_discovery import LiveDiscoveryBackend, LiveDiscoveryError
 
 FIXTURES = Path(__file__).parent / "fixtures"
-DOCTOR_JSON = (FIXTURES / "agent_reach_doctor.json").read_text(encoding="utf-8")
+# Synthetic: exa_search forced ok so dispatch tests exercise dispatch.
+DOCTOR_JSON = (FIXTURES / "agent_reach_doctor_healthy.json").read_text(encoding="utf-8")
+# Verbatim capture: exa_search really is "off", names are literal UTF-8.
+DOCTOR_LIVE_JSON = (FIXTURES / "agent_reach_doctor_live.json").read_text(encoding="utf-8")
 SEARCH_JSON = (FIXTURES / "agent_reach_search.json").read_text(encoding="utf-8")
 PAGE_MD = (FIXTURES / "jina_web_page.md").read_text(encoding="utf-8")
 
@@ -71,14 +77,16 @@ def test_health_uses_doctor_json_not_config_yaml() -> None:
 
     adapter = AgentReachAdapter(runner=runner, skip_exe_check=True)
     health = adapter.check_health()
-    assert "search" in health
-    assert health["search"].status == "ok"
-    assert health["web"].active_backend == "jina"
+    assert "exa_search" in health
+    assert health["exa_search"].status == "ok"
+    # "Jina Reader" is what the real doctor reports; the old invented fixture
+    # said "jina", which is the kind of drift these fixtures now prevent.
+    assert health["web"].active_backend == "Jina Reader"
     assert "doctor" in calls[0]
     assert "--json" in calls[0]
     assert not any("config.yaml" in part for argv in calls for part in argv)
     assert not any(cmd in calls[0] for cmd in ("install", "uninstall", "configure"))
-    assert is_channel_usable(health, "search") is True
+    assert is_channel_usable(health, "exa_search") is True
     assert is_channel_usable(health, "reddit") is False
 
 
@@ -138,7 +146,7 @@ def test_search_fails_closed_when_no_usable_channel() -> None:
         del argv, timeout
         return 0, json.dumps(
             {
-                "search": {"status": "error", "active_backend": None, "message": "down"},
+                "exa_search": {"status": "error", "active_backend": None, "message": "down"},
                 "github": {"status": "error", "active_backend": None, "message": "down"},
                 "web": {"status": "ok", "active_backend": "jina", "message": "ok"},
             }
@@ -316,3 +324,41 @@ def test_check_health_fails_loudly_when_stdout_is_none() -> None:
     adapter = AgentReachAdapter(runner=runner, skip_exe_check=True)
     with pytest.raises(AgentReachUnavailable, match="no decodable stdout"):
         adapter.check_health()
+
+
+def test_doctor_payload_with_non_ascii_channel_names_parses() -> None:
+    """The real doctor emits UTF-8; parsing must survive it end to end."""
+    adapter = AgentReachAdapter(
+        runner=lambda argv, timeout=60: (0, DOCTOR_LIVE_JSON, ""),
+        skip_exe_check=True,
+    )
+    health = adapter.check_health()
+
+    assert health["exa_search"].channel == "exa_search"
+    # Load-bearing: fails if the live fixture is ever flattened to ASCII, which
+    # would silently delete the coverage the encoding fix depends on.
+    assert any(ord(ch) > 127 for ch in health["exa_search"].message)
+
+
+def test_the_live_doctor_fixture_is_not_edited_into_a_healthy_one() -> None:
+    """The verbatim capture must stay verbatim.
+
+    A fixture edited to be convenient, while still called a recording, is what
+    let the channel-name defect survive a whole gate.
+    """
+    payload = json.loads(DOCTOR_LIVE_JSON)
+
+    assert payload["exa_search"]["status"] == "off"
+    assert any(ord(ch) > 127 for ch in DOCTOR_LIVE_JSON)
+    escape_marker = chr(92) + "u"  # avoid an escape sequence in this file
+    assert escape_marker not in DOCTOR_LIVE_JSON, "escapes decode fine under cp1252"
+
+
+def test_the_search_channel_consulted_is_the_real_doctor_key() -> None:
+    """Constants must name reality, not a guess."""
+    assert SEARCH_CHANNELS == ("exa_search",)
+    assert "search" not in ENABLED_CHANNELS
+    assert "exa" not in ENABLED_CHANNELS
+    # The general invariant: every dispatched lane names an enabled channel.
+    # This catches the whole defect class, not just this instance.
+    assert {lane.channel for lane in operational_lanes()} <= ENABLED_CHANNELS

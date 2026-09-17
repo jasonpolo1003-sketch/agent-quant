@@ -27,8 +27,14 @@ from quant_brain.discovery.live_discovery import (
 )
 from quant_brain.discovery.source_quality import normalize_candidate_url
 
-ENABLED_CHANNELS = frozenset({"web", "github", "youtube", "rss", "search", "exa"})
-SEARCH_CHANNELS = ("search", "exa")
+# Channel keys are exactly as `agent-reach doctor --json` emits them. Verified
+# 2026-09-17 against a real doctor run: the search channel key is "exa_search".
+# There is no "search" channel and no "exa" channel -- those were guesses, and
+# because the recorded fixture repeated the same guesses, the Exa lane could
+# never be selected while the suite stayed green. Do not invent these names;
+# re-capture tests/fixtures/agent_reach_doctor_live.json instead.
+ENABLED_CHANNELS = frozenset({"web", "github", "youtube", "rss", "exa_search"})
+SEARCH_CHANNELS = ("exa_search",)
 LOGIN_BACKED_CHANNELS = frozenset(
     {"reddit", "twitter", "facebook", "instagram", "xiaohongshu", "linkedin"}
 )
@@ -57,7 +63,8 @@ class SearchLane:
 
 
 SEARCH_LANES: tuple[SearchLane, ...] = (
-    SearchLane("exa", "search", "operational"),
+    # ``name`` is our lane label; ``channel`` must be the real doctor key.
+    SearchLane("exa", "exa_search", "operational"),
     SearchLane("github", "github", "operational"),
     SearchLane("arxiv-abs", "web", "fixture-only"),
     SearchLane("youtube", "youtube", "deferred"),
@@ -462,8 +469,9 @@ class AgentReachAdapter:
         github_usable = is_channel_usable(health, "github")
         if not search_usable and not github_usable:
             raise AgentReachError(
-                "no usable Agent Reach search channel (Exa/mcporter or GitHub); "
-                "run `agent-reach doctor --json` and install a zero-config backend"
+                "no usable Agent Reach search channel (exa_search or github); "
+                "run `uv run python scripts/agent_reach_check.py` to see which "
+                "lanes are usable and why the others are not"
             )
         pool_target = max(1, limit) * CANDIDATE_POOL_FACTOR
         per_query = max(1, limit)
