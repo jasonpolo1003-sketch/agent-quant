@@ -1,5 +1,9 @@
 # Quant Agent Brain — Session Handoff
 
+## External intake merged to `main` (2026-09-19)
+
+The independently approved external-research intake and its documentation correction were fast-forwarded to `main` at `75b51c9` and pushed. `main` and `testing` are being kept synchronized; Gate D remains blocked and was not executed. The next authorized activity requires a new bounded Gate D brief and prerequisite check, not a strategy or backtest.
+
 ## P1 quotation defect corrected and re-reviewed — committed to `testing` (2026-09-19)
 
 The substring-matching blocker is fixed, independently re-reviewed and **APPROVED**, and the intake feature is committed on `testing`. **350 passed, 1 skipped**; Ruff clean on `.` and on `src tests scripts`.
@@ -20,7 +24,7 @@ The substring-matching blocker is fixed, independently re-reviewed and **APPROVE
 
 ## Verified closeout / limits
 
-- Prior baseline was fast-forwarded and pushed to `main` (`e71b147`); only main/testing exist. The intake feature is now **committed and pushed on `testing`** after the P1 correction above was independently re-reviewed and approved. Still **not merged to `main`**.
+- Only `main` and `testing` exist. The intake feature and documentation correction were **merged to `main` and pushed** at `75b51c9` after independent re-review and approval.
 - Final verification: **350 passed, 1 skipped**, Ruff clean. (The 321/1 figure below predates the P1 correction and its regression tests.)
 - Canonical demo: `C:/Users/jason/quant-agent-brain-intake/exit-rules-final/acceptance.json`. All three PDFs extracted; 18 claims/citation leads, 17 distinct targets (not independent works). Counts of fetch outcomes below are per claim, not network calls. Final catalog reuses hash-checked snapshots from the earlier live run with original timestamps and reuse provenance. Both reimport and offline replay verified idempotent.
 - 47 protected production files, question rows and tracked entity counts unchanged. No trusted promotion, Gate D, strategy or backtest executed.
