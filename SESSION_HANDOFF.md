@@ -1,5 +1,50 @@
 # Quant Agent Brain — Session Handoff
 
+## P1 quotation defect corrected and re-reviewed — committed to `testing` (2026-09-19)
+
+The substring-matching blocker is fixed, independently re-reviewed and **APPROVED**, and the intake feature is committed on `testing`. **350 passed, 1 skipped**; Ruff clean on `.` and on `src tests scripts`.
+
+**What the bug was.** `normalized()` collapsed whitespace but applied no token boundaries, so `quote in normalized(body)` was a raw substring test. `Exit when RSI > 5` matched source text `Exit when RSI > 50 or after 10 trading days.` Reproduced end-to-end: `quote_match`/`full_rule_match` true, `approve_scope` accepted, and the curator handoff carried `evidence: "Exit when RSI > 5"` — a threshold the source never states. Not automatic promotion (an attributed reviewer must approve scope), but it defeated the exact-quotation safeguard, whose whole promise is that evidence is the verbatim source span. Truncation at *either* edge did it, not only the reported prefix case.
+
+**Why it mattered in plain terms.** Exiting at RSI > 50 is an ordinary mean-reversion exit; exiting at RSI > 5 would exit on nearly every bar — a different strategy. The one number defining the rule could be silently wrong in material handed to the curator while still passing an "exact quotation" check.
+
+**The correction.** A boundary-safe `source_span()` helper in `external_verification.py`, used by all three matching sites: verification, `approve_scope` and `handoff`. A span must begin and end on a token boundary; a severed word or number is refused. Clean partial quotation stays legitimate (`Exit when RSI > 50` ends on a boundary and still matches). Text matching stays separate from full-rule and contextual assessment — `full_rule_match` remains its own `claim == quote` check, and reviewer scope judgement is unchanged.
+
+**Stale cache closed.** `verify_claim` returns a cached `evaluations` row *before* matching runs, and `UNIQUE(claim_id,fetch_id)` prevents a corrected row replacing it, so a catalog verified under the old rule keeps `quote_match: true` permanently. Fixing the matcher alone was therefore insufficient: `approve_scope` and `handoff` now **re-derive** the check from the pinned snapshot instead of trusting the stored flag. Cached rows stay immutable (append-only history preserved, no schema change). A stale flag can still *display* as matched; it cannot approve or promote. `verify --force --allow-network` refreshes recorded values.
+
+**Two further defects were found in the fix itself by re-review, and corrected.** (1) The first boundary rule was asymmetric — it guarded a quote ending in `.`/`,` before a digit but left the mirror case open, so `Threshold is 1` matched `1,250` (a 1250× misstatement) and `Win rate 0` matched `0.55`. Tellingly, `Threshold is 1,` was rejected while the *more* misleading `Threshold is 1` passed. Now symmetric over `.,:/%-` plus typographic separators, severing only when digits sit on both sides. (2) The character class was ASCII-only, letting the original defect back in via fullwidth (`５０`→`５`) or Arabic-Indic digits; now `str.isalnum()`, so the alnum test and `str.isdigit()` agree across scripts. The em dash is deliberately **not** a joiner: a dash census over the 18 real snapshots found en dash binding numeric ranges 25 times and em dash 0 times, while including it falsely rejected `It rose 20` from `It rose 20— then fell.`
+
+**Verification.** 350 passed/1 skipped; Ruff clean. Recomputing all 18 evaluations in the real demo catalog under the corrected matcher gives **identical verdicts** — 4 quote matches, 0 full-rule matches, zero changed — so `acceptance.json` counts are unchanged and no legitimate quotation was penalized. Handoff on an isolated copy returns `[]`. All mutation-capable work used a scratchpad copy; `C:/Users/jason/quant-agent-brain-intake/exit-rules-final/external.sqlite` is byte-identical (sha256 `20ebc695…`). Production untouched: `strategy_cards`/`backtests`/`price_datasets`/`reviews` all 0, no `external_*` tables in `db/brain.sqlite`, `RQ-6d9c12f4` still `queued` with `raw_note_path NULL`, `gate_readiness.py --research-id RQ-6d9c12f4` still exits **4** with `brain.sqlite` byte-identical after the run.
+
+**Known limitations.** (a) An em-dash-bound numeric range truncates undetected — a documented trade-off with 0 observed instances in the corpus. (b) `source_span` is a boundary check only: clipping a complete, meaning-bearing token (`Exit when RSI > 50` out of `...50 unless volume is below average`) matches by design; the safeguard there is `full_rule_match` plus the attributed reviewer's scope judgement, not the matcher. (c) Review attribution is a name, not authentication. **Gate D is not advanced and was not executed.**
+
+## Verified closeout / limits
+
+- Prior baseline was fast-forwarded and pushed to `main` (`e71b147`); only main/testing exist. The intake feature is now **committed and pushed on `testing`** after the P1 correction above was independently re-reviewed and approved. Still **not merged to `main`**.
+- Final verification: **350 passed, 1 skipped**, Ruff clean. (The 321/1 figure below predates the P1 correction and its regression tests.)
+- Canonical demo: `C:/Users/jason/quant-agent-brain-intake/exit-rules-final/acceptance.json`. All three PDFs extracted; 18 claims/citation leads, 17 distinct targets (not independent works). Counts of fetch outcomes below are per claim, not network calls. Final catalog reuses hash-checked snapshots from the earlier live run with original timestamps and reuse provenance. Both reimport and offline replay verified idempotent.
+- 47 protected production files, question rows and tracked entity counts unchanged. No trusted promotion, Gate D, strategy or backtest executed.
+- Automatic parsing is conservative: ChatGPT's unstructured sections remain citation leads requiring manual claim-to-source mapping. Four quote matches do not constitute four supported full exit rules. Handoff is empty; no evidence threshold was relaxed.
+- Review role is attributed, not authenticated: this local CLI cannot establish that a reviewer is human. Source matching preserves operators but does not prove context or profitability. Do not call this production-ready before an independent review.
+- Workflow and small learning note: `brain/_system/external_intake_workflow.md`.
+
+
+> **External research intake implemented locally 2026-09-18 (branch `testing`, not merged).** A bounded retention lane for manually-collected external reports. **321 passed, 1 skipped**; Ruff clean. **Gate D was NOT executed and is NOT advanced.** `RQ-6d9c12f4` remains `queued` with `raw_note_path NULL`; `strategy_cards`/`backtests`/`price_datasets`/`reviews` all remain 0; `db/brain.sqlite` has no `external_*` tables; `scripts/gate_readiness.py --research-id RQ-6d9c12f4` still exits **4**.
+>
+> **What it does.** `scripts/external_intake.py` retains original PDFs, native `pypdf` text, per-report citations, deduplicated source targets and an append-only per-claim review history in an **isolated workspace database outside the repository and vault** (the workspace guard refuses any path inside either). Retention is not trust: a claim enters as `unreviewed_lead`, a deterministic verifier can only move it to `partially_supported`/`unresolved`/`blocked`, and **only an attributed reviewer scope review can set `supported_in_scope`** — which is the sole state the curator handoff will offer. The handoff builds its payload from the exact verified source span, not the report's transcription, and still has to pass the existing unmodified `promotion_block_reason`.
+>
+> **Real run over Jason's three reports:** 3 reports, 18 claims, **17 distinct targets** (ChartSchool is cited by 2 reports and counted once — repeated citation is not corroboration). Live verification: 13 fetched, 1 access-blocked, 3 content-rejected, 1 no-URL. **4 quotations located, 0 full-rule matches, so the curator handoff is correctly empty.** Two DOI/SSRN sources sit behind access walls and are parked with reasons, never circumvented. Re-importing all three is a no-op; re-verifying without `--allow-network` replays from cached snapshots in <1s.
+>
+> **Reproduce:**
+> ```
+> uv run python scripts/external_intake.py --workspace C:/tmp/ext_demo import "<pdf>" --provider <name> --research-id RQ-6d9c12f4
+> uv run python scripts/external_intake.py --workspace C:/tmp/ext_demo verify --allow-network --limit 20
+> uv run python scripts/external_intake.py --workspace C:/tmp/ext_demo leads
+> uv run python scripts/external_intake.py --workspace C:/tmp/ext_demo handoff
+> ```
+>
+> Governance: **PROP-002** in `brain/_system/plan/plan_change_proposals.md` (accepted, authorized before implementation) plus the §5 amendment in `PLAN.md`. Still needing separate approval: OCR/further extraction deps, relaxing the ≥3-source bar, and any production promotion.
+>
 > **Gate D attempted 2026-09-17 — BLOCKED, no child question executed.** Prerequisites were checked before any run. `RQ-6d9c12f4`, `RQ-c920baeb`, `RQ-80be8cf7` remain `queued` with no raw note; `strategy_cards`/`backtests`/`price_datasets`/`reviews` all remain 0. **284 passed, 1 skipped**; Ruff clean. Work is on `testing`, **not merged to `main`**.
 >
 > **Three code defects found and fixed.** (1) `default_runner` decoded subprocess output with the locale codec (`cp1252`) while `agent-reach doctor --json` emits UTF-8 — the `UnicodeDecodeError` fired on subprocess's reader thread, nulled `stdout`, and surfaced as a misleading `TypeError`. Every live discovery call was broken on this machine. (2) The adapter looked for channels `"search"`/`"exa"`; the real doctor key is `exa_search`, so the Exa lane could never be selected. The recorded fixture repeated the same invented names — which is why a green suite carried this through a whole gate. (3) `plan_queries` sent the full 440-character question to `gh search`, which rejects long queries as malformed, misreporting a query error as an empty result.

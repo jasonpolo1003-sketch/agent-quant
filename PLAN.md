@@ -83,6 +83,18 @@ The real issue is narrower and is a **data hygiene** problem, not architecture: 
 
 **Market data:** the repository currently has **`price_datasets = 0`**. Historical downloader/module claims were not present in the reconciled tree and must not be treated as current capability. Roadmap **Gate F** owns restoring real files, provenance/checksums, and SQLite registration before any backtest.
 
+## Authorized narrow amendment — external retention intake (2026-09-18)
+
+Jason authorized a bounded external-report intake CLI/library on `testing`:
+preserve original PDFs and native extracted text, deduplicate sources while keeping
+report citations, retain per-claim evidence/history separately from source tier,
+and offer a read-only handoff through the existing curator eligibility gate.
+All mutable catalog/database/artifacts must live in an explicit isolated workspace
+outside production repository and vault trees. No trusted-index writes, curation,
+child research runs, Gate D execution, backtests, paid services or remote configuration.
+This is a retention tool, not a new dispatcher/agent or acceptance of later gates.
+Use maintained `pypdf` extraction; empty/failed native extraction is honestly blocked.
+
 ## 6. Non-goals
 
 - A universal alpha-generating LLM.
@@ -222,6 +234,12 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
   - **State the blocker precisely.** It is *not* "no usable lane": `github` is `warn`, which the code correctly treats as usable, so discovery would run **GitHub-only** — the sweep Gate C exists to prevent. The blocker is that the only lane able to answer these questions is `off`, the surviving lane returns **0 results for all three children** (verified after the query-length fix, reporting the honest "search returned no URLs"), and Phase 6 requires **≥3 upstream sources per raw note**.
   - **Reproduce it:** `uv run python scripts/gate_readiness.py --research-id RQ-6d9c12f4` → exit **4** (same for the other two). This read-only probe runs the Scout's own search and counts candidate URLs; it fetches nothing, snapshots nothing, calls no model, and leaves `db/brain.sqlite` byte-identical. The general check `uv run python scripts/agent_reach_check.py` exits **0**, correctly — GitHub genuinely is usable, and a lane is not unhealthy merely because it suits a question poorly.
   - **Fixture hygiene:** `agent_reach_doctor.json` is replaced by `agent_reach_doctor_live.json` (verbatim capture, real `exa_search: "off"`, literal UTF-8) and `agent_reach_doctor_healthy.json` (explicitly synthetic, for dispatch tests). See `tests/fixtures/README_agent_reach_doctor.md`. Blending observed and edited state in one "recorded" file is what hid defect (2).
+- **External research intake implemented locally (2026-09-18).** A bounded retention lane for manually-collected external reports, on `testing`, not merged. **321 passed, 1 skipped**; Ruff clean. **Gate D was not executed and is not advanced**: `RQ-6d9c12f4` remains `queued` with no raw note, `strategy_cards`/`backtests`/`price_datasets`/`reviews` remain 0, `db/brain.sqlite` gained no tables, and `gate_readiness.py --research-id RQ-6d9c12f4` still exits 4. Governance is PROP-002 plus the §5 amendment above.
+  - **Retention is not trust, and the separation is structural.** The catalog lives in an isolated workspace database outside the repository and vault; the workspace guard refuses any path inside either, and rejects symlink/reparse aliases. Claims enter as `unreviewed_lead`. The deterministic verifier may only reach `partially_supported`, `unresolved` or `blocked` — it can never assert support, and it never asserts contradiction from a failed fetch. `supported_in_scope` requires an **attributed reviewer scope review** whose exact quote must still match the pinned snapshot, and it is the only state the curator handoff will offer.
+  - **The curator was not modified or weakened.** The handoff assembles a `RawResearchSource` from the exact verified source span (not the report's transcription) and must still clear the existing `promotion_block_reason`. Two independent gates, neither trusting the other.
+  - **Repeated citation is not corroboration.** Claims are per (report, citation); source targets are deduplicated on the normalized URL. Over the three real reports: 18 claims across **17 distinct targets**, because StockCharts ChartSchool is cited by two different reports and counted once. `independent_corroboration` is reported as `not_assessed` rather than inferred from a count.
+  - **Honest verification result.** 13 fetched, 1 access-blocked, 3 content-rejected, 1 with no public URL. **4 quotations located; 0 full-rule matches; the handoff is therefore empty.** Two DOI/SSRN primaries sit behind access walls and are parked with reasons and follow-up actions — not circumvented, and explicitly not treated as disproven. Reports that yield no native text are retained as blocked leads carrying a concrete recovery action.
+  - Re-importing the same PDFs is a no-op (identity is the content hash); re-verifying without `--allow-network` replays cached snapshots with integrity checks and zero network.
 - Note for whoever runs the indexer: `scripts/index_markdown.py index` re-chunks and resets all chunks to `embedding_status='pending'`, dropping embeddings. Follow it with `scripts/embed_chunks.py embed`. Pre-existing behavior, not introduced by Phase 0.
 
 ### What Jason decided (2026-08-28)

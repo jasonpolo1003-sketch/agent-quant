@@ -64,6 +64,24 @@ This exists because the project's core design rule is *move slowly, one verified
 
 ---
 
+### PROP-002 — Bounded external research intake for manually-collected reports
+- **Date:** 2026-09-18
+- **Proposed by:** external research intake session (branch `testing`)
+- **Affects:** PLAN.md §5 (new "Authorized narrow amendment" section); no phase, gate, cap, or model choice changes
+- **Current plan says:** durable evidence enters only through the Scout's live discovery path, and `research_findings` is rewritten on every curation run, so there is nowhere to retain research the Scout did not produce.
+- **Problem:** Gate D is blocked on an unconfigured search lane (`exa_search: off`; GitHub returns 0 results for all three children). Three manually-collected external reports about `RQ-6d9c12f4` exist and contain usable material the blocked Scout cannot re-derive. Without a retention lane this research is either lost or, worse, pasted into the trusted layer without provenance.
+- **Proposed change:** add a read-mostly external intake library + CLI that retains original PDFs, native extracted text, per-report citations, deduplicated source targets, and an append-only per-claim review history in an **isolated workspace database outside the repository and vault**. Claims reach the existing, unmodified curator eligibility gate only after an attributed human scope review. Adds `pypdf` as the extraction dependency.
+- **Cost of not changing:** externally collected research stays unmanaged, unverifiable, and indistinguishable from curated evidence; the project's only options become "discard it" or "trust it".
+- **Status:** accepted — authorized by Jason before implementation; recorded here because the entry point is new even though no plan constraint is relaxed.
+- **Jason's decision:** authorized as a bounded retention feature. Explicitly **not** authorized: executing Gate D, promoting trusted evidence, changing production question state, creating strategy cards, running backtests, paid services, or account automation.
+
+**Deliberately not done (would need separate approval):**
+- OCR or any further extraction dependency beyond `pypdf`.
+- Relaxing Phase 6's ≥3-upstream-sources bar so external claims could satisfy Gate D — that is on the "relaxing a hard cap" list above and needs its own proposal.
+- Any write into `brain/01_Sources/` or `db/brain.sqlite` from this lane.
+
+---
+
 ## Accepted changes log
 
 Once Jason accepts a proposal, apply it to `PLAN.md`, then record the applied change here with the date, so the plan's history stays readable.
@@ -71,3 +89,4 @@ Once Jason accepts a proposal, apply it to `PLAN.md`, then record the applied ch
 | Date | Proposal | Applied to | Summary |
 |---|---|---|---|
 | 2026-09-07 | PROP-001 | `PLAN.md` Phase 4 deliverables | Replaced stale `Snapshots/` with canonical `Source_Snapshots/` path during Gate A factual reconciliation. |
+| 2026-09-18 | PROP-002 | `PLAN.md` §5 amendment section | Added the authorized external-report retention intake. Isolated workspace only; no production promotion, no Gate D execution. |
