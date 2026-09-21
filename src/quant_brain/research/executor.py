@@ -10,6 +10,56 @@ from quant_brain.db.init_db import DEFAULT_DB_PATH, connect, init_database
 from quant_brain.research.intake import update_research_status
 from quant_brain.research.schema import validate_raw_research_payload
 
+# Phase 6 requires a raw note to cite at least this many upstream sources.
+# Single definition on purpose: scripts/gate_readiness.py imports it, so the
+# read-only probe and the pipeline cannot drift apart. They were two separate
+# literals, and only the probe actually checked anything.
+MIN_UPSTREAM_SOURCES = 3
+
+
+class InsufficientUpstreamSources(ValueError):
+    """Discovery found fewer distinct upstream works than Phase 6 requires.
+
+    Carries the per-candidate detail so the Failed_Runs receipt can record what
+    *was* found. A question that genuinely has thin literature behind it is a
+    real research finding; it must be preserved as evidence rather than
+    discarded, and it must never become a raw note or a curator recommendation.
+    """
+
+    def __init__(self, message: str, *, detail: dict[str, Any]) -> None:
+        super().__init__(message)
+        self.detail = detail
+
+
+def distinct_upstream_keys(sources: list[dict[str, Any]]) -> list[str]:
+    """Identity of each cited work, for counting against the minimum.
+
+    Counted over normalized URLs rather than list length: arXiv serves the same
+    paper as ``.../abs/1234.5678v1`` and ``.../abs/1234.5678``, and
+    ``normalize_candidate_url`` treats those as different strings, so
+    ``len(sources)`` would let one work satisfy the bar twice. arXiv identities
+    are canonicalized here rather than trusting the lane that supplied them --
+    a source can reach this point from any lane, or from a hand-written note.
+    Sources without a URL fall back to their citation text so an offline
+    reference still counts once, and only once.
+    """
+    from quant_brain.discovery.arxiv_search import canonical_abs_url
+    from quant_brain.discovery.source_quality import normalize_candidate_url
+
+    keys: list[str] = []
+    for source in sources:
+        raw = str(source.get("url_or_citation") or "").strip()
+        if not raw:
+            continue
+        if "://" in raw:
+            key = canonical_abs_url(raw) or normalize_candidate_url(raw)
+        else:
+            key = raw.casefold()
+        if key and key not in keys:
+            keys.append(key)
+    return keys
+
+
 # Minimal starter catalog: enough to execute the first loop without building a web crawler yet.
 # This is intentionally small. A real quant workflow values provenance and review over volume.
 STARTER_SOURCES: list[dict[str, Any]] = [
@@ -40,7 +90,9 @@ STARTER_SOURCES: list[dict[str, Any]] = [
         "main_claim": "Backtests must avoid using information that would not have been available at the time of the simulated trade.",
         "evidence": "Use as bias-control source; exact quote should be captured during curation.",
         "possible_strategy_rule": "Close-based signals should normally enter no earlier than the next bar in the MVP backtester.",
-        "risks": ["If this is ignored, a strategy can appear profitable only because it cheats with future data."],
+        "risks": [
+            "If this is ignored, a strategy can appear profitable only because it cheats with future data."
+        ],
         "confidence": "high",
         "source_quality": "primary",
         "asset_classes": ["equity", "etf", "futures"],
@@ -72,7 +124,9 @@ STARTER_SOURCES: list[dict[str, Any]] = [
         "main_claim": "backtesting.py is a small Python framework for testing trading strategies with features such as commissions, statistics, and plotting.",
         "evidence": "Use as tooling source for the first readable event-style MVP backtests.",
         "possible_strategy_rule": "Implement first strategy classes in backtesting.py after research and strategy-card stages are complete.",
-        "risks": ["Framework convenience does not prevent bad signal timing, bad data, or overfitting."],
+        "risks": [
+            "Framework convenience does not prevent bad signal timing, bad data, or overfitting."
+        ],
         "confidence": "medium",
         "source_quality": "primary",
         "asset_classes": ["equity", "etf"],
@@ -107,7 +161,9 @@ STARTER_SOURCES: list[dict[str, Any]] = [
         "main_claim": "A practitioner book commonly used for learning systematic strategy research, including mean-reversion and momentum concepts.",
         "evidence": "Book citation only; use user-owned copy or legal preview/notes for exact quotes.",
         "possible_strategy_rule": "Use as background reading, but do not promote any specific rule unless exact evidence is captured from an accessible copy.",
-        "risks": ["Do not treat book reputation as evidence for a specific ETF strategy without a sourced passage and backtest."],
+        "risks": [
+            "Do not treat book reputation as evidence for a specific ETF strategy without a sourced passage and backtest."
+        ],
         "confidence": "medium",
         "source_quality": "practitioner",
         "asset_classes": ["equity", "etf", "futures"],
@@ -118,7 +174,9 @@ STARTER_SOURCES: list[dict[str, Any]] = [
 ]
 
 
-def select_candidate_sources(method_family: str | None, question: str, limit: int = 8) -> list[dict[str, Any]]:
+def select_candidate_sources(
+    method_family: str | None, question: str, limit: int = 8
+) -> list[dict[str, Any]]:
     """Select a small set of relevant starter sources for a research task."""
     family = method_family or "unclassified"
     question_lower = question.lower()
@@ -126,7 +184,11 @@ def select_candidate_sources(method_family: str | None, question: str, limit: in
     for source in STARTER_SOURCES:
         families = source.get("method_families", [])
         title_claim = f"{source['title']} {source['main_claim']}".lower()
-        if family in families or "all" in families or any(term in title_claim for term in question_lower.split()):
+        if (
+            family in families
+            or "all" in families
+            or any(term in title_claim for term in question_lower.split())
+        ):
             selected.append({k: v for k, v in source.items() if k != "method_families"})
     return selected[:limit]
 
@@ -192,11 +254,15 @@ def format_findings_markdown(
         lines.append("")
 
     payload = build_raw_research_payload(task, sources)
-    lines.extend(["## Required JSON Block", "", "```json", json.dumps(payload, indent=2), "```", ""])
+    lines.extend(
+        ["## Required JSON Block", "", "```json", json.dumps(payload, indent=2), "```", ""]
+    )
     return "\n".join(lines)
 
 
-def build_raw_research_payload(task: dict[str, Any], sources: list[dict[str, Any]]) -> dict[str, Any]:
+def build_raw_research_payload(
+    task: dict[str, Any], sources: list[dict[str, Any]]
+) -> dict[str, Any]:
     """Assemble and validate the JSON contract the curator later parses."""
     payload = {
         "research_id": task["research_id"],
@@ -368,7 +434,15 @@ def _fail_closed_discovery(
             stage=stage,
             error=error,
             resolve_write=resolve_write,
-            extra={"task_id": task_id, "created_scaffold": created_scaffold},
+            # A sparse-result failure carries its candidate evidence, so the
+            # receipt records what was found -- canonical URLs, tiers, snapshot
+            # hashes, counts and the query that was asked -- not merely that
+            # the run stopped.
+            extra={
+                "task_id": task_id,
+                "created_scaffold": created_scaffold,
+                **getattr(error, "detail", {}),
+            },
         )
         _record_scout_event(
             db_path,
@@ -443,7 +517,9 @@ def execute_discovery_task(
                     """
                 ).fetchone()
             if row is None:
-                raise ValueError("no researching task found; run research_scout_runner.py prepare first")
+                raise ValueError(
+                    "no researching task found; run research_scout_runner.py prepare first"
+                )
             task = dict(row)
         else:
             task = _get_research_task(db_path, research_id)
@@ -452,7 +528,9 @@ def execute_discovery_task(
         if note_path is None:
             if not prepare_if_missing:
                 if not task.get("raw_note_path"):
-                    raise ValueError("research task has no raw note path; prepare the task before executing")
+                    raise ValueError(
+                        "research task has no raw note path; prepare the task before executing"
+                    )
                 raise ValueError(f"raw note does not exist: {task.get('raw_note_path')}")
             stage = "prepare_note"
             prompt = build_scout_prompt(task)
@@ -479,10 +557,47 @@ def execute_discovery_task(
             resolve_write=resolve_write,
         )
         sources = list(discovered.sources)
+        rejected_records = [dict(record) for record in getattr(discovered, "rejected", ())]
         if not sources:
             raise ValueError("no candidate sources found for this research task")
 
-        rejected_records = [dict(record) for record in getattr(discovered, "rejected", ())]
+        # Fail closed BEFORE any raw note is written. A sparse result is a real
+        # finding about the literature, not a partial success to be salvaged:
+        # it is preserved in a Failed_Runs receipt and never becomes a
+        # raw_saved note or a curator recommendation.
+        distinct = distinct_upstream_keys(sources)
+        if len(distinct) < MIN_UPSTREAM_SOURCES:
+            raise InsufficientUpstreamSources(
+                f"{len(distinct)} distinct upstream source(s) found, "
+                f"Phase 6 requires {MIN_UPSTREAM_SOURCES}",
+                detail={
+                    "research_id": task["research_id"],
+                    "distinct_upstream_count": len(distinct),
+                    "required_upstream_count": MIN_UPSTREAM_SOURCES,
+                    "accepted_candidates": [
+                        {
+                            "url": source.get("url_or_citation"),
+                            "title": source.get("title"),
+                            "tier": source.get("source_quality"),
+                            "snapshot_path": source.get("snapshot_path"),
+                            "snapshot_sha256": source.get("snapshot_sha256"),
+                        }
+                        for source in sources
+                    ],
+                    "distinct_upstream_keys": distinct,
+                    "rejected_candidates": rejected_records,
+                    "search_query_expression": getattr(searcher, "last_query_expression", None),
+                    "follow_up": (
+                        "Not a refutation: the question was asked and the reachable "
+                        "literature was thin. Widen the lane set (a discovery lane "
+                        "that answers documentation or practitioner questions), or "
+                        "retain sources manually through the external intake and "
+                        "verify their original upstream works. Do not lower "
+                        f"MIN_UPSTREAM_SOURCES ({MIN_UPSTREAM_SOURCES}) to pass."
+                    ),
+                },
+            )
+
         if rejected_records:
             # Immutable, machine-queryable record of what was deliberately not
             # used. The note carries the human-readable copy.
@@ -564,7 +679,9 @@ def execute_discovery_task(
             note_path = resolve_write(note_path)
         note_path.write_text(text, encoding="utf-8")
 
-        update_research_status(db_path, task["research_id"], "raw_saved", raw_note_path=str(note_path))
+        update_research_status(
+            db_path, task["research_id"], "raw_saved", raw_note_path=str(note_path)
+        )
         _record_scout_event(
             db_path,
             run_id=run_id,

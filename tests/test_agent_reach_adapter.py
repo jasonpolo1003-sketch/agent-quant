@@ -54,8 +54,12 @@ def _fake_runner(argv: list[str], timeout: int = 60) -> tuple[int, str, str]:
 
 
 def test_plan_queries_is_bounded_and_deterministic() -> None:
-    first = plan_queries("What published papers cover overnight reversal?", "equities", max_queries=3)
-    second = plan_queries("What published papers cover overnight reversal?", "equities", max_queries=3)
+    first = plan_queries(
+        "What published papers cover overnight reversal?", "equities", max_queries=3
+    )
+    second = plan_queries(
+        "What published papers cover overnight reversal?", "equities", max_queries=3
+    )
     assert first == second
     assert 1 <= len(first) <= 3
     assert first[0] == "What published papers cover overnight reversal?"
@@ -130,9 +134,19 @@ def test_search_github_when_exa_empty() -> None:
         if "exa.web_search_exa" in " ".join(argv):
             return 0, json.dumps({"results": []}), ""
         if argv and argv[0] == "gh":
-            return 0, json.dumps(
-                [{"url": "https://github.com/quant/paper", "name": "paper", "description": "code"}]
-            ), ""
+            return (
+                0,
+                json.dumps(
+                    [
+                        {
+                            "url": "https://github.com/quant/paper",
+                            "name": "paper",
+                            "description": "code",
+                        }
+                    ]
+                ),
+                "",
+            )
         return 1, "", "unexpected"
 
     adapter = AgentReachAdapter(runner=runner, skip_exe_check=True)
@@ -144,13 +158,17 @@ def test_search_github_when_exa_empty() -> None:
 def test_search_fails_closed_when_no_usable_channel() -> None:
     def runner(argv: list[str], timeout: int = 60) -> tuple[int, str, str]:
         del argv, timeout
-        return 0, json.dumps(
-            {
-                "exa_search": {"status": "error", "active_backend": None, "message": "down"},
-                "github": {"status": "error", "active_backend": None, "message": "down"},
-                "web": {"status": "ok", "active_backend": "jina", "message": "ok"},
-            }
-        ), ""
+        return (
+            0,
+            json.dumps(
+                {
+                    "exa_search": {"status": "error", "active_backend": None, "message": "down"},
+                    "github": {"status": "error", "active_backend": None, "message": "down"},
+                    "web": {"status": "ok", "active_backend": "jina", "message": "ok"},
+                }
+            ),
+            "",
+        )
 
     adapter = AgentReachAdapter(runner=runner, skip_exe_check=True)
     with pytest.raises(AgentReachError, match="no usable Agent Reach search channel"):
@@ -260,7 +278,7 @@ def test_only_operational_lanes_are_dispatched() -> None:
         operational_lanes,
     )
 
-    assert {lane.name for lane in operational_lanes()} == {"exa", "github"}
+    assert {lane.name for lane in operational_lanes()} == {"exa", "github", "arxiv"}
     assert {lane.status for lane in SEARCH_LANES} <= {
         "operational",
         "fixture-only",
@@ -359,9 +377,14 @@ def test_the_search_channel_consulted_is_the_real_doctor_key() -> None:
     assert SEARCH_CHANNELS == ("exa_search",)
     assert "search" not in ENABLED_CHANNELS
     assert "exa" not in ENABLED_CHANNELS
-    # The general invariant: every dispatched lane names an enabled channel.
-    # This catches the whole defect class, not just this instance.
-    assert {lane.channel for lane in operational_lanes()} <= ENABLED_CHANNELS
+    # The general invariant: every dispatched lane that Agent Reach routes must
+    # name an enabled channel. This catches the whole defect class, not just
+    # this instance. A lane with channel None is not routed by Agent Reach at
+    # all (arXiv needs no account or router), so it is exempt by construction
+    # rather than by omission -- and must still be a declared lane.
+    routed = {lane.channel for lane in operational_lanes() if lane.channel is not None}
+    assert routed <= ENABLED_CHANNELS
+    assert any(lane.channel is None for lane in operational_lanes())
 
 
 def test_a_channel_reported_off_is_not_usable() -> None:

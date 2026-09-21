@@ -243,6 +243,8 @@ class LiveDiscoveryBackend:
         self.fetch_fn = fetch_fn
         self.allow_network = allow_network
         self.adapter = adapter
+        self._last_question: str | None = None
+        self._last_method_family: str | None = None
 
     def _adapter(self) -> Any:
         if self.adapter is None:
@@ -250,6 +252,28 @@ class LiveDiscoveryBackend:
 
             self.adapter = AgentReachAdapter()
         return self.adapter
+
+    @property
+    def last_query_expression(self) -> str | None:
+        """The generated search expression, when a lane recorded one.
+
+        Surfaced so a sparse-result receipt can state exactly what was asked --
+        without it a reader cannot tell a thin literature from a bad query. An
+        adapter records the real expression; when a caller injects its own
+        ``search_fn`` there is no adapter, so the deterministic expression the
+        arXiv lane *would* have generated is reported instead, marked as such.
+        Reads the adapter only if one already exists: asking for the query must
+        never construct an adapter or touch the network.
+        """
+        recorded = getattr(self.adapter, "last_arxiv_query", None)
+        if recorded:
+            return recorded
+        if self._last_question is None:
+            return None
+        from quant_brain.discovery.arxiv_search import build_arxiv_query
+
+        generated = build_arxiv_query(self._last_question, self._last_method_family)
+        return f"{generated} (derived; discovery used an injected search function)"
 
     def _resolve_search_fn(self) -> SearchFn:
         if self.search_fn is not None:
@@ -298,6 +322,10 @@ class LiveDiscoveryBackend:
             rank_candidates,
         )
 
+        # Remembered so a sparse-result receipt can report what was searched
+        # even when the caller injected its own search function.
+        self._last_question = question
+        self._last_method_family = method_family
         search_fn = self._resolve_search_fn()
         fetch_fn = self._resolve_fetch_fn()
         raw_candidates = search_fn(question, method_family, limit=limit)
@@ -323,9 +351,7 @@ class LiveDiscoveryBackend:
         # Key on the same fields the candidate builder reads, so a hit using
         # ``url_or_citation`` still finds its own record instead of collapsing
         # onto the empty-string key and losing its claim/evidence fields.
-        by_url = {
-            str(hit.get("url") or hit.get("url_or_citation") or ""): hit for hit in hits
-        }
+        by_url = {str(hit.get("url") or hit.get("url_or_citation") or ""): hit for hit in hits}
         # Candidates that lost the budget but were not rejected on quality, kept
         # in rank order so a post-fetch rejection can be backfilled rather than
         # silently shrinking the yield.
@@ -353,9 +379,7 @@ class LiveDiscoveryBackend:
                     # letting a thin page quietly cost a slot.
                     if backfill:
                         promoted = backfill.pop(0)
-                        rejected_records = [
-                            r for r in rejected_records if r["url"] != promoted.url
-                        ]
+                        rejected_records = [r for r in rejected_records if r["url"] != promoted.url]
                         queue.append(promoted)
                     continue
 

@@ -82,6 +82,41 @@ This exists because the project's core design rule is *move slowly, one verified
 
 ---
 
+### PROP-003 — Independent zero-account arXiv discovery lane, distinct-URL source minimum, sparse-result quarantine
+- **Date:** 2026-09-19
+- **Proposed by:** Gate D readiness assessment session (branch `testing`)
+- **Affects:** Phase 6 implementation shape (adds a discovery lane); **no** change to the ≥3-source bar, the 5-fetched-source cap, source tiers, validators, the curator threshold, or snapshot-before-model. Two of the three parts are *tightenings*.
+- **Current plan says:** Phase 6 step 3 names "Exa / GitHub / web search" as the discovery lanes, and the ≥3-upstream-source bar is an exit-gate requirement.
+- **Problem:** three separate findings, all verified live at `51979f6`:
+  1. **No lane can produce URLs.** `gate_readiness.py` exits **4** with **0 candidates** for all three children. Only `search_exa` and `search_github` turn a question into URLs (`agent_reach.py:498-520`, `SEARCH_CHANNELS = ("exa_search",)`). Exa is `off` by Jason's decision; GitHub is authenticated and working but searches *code repositories* — `gh search repos "RSI exit rules backtest"` returns `[]`. The plan's "web search" was never implemented as search: `fetch_web(self, url)` takes one already-known URL and has no query parameter. RSS/YouTube have no search code at all. `SEARCH_LANES` is decorative — `operational_lanes()` is never called from `src/`.
+  2. **The ≥3-source bar is not enforced in the pipeline.** It exists only in `scripts/gate_readiness.py:41` (a read-only probe) and in Phase 6 prose. `executor.py:481` checks only `if not sources` — i.e. ≥1. A run with 1-2 sources completes and writes a raw note that *looks* valid while violating the Phase 6 exit gate.
+  3. **Counting `len(sources)` is inflatable.** `normalize_candidate_url` does not unify `http://arxiv.org/abs/1909.04327v1` with `https://arxiv.org/abs/1909.04327`, so one paper in two forms counts as two sources and could satisfy a 3-source minimum with two works.
+- **Proposed change:** (a) add `src/quant_brain/discovery/arxiv_search.py`, an independent zero-account lane over arXiv's free Atom API, owning its own hardened transport (fixed HTTPS host, timeout, User-Agent, bounded read, DOCTYPE/entity rejection, strict arXiv-host validation, canonical `https://arxiv.org/abs/<id>` with version stripped), used as a top-up after GitHub and returning the existing hit contract so all ranking/tiering/caps are untouched; (b) enforce the minimum over **distinct normalized upstream URLs**, with one shared constant imported by both the executor and the readiness probe; (c) quarantine sparse results through the existing `_write_failed_run_note` path with canonical URLs, snapshot paths/hashes, tiers, rejection reasons, actual/required counts, the generated query expression and follow-up guidance — producing **no `raw_saved` note and no curator recommendation**.
+- **Honest coverage estimate:** under **one fixed query rule** (no per-question tuning), distinct canonical `/abs/` candidates are **RQ-6d9c12f4: 5**, **RQ-80be8cf7: 1**, **RQ-c920baeb: 1**. A three-phrase conjunction returns 0 for all three. **This lane plausibly makes one of three questions probe-ready, and does not complete Gate D.** An earlier informal probe suggested wider coverage; that came from hand-tuned per-question queries and is withdrawn.
+- **Why arXiv is a defensible lane:** `/abs/` URLs already classify as `primary`/promotable under the existing unmodified `source_quality.classify_source` ("structural primary signal: arxiv-abs"), and a real abstract page fetched through the existing `jina_fetch` returns 722 words, passing the 600-char/120-word content floor. No new fetch dependency, no account, no API key, no paid service.
+- **Cost of not changing:** Gate D stays blocked indefinitely unless Jason configures a third-party service he has declined; and the two enforcement defects remain latent, so whenever a lane *is* restored the first child run could write an under-evidenced raw note that passes silently.
+- **Status:** accepted and implemented 2026-09-19 on `testing`. **No child run was executed.**
+- **Jason's decision:** approved as proposed. Explicitly **not** authorized by that approval: running any of the three child questions, which remains a separate decision after independent review.
+- **Verified outcome after implementation** (`391 passed, 1 skipped`; Ruff clean on `.` and on `src tests scripts`):
+
+  | Question | unique URLs | `gate_readiness` exit |
+  |---|---|---|
+  | RQ-6d9c12f4 exit rules | 3 | **0 — ready** |
+  | RQ-c920baeb max holding period | 1 | 4 — still blocked |
+  | RQ-80be8cf7 costs/slippage | 1 | 4 — still blocked |
+
+  The estimate held exactly: one of three questions is now probe-ready. The generated expression for RQ-6d9c12f4 was `all:"mean reversion" AND all:"exit"`, yielding three distinct `primary`-tier works (`arxiv.org/abs/1411.5062`, `/2309.16008`, `/1601.04210`). No query was tuned per question to change any of these outcomes; the two blocked questions are an honest finding about reachable literature, not a lane failure.
+
+  `db/brain.sqlite` is byte-identical after the probes; `strategy_cards`/`backtests`/`price_datasets`/`reviews` all remain 0; all three questions remain `queued` with `raw_note_path NULL`.
+
+**Deliberately not proposed (would need separate approval):**
+- Executing any of the three child questions. That remains a separate authorization after implementation, independent review, and fresh readiness checks.
+- Relaxing the ≥3-source bar, the 5-source cap, tiers, validators, or the curator threshold.
+- Configuring Exa, any paid API, or any account-backed service.
+- Per-question query tuning to reach a passing candidate count.
+
+---
+
 ## Accepted changes log
 
 Once Jason accepts a proposal, apply it to `PLAN.md`, then record the applied change here with the date, so the plan's history stays readable.
@@ -90,3 +125,4 @@ Once Jason accepts a proposal, apply it to `PLAN.md`, then record the applied ch
 |---|---|---|---|
 | 2026-09-07 | PROP-001 | `PLAN.md` Phase 4 deliverables | Replaced stale `Snapshots/` with canonical `Source_Snapshots/` path during Gate A factual reconciliation. |
 | 2026-09-18 | PROP-002 | `PLAN.md` §5 amendment section | Added the authorized external-report retention intake. Isolated workspace only; no production promotion, no Gate D execution. |
+| 2026-09-19 | PROP-003 | `PLAN.md`, `src/quant_brain/discovery/arxiv_search.py`, `agent_reach.py`, `research/executor.py`, `scripts/{gate_readiness,agent_reach_check}.py` | Added the zero-account arXiv lane; made the ≥3-source bar enforceable over distinct upstream works; quarantined sparse results in Failed_Runs. One of three questions became probe-ready; no child run executed. |

@@ -20,6 +20,11 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from quant_brain.discovery.arxiv_search import (
+    ArxivSearchError,
+    build_arxiv_query,
+    search_arxiv,
+)
 from quant_brain.discovery.live_discovery import (
     FORBIDDEN_SUBCOMMANDS,
     LiveDiscoveryError,
@@ -63,18 +68,24 @@ class SearchLane:
     ``fixture-only`` lanes are exercised by recorded tests but not dispatched
     live. ``deferred`` lanes are declared so doctor output maps cleanly, and are
     never dispatched. Login-backed channels appear nowhere here by design.
+
+    ``channel`` is ``None`` for a lane that Agent Reach does not route. Such a
+    lane needs no account and no router, so its availability is independent of
+    any doctor status -- reporting it under a channel would make an unrelated
+    channel's health look like the reason it did or did not answer.
     """
 
     name: str
-    channel: str
+    channel: str | None
     status: str
 
 
 SEARCH_LANES: tuple[SearchLane, ...] = (
-    # ``name`` is our lane label; ``channel`` must be the real doctor key.
+    # ``name`` is our lane label; ``channel`` must be the real doctor key, or
+    # ``None`` when the lane is not routed through Agent Reach at all.
     SearchLane("exa", "exa_search", "operational"),
     SearchLane("github", "github", "operational"),
-    SearchLane("arxiv-abs", "web", "fixture-only"),
+    SearchLane("arxiv", None, "operational"),
     SearchLane("youtube", "youtube", "deferred"),
     SearchLane("rss", "rss", "deferred"),
 )
@@ -314,7 +325,9 @@ def extract_search_hits(raw: str, *, source_type: str) -> list[dict[str, Any]]:
     return _dedupe_hits(hits)
 
 
-_ARXIV_PDF_RE = re.compile(r"^(https?://(?:www\.)?arxiv\.org)/pdf/([\w.\-/]+?)(?:v\d+)?(?:\.pdf)?$", re.I)
+_ARXIV_PDF_RE = re.compile(
+    r"^(https?://(?:www\.)?arxiv\.org)/pdf/([\w.\-/]+?)(?:v\d+)?(?:\.pdf)?$", re.I
+)
 
 
 def prefer_arxiv_abstract(url: str) -> str:
@@ -361,12 +374,26 @@ class AgentReachAdapter:
         fetch_impl: Any | None = None,
         timeout: int = 60,
         skip_exe_check: bool = False,
+        arxiv_search_impl: Any | None = None,
     ) -> None:
         self.exe = exe if skip_exe_check and exe else (exe or os.environ.get("AGENT_REACH_EXE"))
         self._skip_exe_check = skip_exe_check
         self.runner = runner or default_runner
         self.fetch_impl = fetch_impl or jina_fetch
         self.timeout = timeout
+        # arXiv does not go through ``runner`` (it is HTTP, not a subprocess),
+        # so an injected runner would not contain it. A caller that supplies its
+        # own runner is running hermetically and must opt in explicitly, or the
+        # lane would silently reach the network from inside a test.
+        if arxiv_search_impl is not None:
+            self.arxiv_search_impl: Any | None = arxiv_search_impl
+        else:
+            self.arxiv_search_impl = None if runner is not None else search_arxiv
+        # The last arXiv expression generated, for run records and receipts,
+        # and the last arXiv failure, so a lane fault is never reported as an
+        # empty literature.
+        self.last_arxiv_query: str | None = None
+        self.last_arxiv_error: str | None = None
 
     def _executable(self) -> str:
         if self._skip_exe_check:
@@ -416,7 +443,12 @@ class AgentReachAdapter:
         except json.JSONDecodeError as exc:
             raise AgentReachError("agent-reach doctor returned malformed JSON") from exc
         if isinstance(payload, dict) and payload.get("ok") is False:
-            issues = payload.get("issues") or payload.get("errors") or payload.get("message") or "unhealthy"
+            issues = (
+                payload.get("issues")
+                or payload.get("errors")
+                or payload.get("message")
+                or "unhealthy"
+            )
             raise AgentReachUnavailable(f"agent-reach doctor reported unhealthy: {issues}")
         health = parse_channel_health(payload)
         if not health:
@@ -460,6 +492,21 @@ class AgentReachAdapter:
                 parsed = urlparse(hit["url"])
                 hit["title"] = parsed.path.strip("/") or hit["url"]
         return hits
+
+    def search_arxiv(
+        self, question: str, method_family: str | None, *, limit: int
+    ) -> list[dict[str, Any]]:
+        """Search arXiv with the one deterministic query transformation.
+
+        The generated expression is stashed on the adapter so a caller can
+        record exactly what was asked -- essential when the honest outcome is
+        "the literature is thin" rather than "the lane failed".
+        """
+        expression = build_arxiv_query(question, method_family)
+        self.last_arxiv_query = expression
+        if self.arxiv_search_impl is None:
+            raise ArxivSearchError("arXiv lane disabled for this adapter")
+        return self.arxiv_search_impl(expression, limit=limit, timeout=self.timeout)
 
     def fetch_web(self, url: str) -> dict[str, Any]:
         # Pass the timeout only when the implementation accepts one. Catching
@@ -515,7 +562,24 @@ class AgentReachAdapter:
                     break
         if github_usable and len(_dedupe_hits(hits)) < pool_target:
             hits.extend(self.search_github(queries[0], limit=per_query))
+        if len(_dedupe_hits(hits)) < pool_target:
+            # arXiv is a zero-account lane, so its availability is independent
+            # of any Agent Reach channel's doctor status and it is not gated on
+            # one. A lane failure here must not discard hits the other lanes
+            # already found, so the error is swallowed deliberately; the caller
+            # still sees an empty result if nothing at all was found.
+            try:
+                hits.extend(self.search_arxiv(question, method_family, limit=per_query))
+            except ArxivSearchError as exc:
+                # Keep the reason. "arXiv answered with nothing" and "arXiv did
+                # not answer" are different findings, and reporting the second
+                # as the first would misattribute a transport fault to the
+                # literature.
+                self.last_arxiv_error = str(exc)
         unique = _dedupe_hits(hits)[:pool_target]
         if not unique:
-            raise AgentReachError("Agent Reach search returned no URLs")
+            detail = ""
+            if self.last_arxiv_error:
+                detail = f"; arXiv lane also failed: {self.last_arxiv_error}"
+            raise AgentReachError(f"Agent Reach search returned no URLs{detail}")
         return unique

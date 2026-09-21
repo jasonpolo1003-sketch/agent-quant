@@ -37,8 +37,12 @@ from quant_brain.discovery.agent_reach import (
 from quant_brain.discovery.source_quality import normalize_candidate_url
 
 # brain/_system/plan/phase_06_research_scout_agent.md: a raw research note must
-# cite at least three upstream sources.
-PHASE_6_MIN_SOURCES = 3
+# cite at least three upstream sources. Imported rather than redeclared so this
+# probe and the executor that enforces it cannot drift apart -- they were two
+# independent literals, and only this one was ever checked.
+from quant_brain.research.executor import MIN_UPSTREAM_SOURCES
+
+PHASE_6_MIN_SOURCES = MIN_UPSTREAM_SOURCES
 
 
 def load_question(db_path: str | Path, research_id: str) -> dict[str, Any] | None:

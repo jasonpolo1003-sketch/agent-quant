@@ -1,5 +1,38 @@
 # Quant Agent Brain — Session Handoff
 
+## Gate D partially unblocked — arXiv lane added, no child run (2026-09-19)
+
+**Gate D remains NOT executed.** One of three child questions is now probe-ready; the other two are honestly still blocked. Work is on `testing`, **uncommitted and unpushed**, pending Jason's approval.
+
+**Starting state, verified live at `51979f6`:** `gate_readiness.py` exited **4** with **0 candidate URLs** for all three children. Only `search_exa` and `search_github` could turn a question into URLs (`agent_reach.py`, `SEARCH_CHANNELS = ("exa_search",)`). Exa is `off` by Jason's decision; GitHub is authenticated and working but searches *code repositories* — `gh search repos "RSI exit rules backtest"` returns `[]`. The plan's "web search" was never implemented as search: `fetch_web(self, url)` takes one already-known URL and has no query parameter. RSS/YouTube have no search code at all. `SEARCH_LANES` was decorative — `operational_lanes()` was never called from `src/`.
+
+**What changed (PROP-003, approved before implementation).**
+1. **`src/quant_brain/discovery/arxiv_search.py`** — an independent zero-account lane over arXiv's free Atom API, with its own hardened transport: fixed HTTPS host, explicit timeout and User-Agent, bounded read, DOCTYPE/entity rejection, redirects refused outright, strict arXiv-host validation on every identifier, and canonical `https://arxiv.org/abs/<id>` output. A valid empty feed returns `[]`; malformed or oversized responses raise. It is **not** gated on the Agent Reach `web`/Jina channel — conflating the two would misreport *why* discovery failed.
+2. **One deterministic query transformation** (`build_arxiv_query`) applied identically to every question, recorded in the run and in any receipt. **No per-question tuning.** A three-phrase conjunction returned 0 for all three questions; two phrases is the measured rule.
+3. **The ≥3-source bar is now enforced in the pipeline.** It previously lived only in `gate_readiness.py` (a read-only probe) and Phase 6 prose — `executor.py` checked only `if not sources`, i.e. ≥1. It is now counted over **distinct normalized upstream works**, not `len(sources)`, with one shared `MIN_UPSTREAM_SOURCES` constant imported by the probe so the two cannot drift.
+4. **Sparse results are quarantined, never promoted.** Below the minimum the run fails closed **before** any raw note is written, and the existing `_write_failed_run_note` path records canonical URLs, tiers, snapshot paths/hashes, actual/required counts, the generated query and follow-up guidance — with **no `raw_saved` note and no curator recommendation**.
+
+**Verified results.** **391 passed, 1 skipped**; Ruff clean on `.` and on `src tests scripts`.
+
+| Question | unique URLs | `gate_readiness` exit |
+|---|---|---|
+| RQ-6d9c12f4 exit rules | 3 | **0 — ready** |
+| RQ-c920baeb max holding period | 1 | 4 — still blocked |
+| RQ-80be8cf7 costs/slippage | 1 | 4 — still blocked |
+
+RQ-6d9c12f4's three candidates are distinct `primary`-tier works (`arxiv.org/abs/1411.5062`, `/2309.16008`, `/1601.04210`) from the generated expression `all:"mean reversion" AND all:"exit"`. **No query was tuned to produce this.** The two blocked questions are a finding about reachable literature, not a lane fault — arXiv indexes academic preprints, and "maximum holding-period caps" and practitioner cost conventions are largely documented elsewhere.
+
+**Independent review: APPROVED**, after finding two real defects in the first implementation, both fixed and regression-tested:
+- **P2 — `/pdf/` and `/abs/` of one paper counted as separate works**, so three links to a single paper satisfied the floor of 3. `canonical_abs_url` now reduces both renderings (and a `.pdf` extension) to one identity.
+- **P2 — a bare trailing `v` split one work in two** (`v\d+$` required a digit). Now `v\d*$`.
+- P3s also fixed: an arXiv transport failure no longer reads as "the literature is empty" (the reason is retained and reported), and the generated query is now recorded even when a caller injects its own `search_fn`. Redirects are refused outright rather than checked at the final hop, since `geturl()` cannot see a chain that leaves the host and returns.
+
+**Production invariants unchanged:** `strategy_cards`/`backtests`/`price_datasets`/`reviews` all **0**; no `external_*` tables; all three RQs still `queued` with `raw_note_path NULL`; `db/brain.sqlite` byte-identical after every readiness probe.
+
+**Known limitations.** (a) arXiv is academic-only, so documentation and practitioner questions may still find nothing — that is the honest reason two questions remain blocked. (b) The lane is a *search* addition only; caps, tiers, validators, the curator threshold and snapshot-before-model are untouched. (c) A run reaching exactly 3 sources still has to pass every downstream gate; probe-ready is not evidence.
+
+**Next decision is Jason's:** whether to authorize a single Research Scout child run for `RQ-6d9c12f4` only. That is a separate authorization and was deliberately not taken here.
+
 ## External intake merged to `main` (2026-09-19)
 
 The independently approved external-research intake and its documentation correction were fast-forwarded to `main` at `75b51c9` and pushed. `main` and `testing` are being kept synchronized; Gate D remains blocked and was not executed. The next authorized activity requires a new bounded Gate D brief and prerequisite check, not a strategy or backtest.
@@ -120,7 +153,7 @@ Python uses `uv`.
 Latest verified test count:
 
 ```text
-149 passed
+391 passed
 1 skipped
 ```
 
@@ -693,7 +726,7 @@ run history. Until Gate D is authorized, preserve `RQ-6d9c12f4`, `RQ-c920baeb`, 
 |---|---|---|
 | Exa via mcporter | declared operational, **currently off** | Primary search channel. `exa_search` reports `status: off` (Exa not configured) as of 2026-09-17 — this is the Gate D blocker |
 | GitHub via `gh` | operational | Top-up only when search is short of the cap |
-| arXiv `/abs/` | fixture-only | `/pdf/` → `/abs/` rewrite; promotes hits already found. No API client, no PDF parser |
+| arXiv `/abs/` | **operational since 2026-09-19** (PROP-003) | Now a real search lane over the free public Atom API — zero account, no key, own hardened transport, not routed through Agent Reach. Academic preprints only. Still no PDF parser; `/pdf/` links are canonicalized to `/abs/`. (Was: fixture-only rewrite of hits already found.) |
 | YouTube, RSS | deferred | Declared so doctor output maps cleanly; never dispatched |
 | Reddit, X, Facebook, Instagram, XiaoHongShu, LinkedIn | never | Login-backed; appear in no lane |
 
