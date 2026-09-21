@@ -2,7 +2,7 @@
 
 ## Gate D partially unblocked — arXiv lane added, no child run (2026-09-19)
 
-**Gate D remains NOT executed.** One of three child questions is now probe-ready; the other two are honestly still blocked. Work is on `testing`, **uncommitted and unpushed**, pending Jason's approval.
+**Gate D remains NOT executed.** One of three child questions is now probe-ready; the other two are honestly still blocked. PROP-003 was committed at `cddd3d84d3849e445c2d227f824bb5b9206c5c85` and pushed to `origin/testing`. Post-change verification remains **391 passed, 1 skipped** with Ruff clean on both invocations; the production invariants below remain unchanged.
 
 **Starting state, verified live at `51979f6`:** `gate_readiness.py` exited **4** with **0 candidate URLs** for all three children. Only `search_exa` and `search_github` could turn a question into URLs (`agent_reach.py`, `SEARCH_CHANNELS = ("exa_search",)`). Exa is `off` by Jason's decision; GitHub is authenticated and working but searches *code repositories* — `gh search repos "RSI exit rules backtest"` returns `[]`. The plan's "web search" was never implemented as search: `fetch_web(self, url)` takes one already-known URL and has no query parameter. RSS/YouTube have no search code at all. `SEARCH_LANES` was decorative — `operational_lanes()` was never called from `src/`.
 
