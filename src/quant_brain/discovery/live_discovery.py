@@ -154,6 +154,7 @@ def _source_from_fetch(
     fetched: dict[str, Any],
     snapshot_path: str,
     tier: str = "discovery-only",
+    snapshot_sha256: str | None = None,
 ) -> dict[str, Any]:
     """Map a fetched page onto the raw-research source contract.
 
@@ -183,6 +184,11 @@ def _source_from_fetch(
     # ``source_quality`` is NOT read from the candidate. Upstream search results
     # are untrusted input, and letting a hit carry its own tier would let any
     # result claim `primary` and bypass the classifier entirely.
+    # ``snapshot_path``/``snapshot_sha256`` are carried as real keys, not merely
+    # interpolated into ``evidence``. A failure after this point has to be able
+    # to say *which file* holds the bytes the model was shown, and the failure
+    # path reads exactly these keys. They were previously read but never set, so
+    # every receipt recorded ``null`` for both.
     return {
         "title": candidate.get("title") or fetched.get("title") or candidate["url"],
         "source_type": candidate.get("source_type") or "web",
@@ -197,6 +203,8 @@ def _source_from_fetch(
         "data_required": list(candidate.get("data_required") or []),
         "data_access": candidate.get("data_access") or "available-now",
         "mvp_testable": bool(candidate.get("mvp_testable", False)),
+        "snapshot_path": snapshot_path,
+        "snapshot_sha256": snapshot_sha256,
     }
 
 
@@ -397,8 +405,17 @@ class LiveDiscoveryBackend:
                 mapped["url"] = url
                 mapped.setdefault("title", candidate.title)
                 mapped.setdefault("source_type", candidate.source_type)
+                # Same input ``save_source_snapshot`` hashes for the frontmatter
+                # and the filename prefix, so this value is identical by
+                # construction and the 12-char prefix stays a cross-check.
                 sources.append(
-                    _source_from_fetch(mapped, fetched, snapshot_path, tier=candidate.tier)
+                    _source_from_fetch(
+                        mapped,
+                        fetched,
+                        snapshot_path,
+                        tier=candidate.tier,
+                        snapshot_sha256=hashlib.sha256(content.encode("utf-8")).hexdigest(),
+                    )
                 )
         except Exception:
             # This attempt owns exactly these files, and resolve_write may have

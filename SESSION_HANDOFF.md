@@ -1,5 +1,334 @@
 # Quant Agent Brain — Session Handoff
 
+## Checkpoint committed (2026-09-22) — provenance repair and historical evidence
+
+Two local commits on `testing`, **not pushed** (`origin/testing` is still `3c02397`). No Scout run, retry,
+curator or research was executed. **Phase 6 / Gate D remain incomplete.**
+
+- **`54df8cf`, evidence:** `RUN-4e9d910742.md` plus the five `Source_Snapshots/2026-09-21/` files, committed
+  unchanged, and a new `.gitattributes` marking exactly those six paths `-text` so `core.autocrlf=true`
+  cannot normalise them. Original, staged and committed sha256 were verified identical for all six (CRLF
+  and trailing whitespace preserved). The link to `RUN-4e9d910742` stays **probable, not established**.
+- **The commit containing this entry:** the provenance repair (`live_discovery.py`, `executor.py`), its
+  tests (`test_failed_run_provenance.py`, `test_upstream_minimum.py`), and this file plus `PLAN.md`. Code
+  and test bytes are sha256-identical to the state verified below (397 passed, 1 skipped, Ruff clean), so
+  that verification was reused rather than re-run.
+- **Next build task, required before any further production Scout attempt:** harden
+  `_fail_closed_discovery`:
+  - treat receipt-write and event failures (`PathViolation`, `OSError`, any `Exception`) as secondary;
+  - always run raw-note cleanup and `reset_research_for_retry`;
+  - re-raise the **original** exception, recording the handler failure without masking it;
+  - add regression tests injecting `PathViolation`/`OSError` into the receipt and event writes. Each asserts
+    the original exception propagates, the question is back in `queued`, no scaffold remains, and the
+    evidence gates are unchanged.
+
+  Optional and separate: stamp `run_id`/`task_id` into new snapshot frontmatter.
+
+## Finalization verification of the provenance repair (2026-09-22) — historical: the pre-commit state
+
+**Verdict: no blocker to committing the provenance repair.** Verification and status updates only; nothing
+staged, committed or pushed; no Scout run, retry, curator or research. Phase 6 / Gate D remain
+**incomplete**. Branch `testing` at `3c02397` (= `origin/testing`).
+
+- **397 passed, 1 skipped**; `ruff check .` and `ruff check src tests scripts` both clean; `git diff --check`
+  clean; untracked `tests/test_failed_run_provenance.py` and `RUN-4e9d910742.md` whitespace-clean.
+- **Change-set integrity, checked by hashes rather than `git status`:** the DB, all 12 files under
+  `Failed_Runs/` and `Source_Snapshots/2026-09-21/`, the tracked `git diff`, and every modified or untracked
+  change-set file were sha256-hashed before verification and matched afterwards. `db/brain.sqlite` =
+  `6db659812411efe084f5168d41c98192b79ca59f9b739d89991e6c3f530f9e29`.
+- **Scope review:** the code diff touches only `live_discovery.py` and `executor.py`; no change to source
+  minimums, the 5-source cap, validators, tiers, prompts or the model ladder. The receipt and all 5 snapshots
+  were read in full: public arXiv abstract pages only.
+- **Snapshot integrity (intact, not authorship):** for all 5, `content_hash` recomputes exactly from the
+  LF-normalised body *including* its final newline (on disk the files are CRLF because `write_text` runs on
+  Windows); filename prefixes and `url_hash` also match. This proves integrity, not which run wrote them;
+  the link to `RUN-4e9d910742` stays **probable**.
+- **Separate follow-up, required before the next production Scout run** (new build task, needs approval):
+  make `_fail_closed_discovery` catch non-`OSError` failures from the receipt write and its event, always run
+  cleanup and the reset to `queued`, and re-raise the *original* exception, with `PathViolation` and
+  `OSError` injection tests. Optional: stamp `run_id`/`task_id` into new snapshot frontmatter.
+- **Proposed commit scope (later, separately approved):**
+  - **A, the fix:** both source files, both test files, `PLAN.md`, `SESSION_HANDOFF.md`.
+  - **B, historical evidence as-is:** `RUN-4e9d910742.md` and the 5 snapshots. No backfill; the commit
+    message calls the lineage "probable". Precedent: `46728a7`.
+- **Commit-stage cautions:**
+  - There is no `.gitattributes` and `core.autocrlf=true`, so stored blobs will be LF. After staging, compare
+    the sha256 of the `git cat-file blob :<path>` output with the on-disk sha256 and decide explicitly on
+    normalisation. `content_hash` is defined over the LF body, so it stays verifiable either way.
+  - The snapshots contain trailing whitespace that is part of the captured content and covered by the hash:
+    never whitespace-fix them. There are no pre-commit hooks.
+
+## Failure-receipt provenance defect fixed (2026-09-20, later)
+
+**397 passed, 1 skipped (re-verified 2026-09-22 after the review follow-up; 396 at the
+original fix); Ruff clean on `.` and on `src tests scripts`; `git diff --check` clean.**
+The failed-run receipt and five `2026-09-21` snapshots were hash-checked before and after
+the follow-up and are unchanged. Production
+`db/brain.sqlite` byte-identical across the whole session at sha256
+`6db659812411efe084f5168d41c98192b79ca59f9b739d89991e6c3f530f9e29` (this is the
+**post-run** hash; the older `43fa24b0…` is the pre-run baseline and is now historical —
+the database legitimately changed when `RUN-4e9d910742` wrote its audit rows, which must
+not be discarded). Everything is **unstaged**; nothing committed, pushed or merged.
+**No Scout child run, no curator, no other research question was executed.** Phase 6
+remains **incomplete**.
+
+**Root cause — two defects sharing one gap.**
+
+1. **Candidate evidence was attached to an exception class, not to the run.**
+   `_fail_closed_discovery` built the receipt's `Detail` from
+   `{"task_id", "created_scaffold", **getattr(error, "detail", {})}`. Only
+   `InsufficientUpstreamSources` defines `.detail`; `QwenValidationError` carries
+   `.attempts` and no `.detail`, so the spread contributed nothing and, whenever a receipt
+   *was* written for a post-fetch failure (Qwen validation, write_note, a path violation
+   raised by the run's own writes), it named no source and no snapshot.
+2. **`snapshot_path` / `snapshot_sha256` were read but never written.** `executor.py`
+   read both off each source dict, but `_source_from_fetch` only ever interpolated the
+   path into an `evidence` string — it never set the keys. So **even the sparse-source
+   path** recorded `null` for both. `tests/test_upstream_minimum.py` asserted only that
+   the key was *present*, which `None` satisfies; that is why a green suite carried this.
+
+**The fix (smallest robust change, 2 source files).**
+
+- `src/quant_brain/discovery/live_discovery.py` — `_source_from_fetch` takes
+  `snapshot_sha256` and sets both `snapshot_path` and `snapshot_sha256` as real keys. The
+  hash is computed at the call site from the same `content` `save_source_snapshot` hashes,
+  so it is identical by construction and the filename's 12-char prefix stays a cross-check.
+- `src/quant_brain/research/executor.py` — new shared `candidate_evidence()` helper (one
+  definition, used by both failure paths, so they cannot describe candidates differently);
+  provenance captured **once at the discover stage** into `discovered_provenance` and
+  passed to `_fail_closed_discovery` as `run_provenance`, merged **beneath**
+  `error.detail` so `InsufficientUpstreamSources` keeps precedence.
+
+**Why capture at the discover stage:** a *successful* model call rebinds
+`sources = list(model_result.output["sources"])`, so reading `sources` at failure time
+would describe a later `write_note` failure with model-shaped values instead of what
+discovery actually fetched. Capturing early pins the classifier tier and the canonical
+fetched URL regardless of which later stage fails. This is covered by its own test.
+
+**`QwenValidationError` was deliberately left untouched.** Giving it a `detail` would
+require `qwen_call` — which knows nothing about snapshots — to carry per-source
+provenance, inverting a boundary the codebase maintains. The executor-side keyword covers
+the *contents* of every receipt the fail-closed path writes, whatever the exception type.
+
+**How future failures retain lineage — receipt contents, not receipt creation.** This fix
+improves what a receipt says **when the receipt is successfully written**; it does not
+change whether one is written. For a discovery failure after the discover stage, a written
+receipt now contains `run_id`, `task_id`, `research_id`, `stage`, `error_type`,
+`accepted_candidates` (url / title / tier / snapshot_path / snapshot_sha256),
+`snapshot_paths`, `distinct_upstream_count`, `required_upstream_count`,
+`rejected_candidates` and `search_query_expression` — enough to reconstruct the run without
+directory dates or manual inference (verified by building the receipt the real run
+*should* have written, in an isolated scratch project). For a failure inside discovery,
+before a `DiscoverResult` exists, the receipt carries `run_id`/`task_id`/`research_id`/
+`stage`/`error_type` and the error text, and **no** candidate or snapshot fields (absent,
+not empty) — covered by its own test.
+
+**Receipt creation is still not guaranteed (unchanged, pre-existing).**
+`_fail_closed_discovery` catches only `OSError` around the receipt write, and the receipt
+is written only once a task has loaded. So: (i) an `OSError` writing the receipt leaves no
+receipt (cleanup and reset still run); (ii) a `PathViolation` from `resolve_write` on the
+`Failed_Runs` path — or any other non-`OSError` from the write or its event — escapes the
+handler, skipping raw-note cleanup and the `queued` reset, and replaces the original
+exception (which survives only as `__context__`); (iii) a failure before the task loads
+(e.g. an unknown `research_id`) writes no receipt by design. None of this was fixed here.
+
+**Regression coverage — `tests/test_failed_run_provenance.py` (6 new tests):** the reported
+Qwen-validation defect; the recorded hash verified against the filename prefix and the
+snapshot's own frontmatter; fail-closed containment unchanged; a later-stage failure
+keeping discovery-side values rather than model-shaped ones; an early discovery failure
+(valid task, real live backend raising `LiveDiscoveryError` before any `DiscoverResult`)
+that spies on the real `_fail_closed_discovery` to prove it runs once at stage `discover`,
+propagates the original exception object, and writes a receipt with run/task/research/
+stage/error but no candidate or snapshot fields; and an unknown `research_id`, which
+writes no receipt because no task ever loads.
+`tests/test_upstream_minimum.py` was strengthened from key-presence to non-null values.
+**Mutation-checked:** temporarily removing the two keys fails 4 of these tests, so they
+genuinely detect the defect rather than merely passing alongside it.
+
+**Review follow-up (2026-09-22).** An independent review found two issues, both now
+resolved: (1) the original early-failure test used an unknown `research_id`, so it failed
+before a task loaded and never reached `_fail_closed_discovery` or the provenance
+carrier — it was renamed to say what it actually pins, and the valid-task test above was
+added (mutation-checked: seeding `discovered_provenance` with an empty
+`accepted_candidates` fails it); (2) this file and `PLAN.md` implied every failure now
+writes a complete receipt — corrected above to distinguish receipt *contents* from
+receipt *creation*. No production code changed in the follow-up.
+
+**Nothing weakened.** No change to prompts, the model ladder, validators, source tiers,
+`MIN_UPSTREAM_SOURCES`, the 5-source cap, curator controls, snapshot-before-model ordering,
+or the cleanup sequence. The sparse path's **contract** is preserved (same keys, same
+semantics, same behavior); its **contents** necessarily change, because two fields that
+were always `null` now hold real values — it is not byte-identical, and claiming so would
+be wrong.
+
+**The existing receipt was NOT backfilled, and that is deliberate.** An earlier assessment
+called the attribution "deterministically provable". That was an overclaim. The evidence is
+strong but circumstantial: `TASK-a679b61436` is the only `discovery` task ever recorded;
+all five `captured_at` values (00:57:54–00:58:03 UTC) fall strictly inside the run's event
+span (00:57:30–01:00:18 UTC); and every `content_hash` recomputes exactly from its snapshot
+body. **None of that proves authorship** — content hashes prove *integrity*, not which
+process wrote the file. An identical snapshot could come from a standalone script or an
+unrecorded invocation; the files carry no `run_id` and no event references a path. The
+brief permits backfill only when deterministically proven, so
+`brain/00_Inbox/Failed_Runs/RUN-4e9d910742.md` is **unchanged**. The association is
+recorded here as **probable**, with that limitation stated. The tiers reported for those
+five URLs are **re-derived** by running the current `classify_source` now — not recovered
+runtime records.
+
+**Remaining limitations.** (a) The five existing snapshots stay without machine-readable
+lineage; only *future* runs get it. (b) The fix records provenance in the receipt, not in
+`agent_events` — a reader still needs the receipt file. (c) Snapshot frontmatter still
+carries no `run_id`; linking a loose snapshot back to a run remains inferential. (d) The
+unsuitable-relevance blocker for `RQ-6d9c12f4` is untouched and unresolved. (e) Receipt
+*creation* is not guaranteed — see "Receipt creation is still not guaranteed" above.
+
+**Next decision is Jason's:** review this unstaged change set; then choose whether to widen
+the lane set toward sources that document RSI exit rules, stamp `run_id` into snapshot
+frontmatter as a follow-up, or accept the relevance gap as the finding. Do **not** lower
+`MIN_UPSTREAM_SOURCES` or relax extractive support.
+
+## First Scout child run executed — research acceptance FAILED, fail-closed safeguards verified (2026-09-20)
+
+**Verdict: Scout research acceptance failed; fail-closed safeguards verified.** The first
+Research Scout child run ever executed under PROP-003 ran end to end for `RQ-6d9c12f4`
+only, and stopped at the Qwen validation gate. **This is not Gate D or Phase 6 progress on
+the research question** — it is the first evidence that the production path's safety
+machinery works on live material.
+
+**Precisely what was and was not written.** Nothing was promoted. No validated raw
+research note and no curator recommendation were produced. But the run was not
+write-free: it wrote durable task and event audit rows (`agent_tasks` +1,
+`agent_events` +9), a failed-run receipt, and five source snapshots. An earlier draft of
+this section said "nothing durable was written", which was wrong.
+
+> **Correction (2026-09-20, later).** This section originally stated that the five
+> snapshots' provenance "survives in `agent_events`". **It does not.** All nine event
+> payloads were re-inspected: they carry `S1`–`S5` opaque labels, model/prompt/response
+> hashes and validator reasons, and **no source URL, no snapshot path and no content
+> hash**. The snapshot files likewise carry no `run_id` or `task_id`. The original failure
+> path preserved **no explicit run-to-snapshot lineage**; the snapshot *content* remains on
+> disk, but nothing machine-readable ties those files to this run. That defect has since
+> been fixed in code — see the 2026-09-20 provenance-fix section above this one.
+
+**Run:** `RUN-4e9d910742` / `TASK-a679b61436`, branch `testing` at `3c02397`, 2026-09-20
+19:57:30–20:00:18 local (168s). Exit 1 with traceback, by design.
+
+```bash
+uv run python scripts/dispatch_task.py --type discovery --research-id RQ-6d9c12f4
+```
+
+**Pre-run baseline (all verified):** 391 passed / 1 skipped; Ruff clean on `.` and on
+`src tests scripts`; tree clean; `origin/testing` == local. `agent_reach_check.py` exit 0
+(`exa_search` off, `github` warn/usable, `arxiv` usable, `web`/Jina ok).
+`gate_readiness.py --research-id RQ-6d9c12f4` exit **0** with **3** candidate URLs. The
+dry run was verified genuinely inert: sha256, schema hash, all 40 schema objects and every
+row count byte-identical before and after.
+
+**What the Scout actually found.** The live path retrieved **5 distinct arXiv works** —
+more than the probe's 3, because the probe passes `limit=min_sources=3` while the live run
+uses the agent's `max_sources: 5`. All five classify `primary` via the unmodified
+structural `arxiv-abs` signal. All five were fetched through Jina and snapshotted before
+any model call:
+
+| Work | Title |
+|---|---|
+| `arxiv.org/abs/1411.5062` | Optimal Mean Reversion Trading with Transaction Costs and Stop-Loss Exit |
+| `arxiv.org/abs/2309.16008` | Optimal Entry and Exit with Signature in Statistical Arbitrage |
+| `arxiv.org/abs/1601.04210` | Speculative Futures Trading under Mean Reversion |
+| `arxiv.org/abs/1707.03498` | Mean Reversion Trading with Sequential Deadlines and Transaction Costs |
+| `arxiv.org/abs/0911.1921` | Diagnostics of Rational Expectation Financial Bubbles… |
+
+The ≥3-source bar was **cleared** (5 distinct works, re-derived independently with
+`distinct_upstream_keys`, not trusted from the printed count). The run failed later, at
+extraction.
+
+**Why it failed — the validators were right.** The full bounded ladder ran and all three
+attempts failed deterministic validation:
+
+| Attempt | Model | Duration | Validator reasons |
+|---|---|---|---|
+| 1 | `qwen3:14b` | 51.8s | invented `research_id: R1`; omitted all 5 supplied sources; cited `<missing>` sources |
+| 2 (repair) | `qwen3:14b` | 14.3s | still omitted all 5; still `<missing>` citations |
+| 3 (escalation) | `qwen3.8:27b` | 69.4s | used S5, but `quote:S5: exact evidence is absent from snapshot`; `ungrounded-promotion:S5: main_claim asserts a strategy/performance claim that is not an exact passage of the snapshot` |
+
+**This was verified as a true positive, not validator over-strictness.** The snapshots
+contain **zero** standalone occurrences of `RSI` and **zero** of `ETF`. `RQ-6d9c12f4` asks
+for source-supported exit rules pairing with daily ETF RSI-oversold entries; arXiv returned
+continuous-time optimal-stopping theory on Ornstein-Uhlenbeck processes. The 27B's
+ungrounded main_claim was papering over exactly that gap, and the Gate B extractive-support
+rule blocked it.
+
+**Attributing the failure precisely** (an earlier draft said "not a model defect and not a
+lane fault", which was too generous on both counts):
+
+- **The decisive research blocker was unsuitable source relevance.** Even a perfect
+  extraction could not have produced ETF RSI exit rules from these five papers.
+- **The models also produced genuinely invalid outputs** — an invented `research_id`
+  (`R1`), all five supplied sources omitted, citations to `<missing>` sources, and finally
+  an evidence quotation absent from the snapshot. Those are real model failures, separate
+  from the relevance gap.
+- **The validators and the fail-closed runtime handled those outputs correctly.** Every
+  invalid output was caught and none reached a durable note.
+- **The arXiv lane operated as designed.** It searched, returned real `primary`-tier
+  works, and fetched them. Its *topical coverage* was unsuitable for this particular
+  question — a property of what arXiv indexes, not a malfunction.
+
+**Fail-closed behavior verified against evidence, not assumed:**
+- Event trail complete and correct for the model-validation path: `dispatch_started →
+  discovery_started → qwen_attempt ×3 → discovery_failed → failed_run_written →
+  handler_failed → dispatch_failed` (9 events). No `discovery_candidates_rejected` —
+  nothing was rejected pre-fetch.
+- Per-attempt audit intact: model, duration, prompt hash, response hash, validator verdict
+  and reasons recorded for all three attempts.
+- `agent_tasks` row finalized `failed` with the error text; `output_path` NULL.
+- Raw-note scaffold **removed** — no `Raw_Research/RQ-6d9c12f4.md` exists.
+- `RQ-6d9c12f4` reset to `queued` with `raw_note_path` NULL. `RQ-c920baeb` and
+  `RQ-80be8cf7` untouched and still `queued`.
+- **No curator recommendation was produced or acted on.** No curator was dispatched.
+
+**Protected tables unchanged** (before → after): `strategy_cards` 0→0, `backtests` 0→0,
+`price_datasets` 0→0, `reviews` 0→0, `research_findings` 7→7, `notes` 23→23, `sources` 7→7,
+`chunks` 260→260, `embeddings` 260→260, `research_questions` 7→7. No `external_*` tables.
+Only `agent_tasks` 3→4 and `agent_events` 49→58 changed, as a dispatch must.
+
+**Post-run verification:** 391 passed / 1 skipped; Ruff clean on both invocations.
+
+**Defect found — the Failed_Runs receipt is thin on this path.** The receipt
+`brain/00_Inbox/Failed_Runs/RUN-4e9d910742.md` records id, research_id, `stage:
+qwen_extract`, the error string and a retry command — but its `Detail` JSON contains only
+`task_id` and `created_scaffold`. It records **no source URLs, tiers, snapshot paths or
+snapshot hashes**, because `_fail_closed_discovery` populated that block from
+`getattr(error, "detail", {})` and `QwenValidationError` carries no `detail` attribute —
+only `InsufficientUpstreamSources` does. Consequence: the five snapshots on disk are
+**not referenced by the receipt or by any event**, so a reader cannot machine-verify what
+was fetched. **This has since been fixed in code — see the provenance-fix section above.**
+
+**Unstaged artifacts left for review (nothing staged, committed or pushed):**
+- `brain/00_Inbox/Failed_Runs/RUN-4e9d910742.md`
+- `brain/00_Inbox/Source_Snapshots/2026-09-21/` — 5 files whose **content** remains on
+  disk, each self-describing with url/title/captured_at/content_hash. Their association
+  with `RUN-4e9d910742` is **probable, not established**: no artifact records the linkage
+  (see the attribution limitation in the provenance-fix section).
+
+**Date skew, not an inconsistency:** the run executed on **2026-09-20 local time**
+(19:57–20:00), while the snapshot directory is named **`2026-09-21`** because snapshot
+paths are derived from UTC (`snapshot_relative_path` uses `datetime.now(UTC)`). The
+`agent_events` timestamps are UTC too, which is why they read `00:57–01:00`.
+
+**Limitations.** (a) One run of one question; Phase 6's exit gate requires all three child
+runs and remains **incomplete**. (b) A passing extraction was never demonstrated, so the
+success path of the production Scout is still unproven end to end. (c) The question-to-
+literature relevance gap is unresolved and is not fixable by retrying the same lane.
+
+**Next decision is Jason's.** The options, none of which were taken here: (1) accept the
+relevance gap as the finding and widen the lane set toward documentation/practitioner
+sources that actually discuss RSI exit rules; (2) authorize a receipt-completeness fix so
+`QwenValidationError` carries candidate evidence into `Failed_Runs`; (3) retain sources
+manually through the external intake and verify their upstream works; (4) re-run the same
+question unchanged, which on this evidence would be expected to fail the same way. Do
+**not** lower `MIN_UPSTREAM_SOURCES` or relax the extractive-support rule — the bar was
+cleared; the grounding was not.
+
 ## Gate D partially unblocked — arXiv lane added, no child run (2026-09-19)
 
 **Gate D remains NOT executed.** One of three child questions is now probe-ready; the other two are honestly still blocked. PROP-003 was committed at `cddd3d84d3849e445c2d227f824bb5b9206c5c85` and pushed to `origin/testing`, followed by the documentation commit `30630a0cb8d4559372ca6430812ceb78cd20fd91`. `origin/testing` was fetched and verified at `30630a0`, matching local `HEAD`. `main` remains untouched at `51979f6`; nothing was merged and no branch was created. Post-change verification on the committed tree: **391 passed, 1 skipped**, Ruff clean on `.` and on `src tests scripts`, working tree clean, and `db/brain.sqlite` unchanged at sha256 `43fa24b0c7c7e92d08760404774cb872d5b4530080d8a7ac6a677bafed3069bb`; the production invariants below remain unchanged.
@@ -153,9 +482,11 @@ Python uses `uv`.
 Latest verified test count:
 
 ```text
-391 passed
+396 passed
 1 skipped
 ```
+
+(Was 391/1 before the 2026-09-20 provenance fix added 5 regression tests.)
 
 ### 2. SQLite database
 

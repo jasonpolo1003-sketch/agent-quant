@@ -31,6 +31,26 @@ class InsufficientUpstreamSources(ValueError):
         self.detail = detail
 
 
+def candidate_evidence(sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The per-candidate provenance block shared by every failure receipt.
+
+    One definition so the sparse-source path and the generic failure path cannot
+    describe the same candidates differently. Reads the keys discovery sets when
+    it snapshots a page; a backend that writes no snapshots (the seeded stub)
+    simply yields ``None`` for the snapshot fields.
+    """
+    return [
+        {
+            "url": source.get("url_or_citation"),
+            "title": source.get("title"),
+            "tier": source.get("source_quality"),
+            "snapshot_path": source.get("snapshot_path"),
+            "snapshot_sha256": source.get("snapshot_sha256"),
+        }
+        for source in sources
+    ]
+
+
 def distinct_upstream_keys(sources: list[dict[str, Any]]) -> list[str]:
     """Identity of each cited work, for counting against the minimum.
 
@@ -418,6 +438,7 @@ def _fail_closed_discovery(
     error: BaseException,
     resolve_write: Any | None,
     original_note_bytes: bytes | None = None,
+    run_provenance: dict[str, Any] | None = None,
 ) -> str | None:
     """Restore retryable state, drop incomplete notes, write a Failed_Runs receipt."""
     from uuid import uuid4
@@ -434,13 +455,17 @@ def _fail_closed_discovery(
             stage=stage,
             error=error,
             resolve_write=resolve_write,
-            # A sparse-result failure carries its candidate evidence, so the
-            # receipt records what was found -- canonical URLs, tiers, snapshot
-            # hashes, counts and the query that was asked -- not merely that
-            # the run stopped.
+            # Candidate evidence is attached to the *run*, not to one exception
+            # class. It used to arrive only via ``error.detail``, which only
+            # InsufficientUpstreamSources defines -- so a QwenValidationError
+            # (or any post-fetch failure) wrote a receipt naming no source and
+            # no snapshot, leaving files on disk that the receipt never
+            # referenced. ``run_provenance`` sits *beneath* ``error.detail`` so
+            # an exception that does carry its own richer detail still wins.
             extra={
                 "task_id": task_id,
                 "created_scaffold": created_scaffold,
+                **(run_provenance or {}),
                 **getattr(error, "detail", {}),
             },
         )
@@ -504,6 +529,13 @@ def execute_discovery_task(
     created_scaffold = False
     original_note_bytes: bytes | None = None
     stage = "load_task"
+    # Captured once, at the discover stage, and never re-read from ``sources``:
+    # a successful model call rebinds ``sources`` to model output, so reading it
+    # at failure time would describe a later write_note failure with
+    # model-shaped values instead of what discovery actually fetched. Stays
+    # empty when the run fails before discovery, so an early failure reports no
+    # candidate evidence rather than inventing an empty finding.
+    discovered_provenance: dict[str, Any] = {}
     try:
         if research_id is None:
             with connect(db_path) as conn:
@@ -558,6 +590,17 @@ def execute_discovery_task(
         )
         sources = list(discovered.sources)
         rejected_records = [dict(record) for record in getattr(discovered, "rejected", ())]
+        discovered_provenance = {
+            "research_id": task["research_id"],
+            "run_id": run_id,
+            "task_id": task_id,
+            "accepted_candidates": candidate_evidence(sources),
+            "snapshot_paths": list(getattr(discovered, "snapshots", ())),
+            "distinct_upstream_count": len(distinct_upstream_keys(sources)),
+            "required_upstream_count": MIN_UPSTREAM_SOURCES,
+            "rejected_candidates": rejected_records,
+            "search_query_expression": getattr(searcher, "last_query_expression", None),
+        }
         if not sources:
             raise ValueError("no candidate sources found for this research task")
 
@@ -574,16 +617,7 @@ def execute_discovery_task(
                     "research_id": task["research_id"],
                     "distinct_upstream_count": len(distinct),
                     "required_upstream_count": MIN_UPSTREAM_SOURCES,
-                    "accepted_candidates": [
-                        {
-                            "url": source.get("url_or_citation"),
-                            "title": source.get("title"),
-                            "tier": source.get("source_quality"),
-                            "snapshot_path": source.get("snapshot_path"),
-                            "snapshot_sha256": source.get("snapshot_sha256"),
-                        }
-                        for source in sources
-                    ],
+                    "accepted_candidates": candidate_evidence(sources),
                     "distinct_upstream_keys": distinct,
                     "rejected_candidates": rejected_records,
                     "search_query_expression": getattr(searcher, "last_query_expression", None),
@@ -728,6 +762,11 @@ def execute_discovery_task(
                 error=exc,
                 resolve_write=resolve_write,
                 original_note_bytes=original_note_bytes,
+                run_provenance={
+                    **discovered_provenance,
+                    "stage": stage,
+                    "error_type": type(exc).__name__,
+                },
             )
         raise
 

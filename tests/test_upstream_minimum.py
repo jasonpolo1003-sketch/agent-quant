@@ -204,7 +204,14 @@ def test_a_sparse_result_is_preserved_as_a_failed_run_receipt(project, monkeypat
         "https://example.com/a",
         "https://example.com/b",
     }
-    assert all("tier" in c and "snapshot_path" in c for c in payload["accepted_candidates"])
+    # Presence is not enough: these keys were read by the receipt but never set
+    # by discovery, so both were always null and a `"snapshot_path" in c` check
+    # passed anyway. Assert real values, or the gap returns silently.
+    for candidate in payload["accepted_candidates"]:
+        assert candidate["tier"], "tier must not be null"
+        assert candidate["snapshot_path"], "snapshot path must not be null"
+        assert candidate["snapshot_sha256"], "snapshot hash must not be null"
+        assert (root / candidate["snapshot_path"]).exists()
     assert payload["follow_up"]
     assert "Not a refutation" in payload["follow_up"]
     assert error.detail["distinct_upstream_count"] == 2
