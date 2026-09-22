@@ -1,0 +1,8 @@
+# Historical run evidence is preserved byte-for-byte (CRLF and trailing whitespace
+# included). Exact paths only: no other file changes line-ending handling.
+brain/00_Inbox/Failed_Runs/RUN-4e9d910742.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-21/1842896f8741-d70cb867.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-21/1c66eb06a512-c1dfb32c.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-21/2e16e3760701-523eb9a9.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-21/f84d3ae24d6a-364014f6.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-21/ff600a704fdf-115e168f.md -text
