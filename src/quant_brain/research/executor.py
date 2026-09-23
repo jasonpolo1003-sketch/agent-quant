@@ -340,6 +340,48 @@ def _discard_incomplete_raw_note(
     note_path.unlink()
 
 
+def _recover_raw_note(
+    note_path: Path | None,
+    *,
+    created_scaffold: bool,
+    original_note_bytes: bytes | None,
+    resolve_write: Any | None,
+) -> str:
+    """Undo only what this run provably owns or changed; return the outcome.
+
+    A note that existed before the run and was never modified by it is left
+    alone: it may be a prepared scaffold holding pasted human work, and nothing
+    authorizes this run to delete it. Every mutation goes through
+    ``resolve_write`` first, so a path restriction refuses recovery (raising
+    PathViolation) rather than being bypassed by it.
+    """
+    if note_path is None:
+        return "no-note-tracked"
+    if not note_path.exists():
+        return "not-present"
+    if not created_scaffold and original_note_bytes is None:
+        return "untouched-preexisting"
+    target = resolve_write(note_path) if resolve_write is not None else note_path
+    _discard_incomplete_raw_note(target, None if created_scaffold else original_note_bytes)
+    return "removed" if created_scaffold else "restored"
+
+
+def _attempt(
+    failures: list[dict[str, str]], step: str, fn: Any, *args: Any, **kwargs: Any
+) -> tuple[bool, Any]:
+    """Run one fail-closed step; absorb and record an ordinary failure.
+
+    The boolean is the only success signal -- a step that succeeds by returning
+    ``None`` must not read as a failure. ``Exception`` only: KeyboardInterrupt
+    and SystemExit are process control and must propagate.
+    """
+    try:
+        return True, fn(*args, **kwargs)
+    except Exception as exc:
+        failures.append({"step": step, "error_type": type(exc).__name__, "error": str(exc)})
+        return False, None
+
+
 def _write_failed_run_note(
     project_root: Path,
     *,
@@ -349,18 +391,62 @@ def _write_failed_run_note(
     error: BaseException,
     resolve_write: Any | None,
     extra: dict[str, Any] | None = None,
+    question: str = "queued",
+    leftover_note: str | None = None,
 ) -> str:
     relative = f"brain/00_Inbox/Failed_Runs/{run_id}.md"
     dest = resolve_write(relative) if resolve_write else project_root / relative
     dest.parent.mkdir(parents=True, exist_ok=True)
     payload = extra or {}
+    retryable = question == "queued" and leftover_note is None
+    def release(clear: bool) -> str:
+        return (
+            "uv run python -c \"from quant_brain.research.intake import reset_research_for_retry; "
+            f"reset_research_for_retry('db/brain.sqlite', '{research_id}', "
+            f"clear_raw_note_path={clear})\""
+        )
+
+    if retryable:
+        retry = f"""The research question was returned to `queued`. Re-run:
+
+```bash
+uv run python scripts/dispatch_task.py --type discovery --research-id {research_id}
+```"""
+    elif question == "needs_review":
+        retry = f"""**Manual inspection required.** Raw-note recovery failed, so the note this run
+created or changed is still on disk at:
+
+    {leftover_note}
+
+The question is held at `needs_review`, which queue selection and Scout
+dispatch refuse, and its `raw_note_path` still points at that file. Check
+whether the note is a bare scaffold, a completed-looking (`raw_saved`) note, or
+holds human-pasted work; remove it or restore it by hand. Then release with
+exactly one of these.
+
+If you removed the note:
+
+```bash
+{release(True)}
+```
+
+If you kept the note (the question keeps pointing at it):
+
+```bash
+{release(False)}
+```"""
+    else:
+        leftover = f" The raw note at `{leftover_note}` was also not recovered." if leftover_note else ""
+        retry = f"""**Recovery incomplete.** The research question could NOT be returned to
+`queued` or held for review; see `recovery` in Detail.{leftover} Check the
+question's status and its raw note by hand before retrying."""
     text = f"""---
 id: {run_id}
 type: failed_run
 research_id: {research_id}
 stage: {stage}
 agent_role: research_scout
-retryable: true
+retryable: {"true" if retryable else "false"}
 ---
 
 # Failed Scout Run — {run_id}
@@ -385,11 +471,7 @@ retryable: true
 
 ## Retry
 
-The research question was returned to `queued`. Re-run:
-
-```bash
-uv run python scripts/dispatch_task.py --type discovery --research-id {research_id}
-```
+{retry}
 """
     dest.write_text(text, encoding="utf-8")
     try:
@@ -440,36 +522,130 @@ def _fail_closed_discovery(
     original_note_bytes: bytes | None = None,
     run_provenance: dict[str, Any] | None = None,
 ) -> str | None:
-    """Restore retryable state, drop incomplete notes, write a Failed_Runs receipt."""
+    """Recover retryable state, then write a Failed_Runs receipt saying what happened.
+
+    Never raises ``Exception``: every step is attempted independently and a
+    failure in one -- a receipt path violation, a locked database, a disk error
+    -- is recorded as secondary and never skips the others or replaces
+    ``error``, which the caller re-raises. Recovery is *attempted*, not
+    guaranteed; what could not be done is reported on the receipt (if it can be
+    written) and always as a note on ``error`` itself, a channel that depends
+    on neither the database nor the filesystem.
+    """
     from uuid import uuid4
 
+    from quant_brain.research import intake
     from quant_brain.research.intake import reset_research_for_retry
 
-    failed_run_id = run_id or f"FAIL-{uuid4().hex[:10]}"
-    failed_path = None
-    try:
-        failed_path = _write_failed_run_note(
-            project_root,
-            run_id=failed_run_id,
-            research_id=research_id or "unknown",
-            stage=stage,
-            error=error,
-            resolve_write=resolve_write,
-            # Candidate evidence is attached to the *run*, not to one exception
-            # class. It used to arrive only via ``error.detail``, which only
-            # InsufficientUpstreamSources defines -- so a QwenValidationError
-            # (or any post-fetch failure) wrote a receipt naming no source and
-            # no snapshot, leaving files on disk that the receipt never
-            # referenced. ``run_provenance`` sits *beneath* ``error.detail`` so
-            # an exception that does carry its own richer detail still wins.
-            extra={
-                "task_id": task_id,
-                "created_scaffold": created_scaffold,
-                **(run_provenance or {}),
-                **getattr(error, "detail", {}),
-            },
+    failures: list[dict[str, str]] = []
+    _attempt(
+        failures,
+        "discovery_failed_event",
+        _record_scout_event,
+        db_path,
+        run_id=run_id,
+        task_id=task_id,
+        event_type="discovery_failed",
+        status="failed",
+        message=str(error),
+        payload={"stage": stage, "error": type(error).__name__},
+    )
+
+    # Recovery runs before the receipt so the receipt can state the outcome
+    # rather than assume it.
+    scaffold_ok, scaffold = _attempt(
+        failures,
+        "raw_note_recovery",
+        _recover_raw_note,
+        note_path,
+        created_scaffold=created_scaffold,
+        original_note_bytes=original_note_bytes,
+        resolve_write=resolve_write,
+    )
+    if not scaffold_ok:
+        scaffold = "failed"
+        _attempt(
+            failures,
+            "cleanup_failed_event",
+            _record_scout_event,
+            db_path,
+            run_id=run_id,
+            task_id=task_id,
+            event_type="discovery_cleanup_failed",
+            status="failed",
+            message=f"Could not recover raw note {note_path}",
+            payload={"stage": stage},
         )
-        _record_scout_event(
+
+    question = "untracked"
+    if research_id and scaffold == "failed":
+        # A note this run created or changed is still on disk. ``queued`` would
+        # make the question auto-selectable, and the next prepare would
+        # overwrite that file at its deterministic path -- so hold it instead.
+        # ``needs_review`` is selected by nothing and refused by explicit
+        # dispatch; update_research_status keeps the pointer at the leftover.
+        held, _ = _attempt(
+            failures,
+            "hold_for_review",
+            intake.update_research_status,
+            db_path,
+            research_id,
+            "needs_review",
+        )
+        question = "needs_review" if held else "update-failed"
+    elif research_id:
+        # The pointer is cleared only when no note remains at it. A pre-existing
+        # note (untouched or restored) keeps its pointer, so a retry reuses it
+        # instead of overwriting it.
+        reset, _ = _attempt(
+            failures,
+            "reset_for_retry",
+            reset_research_for_retry,
+            db_path,
+            research_id,
+            clear_raw_note_path=scaffold in {"removed", "not-present", "no-note-tracked"},
+        )
+        question = "queued" if reset else "update-failed"
+
+    failed_run_id = run_id or f"FAIL-{uuid4().hex[:10]}"
+    recovery = {
+        "raw_note": scaffold,
+        "question": question,
+        "complete": scaffold != "failed" and question == "queued",
+        "secondary_failures": list(failures),
+    }
+    receipt_ok, failed_path = _attempt(
+        failures,
+        "receipt",
+        _write_failed_run_note,
+        project_root,
+        run_id=failed_run_id,
+        research_id=research_id or "unknown",
+        stage=stage,
+        error=error,
+        resolve_write=resolve_write,
+        question=question,
+        leftover_note=str(note_path) if scaffold == "failed" else None,
+        # Candidate evidence is attached to the *run*, not to one exception
+        # class. It used to arrive only via ``error.detail``, which only
+        # InsufficientUpstreamSources defines -- so a QwenValidationError
+        # (or any post-fetch failure) wrote a receipt naming no source and
+        # no snapshot, leaving files on disk that the receipt never
+        # referenced. ``run_provenance`` sits *beneath* ``error.detail`` so
+        # an exception that does carry its own richer detail still wins.
+        extra={
+            "task_id": task_id,
+            "created_scaffold": created_scaffold,
+            **(run_provenance or {}),
+            **getattr(error, "detail", {}),
+            "recovery": recovery,
+        },
+    )
+    if receipt_ok:
+        _attempt(
+            failures,
+            "failed_run_written_event",
+            _record_scout_event,
             db_path,
             run_id=failed_run_id if run_id else None,
             task_id=task_id,
@@ -478,26 +654,15 @@ def _fail_closed_discovery(
             message=f"Wrote Failed_Runs receipt {failed_path}",
             payload={"path": failed_path, "stage": stage},
         )
-    except OSError:
-        failed_path = None
-    if created_scaffold or (note_path is not None and note_path.exists()):
-        try:
-            _discard_incomplete_raw_note(
-                note_path, None if created_scaffold else original_note_bytes
-            )
-        except OSError:
-            _record_scout_event(
-                db_path,
-                run_id=run_id,
-                task_id=task_id,
-                event_type="discovery_cleanup_failed",
-                status="failed",
-                message=f"Could not discard incomplete raw note {note_path}",
-                payload={"stage": stage},
-            )
-    if research_id:
-        reset_research_for_retry(db_path, research_id)
-    return failed_path
+
+    for failure in failures:
+        error.add_note(
+            f"fail-closed {failure['step']} failed "
+            f"({failure['error_type']}: {failure['error']}); "
+            f"raw_note={scaffold}, question={question}, "
+            f"receipt={'written' if receipt_ok else 'not written'}"
+        )
+    return failed_path if receipt_ok else None
 
 
 def execute_discovery_task(
@@ -554,7 +719,16 @@ def execute_discovery_task(
                 )
             task = dict(row)
         else:
-            task = _get_research_task(db_path, research_id)
+            requested = _get_research_task(db_path, research_id)
+            # Refused before ``task`` is bound, so the fail-closed path does not
+            # run: it would otherwise "recover" this question back to queued and
+            # undo the hold a person has not yet reviewed.
+            if requested.get("status") == "needs_review":
+                raise ValueError(
+                    f"{research_id} is held for manual review after a failed raw-note "
+                    "recovery; inspect its raw note and release it before dispatching"
+                )
+            task = requested
 
         note_path = _resolve_note_path(root, task.get("raw_note_path"))
         if note_path is None:
@@ -741,15 +915,9 @@ def execute_discovery_task(
         }
     except Exception as exc:
         if task is not None:
-            _record_scout_event(
-                db_path,
-                run_id=run_id,
-                task_id=task_id,
-                event_type="discovery_failed",
-                status="failed",
-                message=str(exc),
-                payload={"stage": stage, "error": type(exc).__name__},
-            )
+            # Records discovery_failed itself and cannot raise ``Exception``, so
+            # the bare ``raise`` below always re-raises ``exc`` -- same object,
+            # original traceback -- whatever recovery managed to do.
             _fail_closed_discovery(
                 project_root=root,
                 db_path=db_path,

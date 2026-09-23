@@ -8,7 +8,17 @@ from uuid import uuid4
 from quant_brain.config import PROJECT_ROOT
 from quant_brain.db.init_db import DEFAULT_DB_PATH, connect, init_database
 
-VALID_STATUSES = {"queued", "researching", "raw_saved", "curating", "curated", "rejected"}
+# ``needs_review``: a failed Scout run left a raw note it could not recover. No
+# selector picks it up and Scout dispatch refuses it until a person releases it.
+VALID_STATUSES = {
+    "queued",
+    "researching",
+    "raw_saved",
+    "curating",
+    "curated",
+    "rejected",
+    "needs_review",
+}
 
 
 def new_research_id() -> str:
@@ -95,18 +105,25 @@ def update_research_status(
         conn.commit()
 
 
-def reset_research_for_retry(db_path: str | Path, research_id: str) -> None:
-    """Return a research question to queued and clear the incomplete raw-note path."""
+def reset_research_for_retry(
+    db_path: str | Path, research_id: str, *, clear_raw_note_path: bool = True
+) -> None:
+    """Return a research question to queued, clearing the raw-note path by default.
+
+    ``clear_raw_note_path=False`` keeps the pointer for a note the failed run did
+    not own (a pre-existing note, left or restored), so a retry reuses that note
+    instead of recreating -- and overwriting -- it at the same path.
+    """
     with connect(db_path) as conn:
         cur = conn.execute(
             """
             UPDATE research_questions
             SET status = 'queued',
-                raw_note_path = NULL,
+                raw_note_path = CASE WHEN ? THEN NULL ELSE raw_note_path END,
                 updated_at = CURRENT_TIMESTAMP
             WHERE research_id = ?
             """,
-            (research_id,),
+            (clear_raw_note_path, research_id),
         )
         if cur.rowcount != 1:
             raise KeyError(f"research_id not found: {research_id}")

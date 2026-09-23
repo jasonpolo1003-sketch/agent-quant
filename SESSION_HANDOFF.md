@@ -1,6 +1,200 @@
 # Quant Agent Brain — Session Handoff
 
-## Checkpoint committed (2026-09-22) — provenance repair and historical evidence
+## Reliability checkpoint committed (2026-09-22) — local on `testing`, not pushed
+
+The discovery-recovery hardening and the reliability closeout (both described below) were independently
+reviewed and are now **one local commit on `testing`**, directly after `df63698`. **Not pushed**
+(`origin/testing` is still `3c02397`). No Scout run, retry, curator or research. **Phase 6 / Gate D remain
+incomplete.**
+
+- **Two wording fixes at commit time, no behaviour change:**
+  - the held-question receipt now gives **two literal, runnable** release commands
+    (`clear_raw_note_path=True` if the note was removed, `False` if it was kept) instead of a template;
+  - a failed dispatcher finalization is reported as `task_row=unconfirmed (finalization update failed;
+    state not verified)` instead of assuming the row is still `running`.
+
+  The tests assert both.
+- **Verified before committing:**
+  - the related files (recovery, dispatcher-failure, dispatcher, discovery handler, provenance,
+    upstream minimum): **76 passed**;
+  - full suite **425 passed, 1 skipped**;
+  - `ruff check .` and `ruff check src tests scripts` clean; `git diff --check` clean;
+  - `db/brain.sqlite`, `.gitattributes`, and every `Failed_Runs/` and `2026-09-21` snapshot file
+    sha256-identical.
+- **Committed paths (7):** `research/executor.py`, `research/intake.py`, `harness/dispatcher.py`,
+  `tests/test_fail_closed_recovery.py`, `tests/test_dispatch_failure_recording.py`, `PLAN.md`,
+  `SESSION_HANDOFF.md`.
+- **Limitations are unchanged:** see the closeout entry below.
+
+**Research blocker, re-diagnosed (read-only; details in `PLAN.md`):** for `RQ-6d9c12f4` the bottleneck is
+**claim-to-source mapping**, not discovery.
+- The retained external reports paraphrased their claims.
+- The intake verifier (by design) accepts only a claim that *equals* its verbatim quotation.
+- So 4 located quotations, plus 2 exit rules present verbatim in pinned snapshots, never reached
+  review.
+- Tier policy (unchanged) makes only the 2 StockCharts targets promotable, fewer than the ≥3 bar.
+
+**Next (approved):** an offline re-mapping of those verbatim spans in a *copy* of the intake workspace,
+producing a review packet for Jason's attributed scope review. It creates no raw note, no Gate D
+progress, and no promotion.
+
+## Reliability closeout (2026-09-22) — historical: the pre-commit description
+
+**425 passed, 1 skipped** (413 + 12 new); `ruff check .` and `ruff check src tests scripts` clean;
+`git diff --check` clean. `db/brain.sqlite` (`6db65981…f530f9e29`), `.gitattributes` and every
+historical `Failed_Runs/` and `Source_Snapshots/2026-09-21/` file are sha256-identical before and after.
+On top of `df63698` together with the recovery hardening below; nothing staged, committed or pushed. No
+Scout run, retry, curator or research. **Phase 6 / Gate D remain incomplete; source relevance is
+unchanged.**
+
+**1. Incomplete recovery no longer looks retryable, and a real control backs that up.**
+- Inspection showed that **nothing reads a receipt's `retryable:` line**. The retry signal actually used
+  is `research_questions.status`:
+  - executor queue selection takes `researching`, then `queued`;
+  - `claim_next_research_task` takes `queued`, then overwrites the note at its fixed path;
+  - explicit `--research-id` dispatch took any status.
+- So when raw-note recovery **fails**, the question is now held at a new status **`needs_review`**
+  (added to `intake.VALID_STATUSES`), using the existing `update_research_status`, whose `COALESCE`
+  keeps `raw_note_path` pointing at the leftover file.
+- No selector picks `needs_review` up, and `execute_discovery_task` refuses it on explicit dispatch
+  **before the task binds**, so fail-closed can't undo the hold.
+- The receipt says `retryable: false` and **"Manual inspection required"**, naming the leftover path,
+  what to check, and the exact release one-liner (`reset_research_for_retry(...)`).
+- A preserved (`untouched-preexisting`) or `restored` pre-existing note counts as **successful**
+  recovery: `queued`, `retryable: true`.
+- The `recovery` block is now `raw_note` / `question` (`queued` | `needs_review` | `update-failed`) /
+  `complete` / `secondary_failures`. If the hold or reset update itself fails, the receipt says
+  "Recovery incomplete" and claims neither state.
+
+**2. The dispatcher preserves the original error**
+(`harness/dispatcher.py`, failure branches only).
+- Both `except` branches now call `_record_dispatch_failure`, which independently attempts:
+  1. the first event (`handler_failed` or `path_violation`);
+  2. `dispatch_failed`;
+  3. `_finish_task_row(..., "failed")`.
+- Each goes through a local `_secondary` helper (the same contract as the executor's `_attempt`; kept
+  local so the harness doesn't import a research module).
+- Secondary failures are added as notes on the handler's exception, stating `task_row=failed` or
+  `task_row=NOT finalized (still 'running')`, never a finalization that didn't happen.
+- The bare `raise` re-raises the same object with its traceback; the notes appear in the CLI's traceback.
+- `Exception` only is caught, so `KeyboardInterrupt`/`SystemExit` propagate. The success path, the
+  pre-handler writes and the handler contracts are unchanged.
+
+**Tests (12 new; mutation-checked).**
+- `tests/test_dispatch_failure_recording.py` (8):
+  - each event failing; finalization failing (the row really stays `running`, and the note says so);
+  - everything failing together; a handler `PathViolation` whose own event fails;
+  - `KeyboardInterrupt` during finalization; a clean failure with no notes;
+  - a successful dispatch unchanged.
+- `tests/test_fail_closed_recovery.py` (+4):
+  - explicit dispatch of a held question refused with nothing mutated;
+  - queue selection skips a held question;
+  - a failed hold reported, not claimed;
+  - end to end, the same Qwen exception carrying both executor and dispatcher notes.
+- The two cleanup-failure tests now expect the hold, and the pre-existing-note tests assert
+  `complete: true` / `retryable: true`.
+- Mutation checks:
+  - un-guarding finalization fails 2 dispatcher tests;
+  - resetting after a failed cleanup fails 3 hold tests.
+- The committed tests, including `tests/test_dispatcher.py`, pass unchanged.
+
+**Limitations (precise).**
+- The hold blocks automatic selection and Scout dispatch. It does **not** stop direct DB edits, or a
+  manual `research_scout_runner.py prepare`, which claims only `queued` but would overwrite the fixed
+  note path if the question were released without inspection.
+- Release is a documented manual one-liner, not a CLI command.
+- Recovery and finalization are attempted, not guaranteed. The success-path dispatcher writes and the
+  pre-handler task-row and `dispatch_started` writes are still unguarded, but there's no original error
+  to mask at those points.
+- A scaffold whose creation failed mid-way is left in place and not held, because ownership can't be
+  proven.
+- Snapshot frontmatter still has no `run_id`.
+
+**Recommended next step toward research acceptance (not authorized):** relevance, not reliability, is the
+blocker (zero `RSI`/`ETF` mentions in the five retrieved works). The smallest step is read-only: add a
+deterministic topical-relevance count to `scripts/gate_readiness.py` and use it to evaluate one
+alternative lane or query for `RQ-6d9c12f4`, with no model and no Scout dispatch. Propose a single,
+separately authorized Scout run only if a candidate set clears both the ≥3-source bar and the relevance
+check.
+
+## Fail-closed recovery hardened (2026-09-22, later) — historical; its dispatcher limitation is resolved above
+
+**413 passed, 1 skipped** (397 + 16 new); `ruff check .` and `ruff check src tests scripts` clean; `git diff
+--check` clean. `db/brain.sqlite` (`6db65981…f530f9e29`), `.gitattributes`, and every file under
+`Failed_Runs/` and `Source_Snapshots/2026-09-21/` are sha256-identical before and after. On top of
+`df63698`; nothing staged, committed or pushed. No Scout run, retry, curator or research. **Phase 6 /
+Gate D remain incomplete; the source-relevance blocker is untouched.**
+
+**Defects fixed, all in `src/quant_brain/research/executor.py`.** Each one could skip recovery and
+replace the original research error with a diagnostic one:
+1. The `discovery_failed` event ran *before* `_fail_closed_discovery`, unguarded, so a DB error there
+   skipped *all* recovery. (Found during planning; not in the brief.)
+2. The receipt write caught only `OSError`, so a `PathViolation` escaped.
+3. The `failed_run_written` event shared the receipt's `try`: a DB error escaped, and an `OSError` nulled
+   the path of a receipt that *had* been written.
+4. Scaffold cleanup caught only `OSError`, its fallback event was unguarded, and the unlink/restore
+   bypassed `resolve_write`.
+5. `reset_research_for_retry` was unguarded.
+6. The receipt always claimed the question "was returned to `queued`".
+
+**Fix.**
+- A private `_attempt()` runs each step and returns `(ok, value)`. Outcomes are read from the flag, so a
+  successful `None` return can't read as failure. It absorbs `Exception` only, so
+  `KeyboardInterrupt`/`SystemExit` propagate.
+- `_fail_closed_discovery` now attempts, independently and in order:
+  1. the `discovery_failed` event;
+  2. raw-note recovery;
+  3. the reset;
+  4. the receipt, *after* recovery so it states the outcome, with a `recovery` block. `retryable: false`
+     and "Recovery incomplete" appear when the reset failed;
+  5. the `failed_run_written` event.
+- Each failed step is added as a note on the original exception (`add_note`). That channel depends on
+  neither the DB nor the filesystem. The executor's bare `raise` re-raises the same object with its
+  original traceback.
+
+**Ownership corrected (behaviour change).**
+- Before: a pre-existing note at `Raw_Research/{research_id}.md` that the run never modified was
+  **deleted** on an early failure. A pre-existing note that *was* restored lost its pointer, so a retry
+  would recreate, and overwrite, it at the same path.
+- Now the run mutates only what it provably owns or changed. A run-created scaffold is removed; a
+  modified pre-existing note is restored byte for byte; an untouched pre-existing note is left alone.
+- Every mutation passes `resolve_write` first: a `PathViolation` **refuses** recovery and is reported,
+  never bypassed.
+- `reset_research_for_retry` gained a keyword-only `clear_raw_note_path` (default `True`, so other callers
+  are unchanged). The pointer is cleared only when no note remains at it. The curator only accepts
+  `raw_saved`/`curated`, so a `queued` question that keeps its pointer can't be curated.
+
+**Tests: `tests/test_fail_closed_recovery.py` (16).**
+- Coverage:
+  - receipt `PathViolation` (real enforcement) and receipt `OSError` (real `FileExistsError`);
+  - each event failing with `PathViolation`/`OSError`/`sqlite3.OperationalError`, and all of them together;
+  - cleanup refused by the real resolver after a normal scaffold and Qwen failure;
+  - cleanup `PermissionError`; a reset DB failure;
+  - `KeyboardInterrupt` propagation; a clean failure;
+  - both pre-existing-note cases.
+- Every case spies on the real handler and asserts the **same exception object** and the original
+  traceback frame. Cases also assert task, question and scaffold state.
+- Mutation-checked: all 16 fail against `HEAD` code (some only via the new `recovery` field), and
+  un-guarding just the receipt step fails the 3 receipt tests.
+- Existing tests pass unchanged.
+
+**Remaining limitations.**
+- Recovery is *attempted*, not guaranteed: a failed filesystem or DB step is reported, not overcome.
+- The dispatcher (`harness/dispatcher.py`) still emits `handler_failed`/`dispatch_failed` and finalizes
+  `agent_tasks` unguarded, so a broken DB there can still mask the original *after* discovery
+  re-raises. That is harness-wide and a candidate follow-up.
+- If `create_raw_research_note` fails mid-way, its scaffold is left in place, because ownership can't be
+  proven.
+- The manual `prepare_next_research_run` still overwrites `Raw_Research/{research_id}.md` whatever the
+  pointer says. That behaviour predates this change and this change doesn't cause it.
+- Snapshot frontmatter still has no `run_id`.
+
+**Next decision is Jason's:** review this unstaged change set. A dispatcher-level guard is a
+recommended small follow-up; it matters only when the DB is already failing, and in that case the
+receipt still records the original error. The source-relevance blocker still decides whether a Scout
+retry can succeed.
+
+## Checkpoint committed (2026-09-22) — provenance repair and historical evidence (historical)
 
 Two local commits on `testing`, **not pushed** (`origin/testing` is still `3c02397`). No Scout run, retry,
 curator or research was executed. **Phase 6 / Gate D remain incomplete.**
