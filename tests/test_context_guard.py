@@ -12,6 +12,7 @@ ladder rather than feeding a longer prompt to the next attempt.
 import hashlib
 import io
 import json
+import time
 import urllib.error
 from copy import deepcopy
 
@@ -28,6 +29,7 @@ from test_candidate_list_lane import (  # noqa: F401  (fixtures used by name)
 from test_discovery_handler import PAGE_BODY
 from test_failed_run_provenance import _receipt_payload
 
+from quant_brain.discovery.live_discovery import DiscoveryDeadlineExceeded, LiveDiscoveryBackend
 from quant_brain.llm import ollama_client
 from quant_brain.llm.ollama_client import ContextOverflowError, OllamaResponse
 from quant_brain.llm.qwen_call import (
@@ -247,6 +249,58 @@ def test_qwen_call_sends_the_extraction_budget_and_timeout():
     assert not result.repaired
 
 
+def test_qwen_call_refuses_to_start_after_the_run_deadline():
+    client = Client([])
+
+    with pytest.raises(QwenValidationError, match="wall-clock"):
+        qwen_call(
+            "Extract",
+            evidence(),
+            expected_research_id="RQ-test",
+            client=client,
+            deadline=time.monotonic() - 1,
+        )
+
+    assert client.calls == []
+
+
+def test_qwen_call_limits_the_http_timeout_to_the_run_deadline():
+    client = Client([valid_payload()])
+
+    qwen_call(
+        "Extract",
+        evidence(),
+        expected_research_id="RQ-test",
+        client=client,
+        deadline=time.monotonic() + 5,
+    )
+
+    timeout = client.calls[0][2]["timeout"]
+    assert 0 < timeout <= 5
+
+
+def test_live_discovery_refuses_an_expired_run_deadline_before_search(tmp_path):
+    calls = []
+
+    def search(_question, _family, *, limit):
+        calls.append(limit)
+        return []
+
+    backend = LiveDiscoveryBackend(
+        search_fn=search,
+        fetch_fn=lambda _url: {"content": "unused"},
+    )
+    with pytest.raises(DiscoveryDeadlineExceeded, match="wall-clock"):
+        backend.discover(
+            "question",
+            None,
+            project_root=tmp_path,
+            deadline=time.monotonic() - 1,
+        )
+
+    assert calls == []
+
+
 def test_the_budget_leaves_room_for_the_output_inside_the_window():
     assert PROMPT_TOKEN_BUDGET + EXTRACTION_NUM_PREDICT <= int(EXTRACTION_NUM_CTX * 0.8)
     # Above the silent-truncation length the server refuses (truncate=false) and
@@ -278,7 +332,7 @@ def recording_runner(monkeypatch, research_id, *, ground=True):
     calls = []
 
     def runner(prompt, evidence, *, expected_research_id, **kwargs):
-        calls.append({"prompt": prompt, "evidence": evidence})
+        calls.append({"prompt": prompt, "evidence": evidence, "deadline": kwargs.get("deadline")})
         sources = [
             {
                 "source_id": item["source_id"], "title": item["title"], "source_type": "web",
@@ -317,6 +371,8 @@ def test_five_sources_too_large_together_are_extracted_one_per_call(project, mon
     assert result.status == "completed"
     assert [len(call["evidence"]) for call in calls] == [1] * 5
     assert [call["evidence"][0]["source_id"] for call in calls] == ["S1", "S2", "S3", "S4", "S5"]
+    assert isinstance(calls[0]["deadline"], float)
+    assert {call["deadline"] for call in calls} == {calls[0]["deadline"]}
     total = sum(estimate_prompt_tokens(call["prompt"]) for call in calls)
     assert total > PROMPT_TOKEN_BUDGET  # one prompt holding all five could not have fit
     for call in calls:

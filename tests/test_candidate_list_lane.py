@@ -450,6 +450,53 @@ def test_listed_candidates_that_fail_the_content_floor_do_not_count(project, mon
     assert receipt["distinct_upstream_count"] == 2
 
 
+def test_candidate_list_failure_receipt_retries_the_same_lane(project, monkeypatch):
+    root, db_path = project
+    stub_validated_qwen(monkeypatch)
+    research_id = new_question(db_path)
+    relative = write_list(root, research_id, URLS[:3])
+
+    with pytest.raises(InsufficientUpstreamSources):
+        dispatch_list(
+            project,
+            relative,
+            Fetcher(thin=URLS[:2]),
+            research_id=research_id,
+            run_id="RUN-retry-command",
+        )
+
+    receipt = root / "brain" / "00_Inbox" / "Failed_Runs" / "RUN-retry-command.md"
+    text = receipt.read_text(encoding="utf-8")
+    assert f"--candidate-list {relative}" in text
+
+
+def test_candidate_list_prepare_failure_receipt_retries_the_same_lane(
+    project, monkeypatch
+):
+    root, db_path = project
+    research_id = new_question(db_path)
+    relative = write_list(root, research_id, URLS[:3])
+
+    def fail_prepare(*_args, **_kwargs):
+        raise OSError("prepare broke")
+
+    monkeypatch.setattr(
+        "quant_brain.research.scout_runner.create_raw_research_note", fail_prepare
+    )
+    with pytest.raises(OSError, match="prepare broke"):
+        dispatch_list(
+            project,
+            relative,
+            Fetcher(),
+            research_id=research_id,
+            run_id="RUN-prepare-retry-command",
+        )
+
+    receipt = root / "brain" / "00_Inbox" / "Failed_Runs" / "RUN-prepare-retry-command.md"
+    text = receipt.read_text(encoding="utf-8")
+    assert f"--candidate-list {relative}" in text
+
+
 def test_a_doi_alias_found_by_search_cannot_fill_two_slots(project, monkeypatch):
     """The same inflation through the search lane: counted once, run quarantined."""
     root, db_path = project

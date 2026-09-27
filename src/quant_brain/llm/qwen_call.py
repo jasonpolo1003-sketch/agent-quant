@@ -96,6 +96,10 @@ class ContextBudgetError(QwenValidationError):
             self.args = ("local Qwen failed closed: " + reason,)
 
 
+class RunBudgetError(QwenValidationError):
+    """The Scout's whole-run wall-clock deadline was exhausted."""
+
+
 def _record_attempt(
     attempt: QwenAttempt,
     *,
@@ -140,37 +144,54 @@ def _attempt(
     db_path: str | Path | None,
     run_id: str | None,
     task_id: str | None,
+    deadline: float | None,
 ) -> tuple[dict[str, Any] | None, ValidationResult]:
     started = time.perf_counter()
     response = None
+    run_failure = None
     context_failure = prompt_budget_violation(prompt)
-    if context_failure is not None:
+    if deadline is not None and time.monotonic() >= deadline:
+        parsed = None
+        run_failure = "budget: Scout run exceeded its whole-run wall-clock deadline"
+        verdict = ValidationResult(False, (run_failure,))
+    elif context_failure is not None:
         # Refused before the model is called: nothing was sent, nothing was cut.
         parsed = None
         verdict = ValidationResult(False, (context_failure,))
     else:
         try:
+            timeout = EXTRACTION_TIMEOUT
+            if deadline is not None:
+                timeout = min(EXTRACTION_TIMEOUT, max(0.001, deadline - time.monotonic()))
             response = client.generate(
                 prompt,
                 model,
                 num_ctx=EXTRACTION_NUM_CTX,
                 num_predict=EXTRACTION_NUM_PREDICT,
                 prompt_token_budget=PROMPT_TOKEN_BUDGET,
-                timeout=EXTRACTION_TIMEOUT,
+                timeout=timeout,
                 temperature=0.0,
                 format=RawResearchPayload.model_json_schema(),
             )
-            parsed = json.loads(response.text)
-            verdict = validate_research_output(
-                parsed, evidence, expected_research_id=expected_research_id
-            )
+            if deadline is not None and time.monotonic() >= deadline:
+                parsed = None
+                run_failure = "budget: Scout run exceeded its whole-run wall-clock deadline"
+                verdict = ValidationResult(False, (run_failure,))
+            else:
+                parsed = json.loads(response.text)
+                verdict = validate_research_output(
+                    parsed, evidence, expected_research_id=expected_research_id
+                )
         except ollama_client.ContextOverflowError as exc:
             parsed = None
             context_failure = str(exc)
             verdict = ValidationResult(False, (context_failure,))
         except Exception as exc:
             parsed = None
-            if isinstance(exc, (json.JSONDecodeError, TypeError, ValueError)) and response is not None:
+            if deadline is not None and time.monotonic() >= deadline:
+                run_failure = "budget: Scout run exceeded its whole-run wall-clock deadline"
+                reason = run_failure
+            elif isinstance(exc, (json.JSONDecodeError, TypeError, ValueError)) and response is not None:
                 reason = f"schema: malformed JSON: {exc}"
             else:
                 reason = f"client_error: {type(exc).__name__}: {exc}"
@@ -207,6 +228,8 @@ def _attempt(
             "prompt_eval_count": getattr(response, "prompt_eval_count", None),
         },
     )
+    if run_failure is not None:
+        raise RunBudgetError(attempts)
     if context_failure is not None:
         raise ContextBudgetError(attempts)
     return parsed, verdict
@@ -230,12 +253,13 @@ def qwen_call(
     db_path: str | Path | None = None,
     run_id: str | None = None,
     task_id: str | None = None,
+    deadline: float | None = None,
 ) -> QwenResult:
-    """Run exactly three maximum local attempts; there is no retry loop/cloud fallback."""
+    """Run at most three local attempts, bounded by an optional whole-run deadline."""
     attempts: list[QwenAttempt] = []
     prior, verdict = _attempt(
         prompt, DEFAULT_MODEL, evidence, expected_research_id, client, attempts,
-        db_path=db_path, run_id=run_id, task_id=task_id,
+        db_path=db_path, run_id=run_id, task_id=task_id, deadline=deadline,
     )
     if verdict.ok and prior is not None:
         return _result(prior, attempts, repaired=False, escalated=False)
@@ -243,7 +267,7 @@ def qwen_call(
     repair = _repair_prompt(prompt, prior, verdict.reasons)
     prior, verdict = _attempt(
         repair, DEFAULT_MODEL, evidence, expected_research_id, client, attempts,
-        db_path=db_path, run_id=run_id, task_id=task_id,
+        db_path=db_path, run_id=run_id, task_id=task_id, deadline=deadline,
     )
     if verdict.ok and prior is not None:
         return _result(prior, attempts, repaired=True, escalated=False)
@@ -251,7 +275,7 @@ def qwen_call(
     escalation = _repair_prompt(prompt, prior, verdict.reasons)
     prior, verdict = _attempt(
         escalation, ESCALATION_MODEL, evidence, expected_research_id, client, attempts,
-        db_path=db_path, run_id=run_id, task_id=task_id,
+        db_path=db_path, run_id=run_id, task_id=task_id, deadline=deadline,
     )
     if verdict.ok and prior is not None:
         return _result(prior, attempts, repaired=True, escalated=True)

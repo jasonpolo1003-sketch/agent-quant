@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -35,6 +36,17 @@ class LiveDiscoveryError(RuntimeError):
     """Raised when live discovery cannot proceed without inventing a scraper."""
 
 
+class DiscoveryDeadlineExceeded(LiveDiscoveryError):
+    """The Scout's shared whole-run wall-clock deadline was exhausted."""
+
+
+def _check_run_deadline(deadline: float | None) -> None:
+    if deadline is not None and time.monotonic() >= deadline:
+        raise DiscoveryDeadlineExceeded(
+            "budget: Scout run exceeded its whole-run wall-clock deadline"
+        )
+
+
 @dataclass(frozen=True)
 class DiscoverResult:
     sources: list[dict[str, Any]]
@@ -57,6 +69,7 @@ class DiscoveryBackend(Protocol):
         limit: int = 5,
         project_root: str | Path = PROJECT_ROOT,
         resolve_write: ResolveWriteFn | None = None,
+        deadline: float | None = None,
     ) -> DiscoverResult: ...
 
 
@@ -222,10 +235,12 @@ class SeededDiscoveryBackend:
         limit: int = 5,
         project_root: str | Path = PROJECT_ROOT,
         resolve_write: ResolveWriteFn | None = None,
+        deadline: float | None = None,
     ) -> DiscoverResult:
         from quant_brain.research.executor import select_candidate_sources
 
         del project_root, resolve_write
+        _check_run_deadline(deadline)
         sources = select_candidate_sources(method_family, question, limit=limit)
         return DiscoverResult(sources=sources, snapshots=(), backend=self.name)
 
@@ -326,6 +341,7 @@ class LiveDiscoveryBackend:
         limit: int = 5,
         project_root: str | Path = PROJECT_ROOT,
         resolve_write: ResolveWriteFn | None = None,
+        deadline: float | None = None,
     ) -> DiscoverResult:
         """Acquire at most ``limit`` credible sources, with snapshots.
 
@@ -351,6 +367,13 @@ class LiveDiscoveryBackend:
             rank_candidates,
         )
 
+        _check_run_deadline(deadline)
+        # Production search and fetch both use the adapter. Give every one of
+        # its subprocess/HTTP calls the same absolute deadline, not a fresh
+        # timeout budget. Injected test functions are checked before and after.
+        if deadline is not None and (self.search_fn is None or self.fetch_fn is None):
+            setattr(self._adapter(), "deadline", deadline)
+
         # Remembered so a sparse-result receipt can report what was searched
         # even when the caller injected its own search function.
         self._last_question = question
@@ -366,6 +389,7 @@ class LiveDiscoveryBackend:
         else:
             search_fn = self._resolve_search_fn()
             raw_candidates = search_fn(question, method_family, limit=limit)
+            _check_run_deadline(deadline)
             hits = [dict(hit) for hit in raw_candidates]
         if not hits:
             raise LiveDiscoveryError("live discovery search returned no candidates")
@@ -396,9 +420,11 @@ class LiveDiscoveryBackend:
         queue = list(accepted)
         try:
             while queue and len(sources) < limit:
+                _check_run_deadline(deadline)
                 candidate = queue.pop(0)
                 url = candidate.url
                 fetched = fetch_fn(url)
+                _check_run_deadline(deadline)
                 content = str(fetched.get("content") or "")
                 title = str(fetched.get("title") or candidate.title or "")
 

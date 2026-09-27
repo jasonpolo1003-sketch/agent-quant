@@ -3,6 +3,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import shlex
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -17,6 +19,9 @@ from quant_brain.research.schema import validate_raw_research_payload
 # read-only probe and the pipeline cannot drift apart. They were two separate
 # literals, and only the probe actually checked anything.
 MIN_UPSTREAM_SOURCES = 3
+# Phase 6's whole-run budget. The same monotonic deadline is passed to every
+# per-source ladder so five sources cannot each consume a fresh timeout budget.
+SCOUT_WALL_CLOCK_SECONDS = 15 * 60
 
 
 class InsufficientUpstreamSources(ValueError):
@@ -432,10 +437,14 @@ def _write_failed_run_note(
         )
 
     if retryable:
+        command = f"uv run python scripts/dispatch_task.py --type discovery --research-id {research_id}"
+        lane = payload.get("discovery_lane")
+        if isinstance(lane, dict) and isinstance(lane.get("candidate_list_path"), str):
+            command += f" --candidate-list {shlex.quote(lane['candidate_list_path'])}"
         retry = f"""The research question was returned to `queued`. Re-run:
 
 ```bash
-uv run python scripts/dispatch_task.py --type discovery --research-id {research_id}
+{command}
 ```"""
     elif question == "needs_review":
         retry = f"""**Manual inspection required.** Raw-note recovery failed, so the note this run
@@ -759,20 +768,27 @@ def execute_discovery_task(
     from quant_brain.discovery.live_discovery import SeededDiscoveryBackend
     from quant_brain.research.scout_runner import build_scout_prompt, create_raw_research_note
 
+    run_deadline = time.monotonic() + SCOUT_WALL_CLOCK_SECONDS
     root = Path(project_root)
     searcher = backend or SeededDiscoveryBackend()
+    # A pre-registered list is an input to the run and is already known before
+    # task preparation. Capture it now so even a prepare-stage failure can give
+    # an exact, same-lane retry command.
+    discovery_lane = getattr(searcher, "discovery_provenance", None)
     task: dict[str, Any] | None = None
     note_path: Path | None = None
     created_scaffold = False
     original_note_bytes: bytes | None = None
     stage = "load_task"
-    # Captured once, at the discover stage, and never re-read from ``sources``:
+    # Captured once and never re-read from ``sources``:
     # a successful model call rebinds ``sources`` to model output, so reading it
     # at failure time would describe a later write_note failure with
-    # model-shaped values instead of what discovery actually fetched. Stays
-    # empty when the run fails before discovery, so an early failure reports no
-    # candidate evidence rather than inventing an empty finding.
-    discovered_provenance: dict[str, Any] = {}
+    # model-shaped values instead of what discovery actually fetched. Before
+    # discovery it contains only the lane input, never fabricated candidate
+    # evidence.
+    discovered_provenance: dict[str, Any] = (
+        {"discovery_lane": discovery_lane} if discovery_lane else {}
+    )
     try:
         if research_id is None:
             with connect(db_path) as conn:
@@ -823,13 +839,11 @@ def execute_discovery_task(
         # than after discovery: a failure inside ``discover`` must still name
         # the list it was driven by. It is not candidate evidence, and a search
         # run records nothing here.
-        discovery_lane = getattr(searcher, "discovery_provenance", None)
         started_payload: dict[str, Any] = {
             "backend": getattr(searcher, "name", type(searcher).__name__)
         }
         if discovery_lane:
             started_payload["discovery_lane"] = discovery_lane
-            discovered_provenance = {"discovery_lane": discovery_lane}
         _record_scout_event(
             db_path,
             run_id=run_id,
@@ -845,6 +859,7 @@ def execute_discovery_task(
             limit=max_sources,
             project_root=root,
             resolve_write=resolve_write,
+            deadline=run_deadline,
         )
         sources = list(discovered.sources)
         rejected_records = [dict(record) for record in getattr(discovered, "rejected", ())]
@@ -972,6 +987,7 @@ def execute_discovery_task(
                     db_path=db_path,
                     run_id=run_id,
                     task_id=task_id,
+                    deadline=run_deadline,
                 )
                 for item, prompt in zip(evidence_bundle, prompts, strict=True)
             ]

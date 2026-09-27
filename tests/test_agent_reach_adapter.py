@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -299,6 +300,25 @@ def test_fetch_web_passes_its_timeout_to_a_fetcher_that_accepts_one() -> None:
     ).fetch_web("https://example.com/x")
 
     assert seen["timeout"] == 45
+
+
+def test_adapter_caps_subprocess_timeout_to_the_shared_run_deadline() -> None:
+    seen = []
+
+    def runner(argv, timeout):
+        seen.append(timeout)
+        return 0, DOCTOR_JSON, ""
+
+    adapter = AgentReachAdapter(
+        runner=runner,
+        timeout=60,
+        deadline=time.monotonic() + 5,
+        skip_exe_check=True,
+    )
+    adapter.check_health()
+
+    assert len(seen) == 1
+    assert 0 < seen[0] <= 5
 
 
 def test_fetch_web_still_supports_a_fetcher_that_takes_only_a_url() -> None:

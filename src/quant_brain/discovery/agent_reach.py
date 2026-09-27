@@ -15,6 +15,7 @@ import os
 import re
 import shutil
 import subprocess
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -373,6 +374,7 @@ class AgentReachAdapter:
         runner: Any | None = None,
         fetch_impl: Any | None = None,
         timeout: int = 60,
+        deadline: float | None = None,
         skip_exe_check: bool = False,
         arxiv_search_impl: Any | None = None,
     ) -> None:
@@ -381,6 +383,7 @@ class AgentReachAdapter:
         self.runner = runner or default_runner
         self.fetch_impl = fetch_impl or jina_fetch
         self.timeout = timeout
+        self.deadline = deadline
         # arXiv does not go through ``runner`` (it is HTTP, not a subprocess),
         # so an injected runner would not contain it. A caller that supplies its
         # own runner is running hermetically and must opt in explicitly, or the
@@ -402,6 +405,16 @@ class AgentReachAdapter:
             return resolve_agent_reach_exe(self.exe)
         return resolve_agent_reach_exe()
 
+    def _remaining_timeout(self) -> float:
+        if self.deadline is None:
+            return float(self.timeout)
+        remaining = self.deadline - time.monotonic()
+        if remaining <= 0:
+            raise AgentReachError(
+                "budget: Scout run exceeded its whole-run wall-clock deadline"
+            )
+        return min(float(self.timeout), remaining)
+
     def _run(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
         if not argv:
             raise AgentReachError("refusing to run an empty command")
@@ -417,10 +430,11 @@ class AgentReachAdapter:
                     f"refusing Agent Reach subcommand {subcommand!r}; "
                     f"forbidden: {sorted(FORBIDDEN_SUBCOMMANDS)}"
                 )
+        timeout = self._remaining_timeout()
         try:
-            completed = _as_completed(argv, self.runner(argv, timeout=self.timeout))
+            completed = _as_completed(argv, self.runner(argv, timeout=timeout))
         except subprocess.TimeoutExpired as exc:
-            raise AgentReachError(f"command timed out after {self.timeout}s: {argv[0]}") from exc
+            raise AgentReachError(f"command timed out after {timeout:.3f}s: {argv[0]}") from exc
         return completed
 
     def check_health(self) -> dict[str, ChannelHealth]:
@@ -506,15 +520,18 @@ class AgentReachAdapter:
         self.last_arxiv_query = expression
         if self.arxiv_search_impl is None:
             raise ArxivSearchError("arXiv lane disabled for this adapter")
-        return self.arxiv_search_impl(expression, limit=limit, timeout=self.timeout)
+        return self.arxiv_search_impl(
+            expression, limit=limit, timeout=self._remaining_timeout()
+        )
 
     def fetch_web(self, url: str) -> dict[str, Any]:
         # Pass the timeout only when the implementation accepts one. Catching
         # TypeError instead would swallow a genuine TypeError raised inside the
         # fetch and silently retry it.
         if _accepts_timeout(self.fetch_impl):
-            fetched = self.fetch_impl(url, timeout=self.timeout)
+            fetched = self.fetch_impl(url, timeout=self._remaining_timeout())
         else:
+            self._remaining_timeout()
             fetched = self.fetch_impl(url)
         if isinstance(fetched, dict):
             return fetched
