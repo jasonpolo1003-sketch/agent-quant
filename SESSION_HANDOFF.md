@@ -1,5 +1,82 @@
 # Quant Agent Brain — Session Handoff
 
+## Context-safe extraction fix (2026-09-26): prompts can no longer be silently truncated
+
+Fix and verification only. No Scout or curator dispatch, no research, and no push. The E3 receipt and snapshots are still unstaged. **Phase 6 / Gate D remain incomplete.**
+
+**Commit:** `9f963f1` `fix(llm): bound extraction prompts and fail closed on context overflow`.
+
+**Calibration** (Ollama 0.34.3, RTX 5070 12 GB). All probes used synthetic text, except the read-only token counts of the five E3 snapshots, which wrote no DB rows, events or files.
+
+| Question | Measured |
+|---|---|
+| Silent prompt limit | `num_ctx // 2 + 2`: 1,026 at 2,048 and 2,050 at 4,096. Independent of `num_predict`. `prompt_eval_count` reports the cut length. |
+| `truncate:false` | Honoured. HTTP 400 `exceed_context_size_error` ("request (3192 tokens) exceeds the available context size (2048 tokens)"). |
+| qwen3:14b speed | At 16k: 16%/84% CPU/GPU, about 18 tok/s. At 40k: 37%/63%, about 2.25 tok/s (a 31k-token prompt took 117s for 179 output tokens). |
+| qwen3.8:27b speed | At 16k: 57%/43% CPU/GPU, about 6 tok/s. |
+| E3 snapshot tokens | ChartSchool 4,711; Hill 3,647; Double 7s 9,728; **NAAIM 31,330** (1.77 bytes/token, PDF mojibake); Connors Research 2,065. |
+
+**What changed**
+- `research/executor.py` (`qwen_extract` only):
+  - One `qwen_call` per source, with the snapshot as raw text between delimiters. It used to be one JSON-escaped bundle; `ensure_ascii` roughly doubled the tokens.
+  - All prompts are screened before the first model call.
+  - The deterministic merge keeps S-order and an order-preserving union of open questions. The recommendation survives only if unanimous; otherwise it becomes `needs_more_work`.
+  - The merged payload must pass the old whole-bundle `validate_research_output`. If it fails, the run fails with a `merge:` reason.
+  - Still all-or-nothing.
+- `llm/ollama_client.py`:
+  - `generate()` **requires** `num_ctx` and `num_predict`, and sends `truncate:false` and `shift:false`.
+  - `ContextOverflowError` is raised on: the server's 400; a missing `prompt_eval_count`; a count equal to the truncation signature; a count over the budget; or `done_reason=length`.
+- `llm/qwen_call.py`:
+  - Constants: `EXTRACTION_NUM_CTX` 16384, `EXTRACTION_NUM_PREDICT` 1536, `PROMPT_TOKEN_BUDGET` 11,571 (80% of the window minus the output reserve), and `EXTRACTION_TIMEOUT` 600s (the 27B measured near 300s).
+  - There is an optimistic pre-flight estimate (bytes / 4).
+  - `ContextBudgetError(QwenValidationError)` stops the ladder immediately, since repair and escalation prompts are longer.
+  - `qwen_attempt` events gain `source_ids`, `num_ctx`, `estimated_prompt_tokens` and `prompt_eval_count`.
+- **Tests:**
+  - New `tests/test_context_guard.py` (17 tests).
+  - Three existing fakes now record every per-source call. No assertion was loosened; two became stricter: each call carries exactly one source, and a failed first source stops the run.
+- `scripts/context_smoke.py` plus the fixed fixture `tests/fixtures/context_smoke_snapshot.md` (synthetic, needle sentence first).
+
+**Verification**
+- 505 passed, 1 skipped. Both Ruff checks and `git diff --check` are clean.
+- DB `a6ab24f8…`, list blob `88ba2d3c…`, the E3 receipt and snapshots, `RUN-4e9d910742.md`, the `2026-09-21` snapshots, `.gitattributes` and `external.sqlite`: all sha256-identical.
+- The dispatcher, registry, paths and discovery code are unchanged.
+
+**Mutations** (each applied to a backed-up file, then restored byte-for-byte with its sha256 verified). All 13 were caught:
+
+| Mutation | Tests failed |
+|---|---|
+| M1 drop `num_ctx` | 2 |
+| M2a no truncation-signature check | 1 |
+| M2b accept missing `prompt_eval_count` | 1 |
+| M2c no post-hoc budget check | 1 |
+| M3a no pre-flight in `qwen_call` | 2 |
+| M3b no executor sweep | 1 |
+| M4 ladder continues after a context error | 3 |
+| M5 whole bundle in each call | 12 |
+| M6 skip merged validation | 1 |
+| M7 `truncate:true` | 1 |
+| M7b `shift:true` | 1 |
+| M8 accept `done_reason=length` | 1 |
+| M9 server 400 not mapped | 1 |
+
+**Live smoke** (`uv run python scripts/context_smoke.py`, exit 0, 7/7 PASS):
+- Prompt of 30,791 bytes, estimate 7,698, **`prompt_eval_count` 5,914**, `done_reason` stop, 12.6s. The model returned the needle verbatim.
+- The ladder validated via qwen3:14b after one repair (13.8s + 11.7s), with evidence = the needle.
+- The pre-flight refused an oversize prompt (~22,772 estimated) without calling the model.
+- The server refused a 5,887-token prompt at `num_ctx` 2048 with HTTP 400.
+- The `truncating input prompt` count in server.log was 6 before and 6 after (3 from E3, 3 from the calibration probes).
+
+**Limitations**
+- The pre-flight estimate is a screen, not a tokenizer. Real snapshots run 1.8–3.9 bytes per token, so it can under-estimate. The exact guards are the server's refusal and the post-hoc `prompt_eval_count` checks.
+- **An oversize single source fails closed; there is no windowing.** The NAAIM snapshot exceeds the budget, so a re-run on the committed RQ-6d9c12f4 list will fail closed before any model call.
+- Up to 5 × 3 model calls per run (the ladder is per extraction), and there is no run-level wall-clock cap.
+- The 27B is 57% on CPU, and a worst-case call is about 5 minutes.
+- Server-side refusal depends on Ollama honouring `truncate:false` (verified on 0.34.3). The client checks still apply if it stops doing so.
+- The constants are calibrated for this machine.
+
+**Next, needing approval:** decide how to handle the E3 re-run (run and record the fail-closed outcome, or first approve a design for oversize sources). See PLAN.md §10 "What to do next".
+
+
 ## Gate D checkpoint E3: first candidate-list run for RQ-6d9c12f4 (2026-09-26 local, 2026-09-27 UTC). It failed closed, and the cause was prompt truncation.
 
 One approved run and no retry. No code change, push or merge. PROP-005 is still **undecided** and was not applied. **Phase 6 / Gate D remain incomplete.**
@@ -51,9 +128,9 @@ One approved run and no retry. No code change, push or merge. PROP-005 is still 
 
 **Finding: the decisive cause is prompt truncation in the model runtime.**
 - The Ollama `server.log` records `msg="truncating input prompt" limit=2050` at 21:47:46, 21:48:06 and 21:48:42 local time. The prompts were 53,917, 54,985 and 55,586 tokens, and each was cut to 2,050 (`keep=4`).
-- `llm/ollama_client.py` sends only `temperature`, with no `num_ctx`, so the server's `-c 4096` applies. Nothing in the harness notices.
+- `llm/ollama_client.py` sends only `temperature`, with no `num_ctx`. Nothing in the harness notices. **Correction (2026-09-26):** the server ran with `-c 4096`, but the effective prompt limit is `num_ctx // 2 + 2` (measured), which is **2,050** tokens, not 4,096.
 - The models therefore saw about 4% of each prompt: the tail of the evidence bundle, which is the end of the S5 Double 7s snapshot, without the instruction, the question or S1–S4. This explains the `Double7sSetup` research ID.
-- **The same happened to RUN-4e9d910742** on 2026-09-20 (`server-5.log`, 19:58–19:59: 11,962, 12,847 and 12,760 tokens → 2,050). The recorded attribution for that run ("unsuitable source relevance") is therefore confounded. Its arXiv sources still had zero RSI/ETF mentions, but the models could not have extracted from them either.
+- **The same happened to RUN-4e9d910742** on 2026-09-20 (`server-5.log`, 19:58–19:59: 11,962, 12,847 and 12,760 tokens → 2,050). **Correction (2026-09-26):** that run's source-relevance finding **stands**. Its snapshots were checked directly and have zero RSI or ETF mentions. The truncation confounds only the account of why the models misbehaved.
 - The validators and fail-closed path behaved correctly. Per the task constraints this was **not fixed** (no code changes).
 - The log lines are quoted here because Ollama rotates its logs.
 

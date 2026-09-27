@@ -205,6 +205,36 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 
 **Picking this up cold? Read this section, then start.**
 
+### Context-safe extraction fix (2026-09-26): prompts can no longer be silently truncated
+
+- **Commit:** `9f963f1` (local `testing`, not pushed). No Scout or curator run, and no research.
+- **Calibrated on this machine** (Ollama 0.34.3, RTX 5070 12 GB), on synthetic probes plus read-only token counts of the E3 snapshots:
+  - The silent prompt limit is `num_ctx // 2 + 2`, whatever `num_predict` is: 1,026 at 2,048 and 2,050 at 4,096.
+  - `truncate:false` is honoured: an oversize prompt gets HTTP 400 `exceed_context_size_error`.
+  - At 16k, qwen3:14b runs 84% on GPU at about 18 tok/s. At 40k it drops to about 2 tok/s. qwen3.8:27b runs about 6 tok/s at 16k.
+- **The fix:**
+  - One source per extraction call, per the Phase 6 design. Snapshots go in as raw text, not JSON-escaped.
+  - `generate()` requires `num_ctx` and `num_predict` and sends `truncate:false` and `shift:false`. The response must report `prompt_eval_count`.
+  - The truncation signature, an over-budget count and `done_reason=length` are all refused.
+  - An optimistic bytes-per-4 estimate screens every prompt before the first model call.
+  - A context failure stops the ladder at once with `ContextBudgetError`, a subclass of `QwenValidationError`.
+  - The merged payload must still pass the old whole-bundle validation.
+  - Extraction stays all-or-nothing.
+- **Constants:** `num_ctx` 16384, `num_predict` 1536, prompt budget 11,571 tokens (80% of the window minus the output reserve), and extraction timeout 600s (raised because the 27B measured near 300s).
+- **Unchanged:** the ladder (per call), the validators, the source minimum, tiers, extractive support, the curator gate, snapshot-before-model, and the dispatcher, registry and paths.
+- **Verification:**
+  - 505 passed, 1 skipped (17 new tests). Both Ruff checks and `git diff --check` are clean.
+  - All **13 mutations** were caught.
+  - The live smoke check (`scripts/context_smoke.py`, fixed synthetic fixture, no writes) passed 7/7:
+    - `prompt_eval_count` was 5,914.
+    - The model quoted the head needle.
+    - The ladder validated.
+    - The pre-flight and the server both refused an oversize prompt.
+    - There was no new truncation warning.
+  - The DB, the list blob, and the E3 and historical evidence are sha256-identical.
+- **What it means for E3's list:** four of the five sources fit (about 2.1k–9.7k tokens each). **The NAAIM PDF snapshot is 31,330 tokens** (mojibake, 1.8 bytes per token), so a re-run on the committed list would fail closed before any model call. This is the designed bounded outcome, not a defect.
+- **Status:** Phase 6 / Gate D remain incomplete.
+
 ### Gate D checkpoint E3 (2026-09-26 local / 2026-09-27 UTC): first candidate-list run failed closed; prompt truncation found
 
 - **Commits (local `testing`, not pushed):**
@@ -221,9 +251,9 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
     - `qwen3.8:27b` left S4/S5 evidence empty.
 - **Decisive cause: a runtime defect, not the sources.**
   - The Ollama server log shows `truncating input prompt limit=2050` on all three attempts: 53,917 / 54,985 / 55,586 prompt tokens were cut to 2,050.
-  - `ollama_client` sends no `num_ctx`, so the server's 4,096 context applies, and nothing detects the truncation.
+  - `ollama_client` sends no `num_ctx`, and nothing detects the truncation. **Correction (2026-09-26):** the server ran with `-c 4096`, but the effective prompt limit was **2,050** tokens (`num_ctx // 2 + 2`, measured), not 4,096.
   - The models saw only the tail of the evidence bundle (the end of the Double 7s snapshot), without the instructions or the question. Every dossier exit-rule span is present in the snapshots.
-  - **RUN-4e9d910742 (2026-09-20) was also truncated** (11,962–12,847 → 2,050), which confounds that run's "unsuitable source relevance" attribution.
+  - **RUN-4e9d910742 (2026-09-20) was also truncated** (11,962–12,847 → 2,050). **Correction (2026-09-26):** that run's source-relevance finding **stands**, because its snapshots were checked directly and have zero RSI or ETF mentions. The truncation confounds only the account of *why the models misbehaved*.
   - Not fixed, because this task allowed no code changes.
 - **Curator:** not dispatched, because no raw note was written.
 - **State:**
@@ -339,10 +369,14 @@ Next recommended bounded step: append exact-quotation claims and offline verific
 6. The plan must be saved and portable enough for Claude Desktop to resume cold.
 
 ### What to do next
-What remains, as of E3. Each item needs its own approval.
-1. **Fix prompt truncation.** Set an explicit context window (`num_ctx`) sized to the prompt, and fail closed when a prompt cannot fit rather than letting Ollama silently truncate it. Add a regression test. Neither Scout run so far is a valid test of extraction until this is fixed.
-2. **Re-run RQ-6d9c12f4 on the same committed list** (`88ba2d3c…`) after the fix. Then dispatch the curator separately if a raw note results. The honest ceiling remains about 2 promotable sources from 2 originators.
-3. **Re-read the RUN-4e9d910742 attribution** in the light of its truncation.
+What remains after the context fix. Each item needs its own approval.
+1. ~~**Fix prompt truncation.**~~ **Done in `9f963f1`**; see the context-safe extraction entry above.
+2. **Re-run RQ-6d9c12f4 on the same committed list** (`88ba2d3c…`). This is the next checkpoint.
+   - **Known before running:** the NAAIM snapshot (31,330 tokens) exceeds the 11,571-token per-call budget, so the run will fail closed at `qwen_extract` before any model call.
+   - Jason decides whether to run it anyway and record that outcome, or to first approve a separate design for oversize sources (for example, deterministic windowing).
+   - Do not edit the committed list, and do not raise the context beyond what the 14B can run at usable speed.
+   - Dispatch the curator separately only if a raw note results. The honest ceiling remains about 2 promotable sources from 2 originators.
+3. ~~**Re-read the RUN-4e9d910742 attribution.**~~ **Settled:** its relevance finding stands; the truncation explains only the models' behaviour.
 4. **PROP-005:** Jason's decision. It is still undecided and not applied.
 5. **RQ-c920baeb and RQ-80be8cf7** are source-insufficient per the E1 dossier. They have no list and no run.
 6. **Diagnose the arXiv HTTP 406** as its own task.
@@ -362,7 +396,7 @@ Historical context below. Gate C is complete and verified (2026-09-16). **Gate D
 | 4 — Agent Reach adapter | **done** | 2026-09-07 | Merged adapter + production discovery handler; fixture tests use zero network |
 | 5 — Qwen runtime + validators | **done** | 2026-09-07 | Gate B: hermetic ladder tests + bounded 14B live smoke; per-attempt hashes/timing recorded |
 | 5b — Gate C bounded acquisition | **done** | 2026-09-16 | 269 passed. Tier classifier, ranking, dedupe, pre-Qwen content floor, rejection ledger. Live sources can finally be promotable |
-| 6 — Research Scout agent | pending | — | **First child run executed 2026-09-20** (`RQ-6d9c12f4` only, `RUN-4e9d910742`): 5 distinct primary arXiv works cleared the ≥3 bar, then all three Qwen attempts failed validation on ungrounded/absent quotations. **Scout research acceptance failed; fail-closed safeguards verified.** Decisive blocker: unsuitable source relevance (zero RSI/ETF mentions in the retrieved papers); the models also produced invalid outputs, which the validators correctly caught. The failure-receipt provenance defect it exposed was **fixed the same day** (396 passed; 397 after the 2026-09-22 review follow-up, which also scoped the fix to receipt contents, not guaranteed receipt creation). Exit gate needs all three child runs — 2 of 3 still blocked at 1 candidate each. **E3 (2026-09-26/27):** `RUN-9b0d5a6e12` on the committed candidate list fetched 5/5 and failed closed at extraction; both Scout runs had prompts truncated to 2,050 tokens by Ollama (no `num_ctx`) — runtime fix pending approval. **Incomplete** |
+| 6 — Research Scout agent | pending | — | **First child run executed 2026-09-20** (`RQ-6d9c12f4` only, `RUN-4e9d910742`): 5 distinct primary arXiv works cleared the ≥3 bar, then all three Qwen attempts failed validation on ungrounded/absent quotations. **Scout research acceptance failed; fail-closed safeguards verified.** Decisive blocker: unsuitable source relevance (zero RSI/ETF mentions in the retrieved papers); the models also produced invalid outputs, which the validators correctly caught. The failure-receipt provenance defect it exposed was **fixed the same day** (396 passed; 397 after the 2026-09-22 review follow-up, which also scoped the fix to receipt contents, not guaranteed receipt creation). Exit gate needs all three child runs — 2 of 3 still blocked at 1 candidate each. **E3 (2026-09-26/27):** `RUN-9b0d5a6e12` on the committed candidate list fetched 5/5 and failed closed at extraction; both Scout runs had prompts truncated to 2,050 tokens by Ollama (no `num_ctx`). **Context fix `9f963f1` (2026-09-26):** one source per call, explicit 16k context, overflow fails closed; NAAIM (31k tokens) exceeds the per-call budget. **Incomplete** |
 | 7 — Re-verify 5 source notes | pending | — | See §4 |
 | 8 — Strategy card + backtest | pending | — | Needs Jason's explicit approval |
 | 9 — Second market door | pending | — | Do not scope until 8 done |
