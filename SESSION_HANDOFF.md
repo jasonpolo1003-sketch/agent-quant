@@ -1,5 +1,199 @@
 # Quant Agent Brain — Session Handoff
 
+## Gate D checkpoint E2: pre-registered candidate-list lane (2026-09-26). Ready for Drew's review.
+
+This implements the scope PROP-004 authorized for E2. Nothing is committed, and there was no Scout or curator dispatch, network research, list registration, arXiv repair or later-phase work. PROP-005 remains **proposed**. **Phase 6 / Gate D remain incomplete.** `HEAD` is still `7277a76`.
+
+**Change set**
+
+New files:
+- `src/quant_brain/discovery/work_identity.py`
+- `src/quant_brain/discovery/candidate_list.py`
+- `tests/test_work_identity.py`
+- `tests/test_candidate_list_lane.py`
+
+Modified files:
+- `discovery/live_discovery.py`
+- `research/executor.py`
+- `harness/handlers.py` (the Scout handler only)
+- `scripts/dispatch_task.py`
+- `scripts/gate_readiness.py`
+- `tests/test_gate_readiness.py`
+
+`dispatcher.py`, `registry.py`, `paths.py` and `acquisition.py` are unchanged.
+
+**How the lane behaves**
+
+- **List file:** `brain/00_Inbox/Scout_Candidates/<RQ>.md`, holding exactly one ```json block with these fields:
+  - `research_id`, `selection_rule`, `screening_reference`, `registered_by`, `registered_on`
+  - `candidates[]`: 1 to 10 entries, each with `url`, `found_via`, `added_by`, `added_on`
+
+  pydantic `extra="forbid"` applies at both levels, so an entry cannot carry a tier, title, claim or evidence. One work listed twice (for example a DOI and its landing page) is refused at load.
+- **Run:**
+  - `scripts/dispatch_task.py --type discovery --research-id <RQ> --candidate-list brain/00_Inbox/Scout_Candidates/<RQ>.md`
+  - This requires the live backend and an explicit research ID matching the list's own `research_id`. Both are checked before any fetch.
+  - The backend keeps `name = "live"`, so the Qwen ladder and validators always run.
+  - **Search is not called.** Hits are built from URLs alone, and tiers come from `classify_source`.
+- **Offline pre-registration check:**
+  - `scripts/gate_readiness.py --research-id <RQ> --candidate-list <path>`
+  - It checks that the list loads, matches the question, and names at least 3 distinct works.
+  - It says nothing about relevance, access or support. Exit codes: 0 ready, 4 short, 5 invalid.
+- **Budget, precisely:** at most 5 **accepted** sources. A thin or boilerplate page is backfilled from the next listed candidate, so fetch attempts can reach the list length (≤10). Pre-fetch `reject` URLs are never fetched.
+- **Provenance:** a `discovery_lane` block (path, sha256, count, URLs) is recorded in:
+  - the `discovery_started` and `discovery_completed` events
+  - the handler detail
+  - a `## Discovery Lane` note section, outside the JSON block
+  - `InsufficientUpstreamSources.detail`
+  - every Failed_Runs receipt, including failures inside `discover()`. It is captured before discovery as an input, not as candidate evidence.
+
+**DOI identity** (`upstream_work_key`)
+
+It uses only a host-anchored table:
+- doi.org / dx.doi.org resolver paths
+- the arXiv DataCite DOI, mapped to the abs URL
+- European Proceedings `/article/10.15405/…`
+- Wiley `/doi/(abs|full|pdf|epdf)/10.1111/…`
+- SSRN `abstract_id` / `abstract=`, on SSRN hosts only
+
+Publisher rows match the full path with a slash-free suffix. `…/figures`, unlisted publishers, query-string DOIs and `abstract_id` on other hosts stay separate.
+
+The key is used by `distinct_upstream_keys` (the source minimum, which counts fetched sources) and by list validation. **Plan deviation:** search-lane candidate dedupe was left on the normalized URL. Changing it broke `test_duplicates_cannot_buy_a_passing_run`, which pins the existing layering, and the minimum was already protected at the counting layer.
+
+**Verification**
+
+| Check | Result |
+|---|---|
+| `uv run pytest -q` | **488 passed, 1 skipped** (425 plus 63 new) |
+| `tests/test_dispatcher.py` | 13 passed, file unchanged |
+| `ruff check .` | clean |
+| `ruff check src tests scripts` | clean |
+| `git diff --check` | clean |
+| `db/brain.sqlite` | `6db65981…f530f9e29`, unchanged |
+| `exit-rules-final/external.sqlite` | `4b20094c…7c00`, unchanged |
+| `.gitattributes`, `RUN-4e9d910742.md`, five `2026-09-21` snapshots | sha256 OK |
+| Questions | all three `queued` with a NULL path; agent_tasks 4, agent_events 58; protected tables 0 |
+
+**Mutation checks** (each applied to a backed-up file and restored byte-for-byte, verified by sha256). All seven were caught:
+
+| # | Mutation | Tests failed |
+|---|---|---|
+| M1a | drop the European Proceedings row | 5 |
+| M1b | drop the SSRN host anchor | 1: `abstract_id` on another host |
+| M2 | run search in list mode | 12 |
+| M3 | loader ignores extra fields | 6 |
+| M4 | lane not captured before discovery | 2 |
+| M5 | count listed URLs, not acquisitions | 1 |
+| M6 | pass list entries through as hits | 1 |
+
+**Limitations**
+
+- **"Frozen" is procedural.** The sha256 is recorded, but the code does not check git. Before any E3 run, compare the recorded sha256 with the committed blob.
+- **Unlisted publisher aliases are not collapsed**, so work identity must be checked by hand before a run.
+- Relevance screening and originator independence remain human steps.
+- The arXiv 406 is untouched.
+
+**Next, needing separate approval**
+- Jason's scope decision on the Malaysian DOI chapter.
+- Registering and committing the RQ-6d9c12f4 list.
+- E3, the single run.
+
+
+## Gate D checkpoint E1: seed dossier and proposals (2026-09-26). Stopped for Jason.
+
+This was an approved plan checkpoint. It involved no code change, no Scout or curator run, and no write to the production DB or the intake catalog. **Phase 6 / Gate D remain incomplete.**
+
+**Outputs:**
+- `brain/00_Inbox/Gate_D_Seed_Dossier_2026-09-26.md`, holding leads only.
+- PROP-004 (pre-registered seed lane plus DOI-alias collapse) and PROP-005 (narrow "source-insufficient" pipeline-acceptance clarification), both **proposed**, in `brain/_system/plan/plan_change_proposals.md`.
+
+**Verified before and after:**
+- **425 passed, 1 skipped.** Ruff and `git diff --check` clean.
+- `db/brain.sqlite` `6db65981…f530f9e29` is unchanged.
+- `exit-rules-final/external.sqlite` `4b20094c…7c00` is unchanged.
+- All three questions are `queued` with a NULL raw-note path. agent_tasks is 4 and agent_events is 58. The protected tables are 0.
+
+**New findings:**
+1. **The arXiv lane now fails.** Python `urllib` gets **HTTP 406** from `export.arxiv.org` while curl gets 200; the cause is not established. `gate_readiness` now exits 4 with **0 URLs for all three** questions (RQ-6d9c12f4 was at 3).
+2. **DOI aliases double-count.** `distinct_upstream_keys` counts a `doi.org` URL and its publisher landing page as 2 works.
+3. **sec.gov comment letters classify as `primary` on host alone.**
+4. **One catalog DOI primary was fetched, not blocked.** `doi.org/10.15405/epms.2022.10.4` states the RSI(14) 30/70 exit, but on Malaysian equities.
+
+**Pre-run findings:**
+
+| Question | Relevant, accessible | Promotable | Originators | Finding |
+|---|---|---|---|---|
+| RQ-6d9c12f4 | 4 (5 with the epms DOI) | 2 (3 with the DOI) | 2 (3 with the DOI) | The Scout bar is clearable via a seed lane. Whether the DOI enters is Jason's scope call. |
+| RQ-c920baeb | 2, both out of scope | — | — | **source-insufficient.** One is an uncited SEO 10-day time stop; the other is a 9-day cap on A-shares. |
+| RQ-80be8cf7 | 2 | 2 | 2 | **source-insufficient.** Nasdaq-measured QQQ spreads of about 1–2 bps (2011–12), and an arXiv paper assuming 18 bps for retail US large-cap equities (2024). |
+
+**Decisions for Jason:**
+- Accept or reject PROP-004, or configure Exa instead.
+- Include or exclude the epms DOI from the RQ-6d9c12f4 seeds.
+- Accept or reject PROP-005.
+- Whether to diagnose the arXiv 406 as its own task.
+- Next step after those decisions: E2, implementing the seed lane with tests. That needs approval, and no run happens in E2.
+
+
+## YouTube methodology scout (2026-09-26) — video leads only
+
+Cataloged the first 30 `@itsjjsimon` uploads and all 14 visible `@deltatrendtrading/videos` uploads via yt-dlp; fetched and reviewed English transcripts from 4 JJ Simon and 6 Delta Trend Trading videos. Timestamped transcripts retained outside the repo at `C:/Users/jason/quant-agent-brain-intake/channel-review-2026-09-26/` (video IDs are file names). These are creator claims/teaching, not independent strategy evidence.
+
+- JJ Simon: the sample emphasizes prop-firm evaluation economics and payouts, with useful warnings about selection among many tests, uncounted trials, and small samples (`PMGhHCjYG5c` 03:39–05:40). This supports the existing immutable-trial and benchmark policy; it does **not** substantiate payout figures or a transferable market edge. The break-even/zero-edge account example (`2BtwoTCxcbc`) is a simulation premise, not proof of positive strategy expectancy. Do not copy risk sizing into this no-live-trading project.
+- Delta Trend Trading: stronger fit for learning a research workflow. `M3-0LfZMsz4` distinguishes building/falsifying an idea from copying a guru setup; `Zu4sL5u-WyU` defines event sampling as a research start, not a strategy; `ZQUmXK_xapM` shows null results and context-feature experiments; `MCnFrUxZARU` explains net expectation and path dependence. Treat on-video p-values/results as unverified until data, code, split, cost assumptions, and trial family are available. `jGhk-uSrtII` initially describes IID trade bootstrap and later warns of regime dependence; resampling the same trade history does not increase independent information or establish edge.
+- No reviewed video supplies three distinct promotable upstream sources documenting the daily ETF RSI exit rule. These videos belong in a methodology/learning lead pool, not the Phase 6 source count or trusted research index. No phase, gate, code, production database, or strategy state was changed.
+
+
+## Methodology reports reviewed (2026-09-26) — leads, not trusted research
+
+Jason supplied two PDFs, retained byte-for-byte in the vault's `Projects/Quant Agent Brain/Research/External Reports/`:
+- `Quant Mind End-to-End - external synthesis.pdf` (11 pages; SHA-256 `0ee8b4878c08eb4089944b1ef7315c613127aa4f0f5d072167064b6f4db3ac6e`): useful hypothesis-first, point-in-time and anti-overfitting orientation; mostly familiar to PLAN.md. Its proposed immediate Alpaca/Tiingo, MLflow, six-station agents, Qlib and external competitions are **not adopted**; they expand scope or jump gates. Precise pricing, subscriber, platform and performance claims are unverified leads, not sources of truth.
+- `Closing Three Missing Validation Gaps in the Evidence-First Quant Agent.pdf` (45 pages; SHA-256 `5a3e9ed7d3c3748449501b3350ac43baf16a60358f61e5d2b79c`): stronger candidate methodology for later validation: separate within-family instrument replication from independent economic environments; count signal episodes before exits and evaluate net-outcome power after a strategy freeze; compare feed semantic contracts and signal/trade parity before paper. Its source list provides leads, not independently verified proof; gate cutoffs and formulas need primary-source and data checks before implementation. Neither PDF supplies a third qualifying independent source for `RQ-6d9c12f4` or changes Phase 6 / Gate D.
+
+Retained only as **external methodology leads** in the vault, not imported into the exit-rule claims catalog, RAG/trusted notes, or production database. Do not treat report prose as multiple independent sources. Any added phase/exit gate needs a proposal and Jason's approval; prioritize the current research-source blocker first.
+
+
+## Resume verification (2026-09-26)
+
+**Completed after Jason selected the original catalog:** appended five exact-quotation claims using the existing Intake API and verified all five offline against pinned snapshots. All five have `quote_match=true`, `full_rule_match=true`, and state `partially_supported` / `review_required`; this is exact passage matching, not validation of a complete strategy. No attributed human scope review was performed. Handoff remains empty. Added 5 claims, 5 evaluations and 10 history rows; no new targets, reports or fetches. All pre-existing catalog rows and non-database intake files (including acceptance.json) were preserved; production DB unchanged. Backup and machine-readable verification are in `C:/Users/jason/quant-agent-brain-intake/exit-rules-review/` as `external-before-remap-2026-09-26.sqlite` and `remap-recorded-verification.json`. The workspace decision is resolved; the next boundary is human scope review and acquiring additional relevant independent evidence through an approved route. Gate D remains incomplete.
+
+
+- Live local `testing` and remote `refs/heads/testing` both resolve to `7277a76`; the checkpoint is pushed. Earlier "not pushed" statements below are historical.
+- Fresh verification: `uv run pytest -q` = **425 passed, 1 skipped**; `uv run ruff check .` and `git diff --check` pass. Production DB SHA-256 before/after: `6db659812411efe084f5168d41c98192b79ca59f9b739d89991e6c3f530f9e29`.
+- All three Gate D child questions remain queued with no raw-note path. Strategy cards, backtests, price datasets and reviews are all zero. Phase 6 / Gate D remain incomplete.
+- Existing uncommitted changes were documentation only (PLAN.md and SESSION_HANDOFF.md); preserved during this review.
+- Next bounded step recommended: append exact-quotation claims and offline verification to the original isolated `exit-rules-final` catalog, preserving existing records. This resolves the copied-workspace path guard without bypassing it. Await Jason's workspace choice before catalog writes; do not attribute a scope review to him without his actual review.
+- This step alone cannot satisfy Gate D: the existing packet identifies only two promotable targets (Connors via ChartSchool and Hill). More independent, relevant evidence and an approved ingestion route are still needed. No Scout/curator dispatch, model calls, production research writes, commits or pushes performed in this session.
+
+
+## Verbatim re-mapping pre-check for RQ-6d9c12f4 (2026-09-22) — stopped at a guard, awaiting decision
+
+The reliability checkpoint is committed as **`7277a76`** (entry below). This is the separate part B:
+read-only, offline, no model, no network, no Scout, no curator. **Phase 6 / Gate D remain incomplete.**
+
+- **Pre-check:** the intake verifier's own `normalized`/`source_span` were run on the integrity-checked
+  pinned snapshots in `C:\Users\jason\quant-agent-brain-intake\exit-rules-final`. All **5 of 5**
+  verbatim exit-rule spans were located, across 5 distinct targets:
+  - ChartSchool (Connors, 5-day SMA exit);
+  - Arthur Hill (RSI(5) above 70);
+  - Connors Research (4-period RSI above 55);
+  - NAAIM/Pagonidis (hold while RSI(3) ≤ 40);
+  - Bulkowski (relaying Connors & Alvarez, seven-day high).
+- **Only 2 are promotable tier (both StockCharts), and only 1 is independent of Connors.** Under the
+  unchanged tier policy this material cannot meet the ≥3-source bar.
+- **Not recorded, by design.** Recording was to happen in a byte-identical copy
+  (`…\exit-rules-review`). But the catalog stores absolute snapshot paths inside `exit-rules-final`, and
+  `safe_target` refuses paths outside the workspace root. The guard was not bypassed, and the recorded
+  workspace was verified unchanged (24 files, sha256).
+- **Packet:** `…\exit-rules-review\REVIEW-PACKET.md`; raw results in `remap-precheck.json`.
+- **Jason's decision:**
+  1. append the claims to `exit-rules-final` and verify offline;
+  2. use a fresh workspace and one refetch; or
+  3. stop here.
+
+  Then comes his attributed `review --state supported_in_scope`. A third promotable, independent source
+  is needed before any `RQ-6d9c12f4` Scout run could pass. A "reviewed-leads" Scout lane remains a
+  possible governance proposal, not authorized.
+
 ## Reliability checkpoint committed (2026-09-22) — local on `testing`, not pushed
 
 The discovery-recovery hardening and the reliability closeout (both described below) were independently

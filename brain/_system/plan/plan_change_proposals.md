@@ -117,6 +117,62 @@ This exists because the project's core design rule is *move slowly, one verified
 
 ---
 
+### PROP-004 — Pre-registered seed lane for known candidate URLs (plus DOI-alias collapse)
+- **Date:** 2026-09-26
+- **Proposed by:** Gate D source-blocker planning, checkpoint E1 (branch `testing`)
+- **Affects:** Phase 6 implementation shape (adds a discovery lane). **No** change to the ≥3 distinct-upstream bar, the 5-fetched-source cap, tiers, validators, the curator threshold, snapshot-before-model or any harness code (dispatcher/registry/paths).
+- **Current plan says:** Phase 6 step 3, "discover candidates -> Exa / GitHub / web search". Discovery is search-only (`agent_reach.search_for_question`); there is no path for an already-known URL.
+- **Problem (verified in E1, see `brain/00_Inbox/Gate_D_Seed_Dossier_2026-09-26.md`):**
+  - `exa_search` is `off` by Jason's decision.
+  - GitHub searches code.
+  - The arXiv lane now fails with HTTP 406 from Python `urllib`, while curl succeeds for the same URL; the cause is not established.
+  - As a result, `gate_readiness.py` returns 0 URLs for all three child questions.
+  - Relevant exit-rule sources exist and are accessible, but only as human-collected report citations. No Scout lane can reach them.
+- **Proposed change:**
+  - (a) An optional frozen seed file `brain/00_Inbox/Scout_Seeds/<RQ>.md` lists at most 10 URLs. Each URL records where it was found, who added it, the date, and the declared rule that built the list.
+  - (b) The Scout merges seeds into the candidate pool before the unchanged classify → rank → cap → content floor → snapshot → Qwen → validators steps. A seed cannot set a tier, relevance or any payload field.
+  - (c) The lane is recorded as `seeded` in the discovery events, the raw note and any Failed_Runs receipt.
+  - (d) **Tightening:** DOI-alias collapse. `distinct_upstream_keys` currently counts `doi.org/<doi>` and a publisher landing page that contains the same DOI as two works.
+- **Guards against cherry-picking:**
+  - The seed file is committed before the run.
+  - It contains every lead that matches the declared rule, not only those likely to pass.
+  - It is never edited after a run.
+  - Seeds found by a human are labelled as human discovery. Source *support* still comes only from the Scout's own snapshot and extractive validation.
+  - Intake-catalog verification is never counted as Scout validation.
+- **Cost of not changing:** no approved lane reaches relevant sources, so every child run is quarantined at 0 candidates and Phase 6 cannot progress. The zero-code alternative is to configure Exa, which is account-backed and was previously declined.
+- **Status:** accepted for **E2 implementation scope only**, via the E2 instruction (2026-09-26). Implemented on `testing` and uncommitted, pending Drew's review. **No Scout or curator run is authorized.** No real candidate list exists yet: the RQ-6d9c12f4 list waits on the Malaysian-chapter scope decision.
+- **Jason's decision:** E2 implementation authorized. Separate authorization is still required for any list registration, any live run (E3), and PROP-005.
+- **As implemented (differences from the proposal text above):**
+  - **Name:** "pre-registered candidate list", not "seed". `seeded` already names the offline stub backend. Lists live in `brain/00_Inbox/Scout_Candidates/<RQ>.md`, and the lane label is `preregistered_candidate_list`.
+  - **Search is replaced, not merged, in list mode.** The candidate pool is exactly the list, so off-topic search hits cannot displace screened entries.
+  - **The budget is ≤5 accepted sources, not ≤5 fetch attempts.** Thin pages are backfilled, and attempts are bounded by the list length (≤10).
+  - **DOI identity is a host-anchored table** (`discovery/work_identity.py`): the doi.org/dx.doi.org resolvers, the arXiv DataCite DOI, European Proceedings `/article/`, Wiley `/doi/…`, and SSRN abstracts on SSRN hosts only. It is used for the source minimum and for list validation. Candidate dedupe on the search lane was **deliberately left unchanged** because `test_duplicates_cannot_buy_a_passing_run` pins the existing layering. An alias on an unlisted publisher is not collapsed.
+
+**Explicitly not proposed:** fixing or working around the arXiv 406 (a separate diagnosis task), adding hosts to tier allowlists, lowering `MIN_UPSTREAM_SOURCES`, or turning the external-intake catalog into a trusted lane.
+
+---
+
+### PROP-005 — Narrow clarification: "source-insufficient" child outcome for Phase 6 pipeline acceptance
+- **Date:** 2026-09-26
+- **Proposed by:** Gate D source-blocker planning, checkpoint E1
+- **Affects:** `phase_06_research_scout_agent.md` exit gate and "On outcome (5) vs research outcome". Phase 8 entry is **unchanged**.
+- **Current plan says:** success requires, for each child, "Raw research note citing ≥3 upstream sources" and "All Phase 5 validators pass", and "If 1-3 and 5 pass but the curator finds the evidence insufficient, the phase still succeeded."
+- **Problem:** the live pipeline writes a raw note only when ≥3 distinct upstream sources are fetched **and** the validators pass. Otherwise it quarantines the run to `Failed_Runs`. The written clause blesses only a *curator-level* negative. A question whose reachable literature holds fewer than 3 relevant sources, which the E1 dossier indicates for `RQ-c920baeb` and `RQ-80be8cf7`, can therefore never satisfy the gate, however honest and well-evidenced the negative is. That leaves Phase 6 open indefinitely, and the gate says nothing about whether the harness works.
+- **Proposed change:** a child question counts toward Phase 6 **pipeline** acceptance with the outcome `source-insufficient` only if **all** of these hold:
+  - (a) It was dispatched through an approved lane with a pre-registered seed or query set.
+  - (b) A pre-run dossier shows fewer than 3 relevant, accessible, distinct candidates.
+  - (c) A full-provenance `Failed_Runs` receipt and a complete event trail exist.
+  - (d) The quarantine reason is **source count**. A model or validator failure never qualifies.
+  - (e) Jason signs the review of the outcome.
+  - (f) **At least one** child question completed the full raw-note → validators → separately dispatched curator path.
+
+  A source-insufficient outcome never counts as research acceptance. It never unlocks Phase 8, whose entry gate still requires a source-supported exit rule, maximum holding period and cost assumptions.
+- **Cost of not changing:** Phase 6 stays pending until the approved lanes can reach ≥3 relevant sources for every child. That is a legitimate choice: the alternative is to keep the gate as written.
+- **Status:** proposed
+- **Jason's decision:** _pending_
+
+---
+
 ## Accepted changes log
 
 Once Jason accepts a proposal, apply it to `PLAN.md`, then record the applied change here with the date, so the plan's history stays readable.
@@ -126,3 +182,4 @@ Once Jason accepts a proposal, apply it to `PLAN.md`, then record the applied ch
 | 2026-09-07 | PROP-001 | `PLAN.md` Phase 4 deliverables | Replaced stale `Snapshots/` with canonical `Source_Snapshots/` path during Gate A factual reconciliation. |
 | 2026-09-18 | PROP-002 | `PLAN.md` §5 amendment section | Added the authorized external-report retention intake. Isolated workspace only; no production promotion, no Gate D execution. |
 | 2026-09-19 | PROP-003 | `PLAN.md`, `src/quant_brain/discovery/arxiv_search.py`, `agent_reach.py`, `research/executor.py`, `scripts/{gate_readiness,agent_reach_check}.py` | Added the zero-account arXiv lane; made the ≥3-source bar enforceable over distinct upstream works; quarantined sparse results in Failed_Runs. One of three questions became probe-ready; no child run executed. |
+| 2026-09-26 | PROP-004 (E2 scope only) | `discovery/{work_identity,candidate_list}.py`, `live_discovery.py`, `research/executor.py`, `harness/handlers.py` (Scout handler only), `scripts/{dispatch_task,gate_readiness}.py` | Added a pre-registered candidate-list lane through the unchanged live path, and DOI-alias collapse in the source minimum. No list registered, no run executed. PROP-005 remains proposed. |
