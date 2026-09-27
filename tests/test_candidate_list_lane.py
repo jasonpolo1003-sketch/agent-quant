@@ -557,12 +557,15 @@ def use_real_ladder(monkeypatch, *, grounded):
     import quant_brain.llm.qwen_call as module
 
     real = module.qwen_call
-    seen = {}
+    seen = {"clients": [], "evidence": [], "calls": []}
 
     def ladder(prompt, evidence, *, expected_research_id, **kwargs):
         client = GroundingClient(evidence, grounded=grounded)
         client.research_id = expected_research_id
-        seen["client"], seen["evidence"] = client, evidence
+        # One extraction call per source: record every call, not just the last.
+        seen["clients"].append(client)
+        seen["evidence"].extend(evidence)
+        seen["calls"].append(evidence)
         return real(prompt, evidence, expected_research_id=expected_research_id,
                     client=client, **kwargs)
 
@@ -579,7 +582,9 @@ def test_grounded_extraction_of_list_sources_passes_the_real_validators(project,
     result = dispatch_list(project, relative, Fetcher(), research_id=research_id)
 
     assert result.status == "completed"
-    assert seen["client"].models == ["qwen3:14b"]
+    assert [client.models for client in seen["clients"]] == [["qwen3:14b"]] * 3
+    # Exactly one source per extraction call.
+    assert [len(call) for call in seen["calls"]] == [1, 1, 1]
     # The model was shown the persisted snapshots, one per acquired source.
     for item in seen["evidence"]:
         assert "Exact evidence passage." in item["snapshot_text"]
@@ -596,7 +601,10 @@ def test_ungrounded_extraction_of_list_sources_fails_closed(project, monkeypatch
     with pytest.raises(QwenValidationError, match="failed closed"):
         dispatch_list(project, relative, Fetcher(), research_id=research_id, run_id="RUN-bad")
 
-    assert seen["client"].models == ["qwen3:14b", "qwen3:14b", "qwen3.8:27b"]
+    # The first source exhausts its ladder and the run stops: no later source is tried.
+    assert [client.models for client in seen["clients"]] == [
+        ["qwen3:14b", "qwen3:14b", "qwen3.8:27b"]
+    ]
     receipt = _receipt_payload(root)
     assert receipt["stage"] == "qwen_extract"
     assert receipt["discovery_lane"]["candidate_list_sha256"] == (

@@ -699,10 +699,11 @@ def test_production_live_scout_uses_validated_qwen_and_only_recommends_curation(
     root, db_path = project
     task_row = add_research_question(db_path, "Research RSI evidence", "mean_reversion")
     register_default_handlers()
-    seen = {}
+    seen = {"calls": []}
 
     def runner(prompt, evidence, **kwargs):
-        seen.update(prompt=prompt, evidence=evidence, kwargs=kwargs)
+        # One extraction call per source; keep every call.
+        seen["calls"].append({"prompt": prompt, "evidence": evidence, "kwargs": kwargs})
         source = evidence[0]
         output = {
             "research_id": task_row["research_id"],
@@ -779,8 +780,10 @@ def test_production_live_scout_uses_validated_qwen_and_only_recommends_curation(
         db_path=db_path,
     )
 
-    assert seen["evidence"][0]["source_id"] == "S1"
-    assert "Exact evidence passage." in seen["evidence"][0]["snapshot_text"]
+    assert [[item["source_id"] for item in call["evidence"]] for call in seen["calls"]] == [
+        ["S1"], ["S2"], ["S3"]
+    ]
+    assert "Exact evidence passage." in seen["calls"][0]["evidence"][0]["snapshot_text"]
     assert result.recommendation == "curation"
     assert result.detail["model_used"] == "qwen3:14b"
     assert not (root / "brain" / "01_Sources").exists()

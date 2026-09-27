@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 from quant_brain.config import PROJECT_ROOT
@@ -688,6 +690,53 @@ def _fail_closed_discovery(
     return failed_path if receipt_ok else None
 
 
+def _source_extraction_prompt(task: dict[str, Any], item: dict[str, Any]) -> str:
+    """The extraction prompt for exactly one evidence item.
+
+    The snapshot goes in as raw text between delimiters rather than inside a
+    JSON string: ``json.dumps`` escapes every non-ASCII character, which roughly
+    doubled the token count of real snapshots, and the model must quote the
+    text exactly as the validator will see it.
+    """
+    source_id = item["source_id"]
+    metadata = {key: item[key] for key in ("source_id", "title", "url_or_citation", "source_quality")}
+    return (
+        "Extract a raw research payload using only the supplied snapshot. "
+        f"Return exactly one source, with source_id {source_id}. "
+        "Preserve its source_id, title, URL, and source_quality exactly. "
+        "Evidence values must be exact snapshot quotations. Do not invent rules, "
+        "thresholds, holding periods, or costs.\n\n"
+        f"Research ID: {task['research_id']}\nQuestion: {task['question']}\n"
+        f"Source metadata:\n{json.dumps(metadata, indent=2, ensure_ascii=False)}\n"
+        f"Snapshot text for {source_id}:\n"
+        f"<<<BEGIN SNAPSHOT {source_id}>>>\n{item['snapshot_text']}\n<<<END SNAPSHOT {source_id}>>>"
+    )
+
+
+def _merge_extractions(research_id: str, outputs: list[dict[str, Any]]) -> dict[str, Any]:
+    """Combine per-source payloads deterministically, in source order.
+
+    The recommendation is kept only when every call agreed; otherwise it falls
+    back to ``needs_more_work``, which asserts nothing a per-source validation
+    did not already check. The curator does not read this field.
+    """
+    open_questions: list[str] = []
+    for output in outputs:
+        for question in output.get("open_questions") or []:
+            if question not in open_questions:
+                open_questions.append(question)
+    recommendations = {output.get("curator_recommendation") for output in outputs}
+    return {
+        "research_id": research_id,
+        "status": "raw_saved",
+        "sources": [source for output in outputs for source in output.get("sources") or []],
+        "open_questions": open_questions,
+        "curator_recommendation": (
+            recommendations.pop() if len(recommendations) == 1 else "needs_more_work"
+        ),
+    }
+
+
 def execute_discovery_task(
     project_root: str | Path = PROJECT_ROOT,
     db_path: str | Path = DEFAULT_DB_PATH,
@@ -873,7 +922,15 @@ def execute_discovery_task(
             # Deliberately function-local: the module attribute is re-read on
             # every call, which is the seam tests rebind. Hoisting this to
             # module scope would silently break that injection point.
-            from quant_brain.llm.qwen_call import qwen_call
+            from quant_brain.llm.qwen_call import (
+                ESCALATION_MODEL,
+                ContextBudgetError,
+                QwenAttempt,
+                QwenValidationError,
+                prompt_budget_violation,
+                qwen_call,
+            )
+            from quant_brain.llm.validators import validate_research_output
 
             evidence_bundle = []
             for index, (source, snapshot) in enumerate(
@@ -891,21 +948,64 @@ def execute_discovery_task(
                         "snapshot_text": snapshot_path.read_text(encoding="utf-8"),
                     }
                 )
-            extraction_prompt = (
-                "Extract a raw research payload using only the supplied snapshots. "
-                "Preserve each source_id, title, URL, and source_quality exactly. "
-                "Evidence values must be exact snapshot quotations. Do not invent rules, "
-                "thresholds, holding periods, or costs.\n\n"
-                f"Research ID: {task['research_id']}\nQuestion: {task['question']}\n"
-                f"Evidence bundle:\n{json.dumps(evidence_bundle, indent=2)}"
+            # One source per extraction call (Phase 6 design). A single prompt
+            # holding every snapshot ran to ~55k tokens and Ollama silently kept
+            # only its tail, so each call now carries exactly one snapshot and
+            # must fit the context budget on its own.
+            prompts = [_source_extraction_prompt(task, item) for item in evidence_bundle]
+            # Every prompt is screened before the first model call, so a source
+            # that cannot fit fails the run at once instead of after four others.
+            for item, prompt in zip(evidence_bundle, prompts, strict=True):
+                violation = prompt_budget_violation(prompt)
+                if violation is not None:
+                    raise ContextBudgetError(
+                        [], f"{violation} (source {item['source_id']}: {item['url_or_citation']})"
+                    )
+
+            # All or nothing, as before: any source that fails its ladder fails
+            # the run. Dropping it could only make the run look better.
+            results = [
+                qwen_call(
+                    prompt,
+                    [item],
+                    expected_research_id=task["research_id"],
+                    db_path=db_path,
+                    run_id=run_id,
+                    task_id=task_id,
+                )
+                for item, prompt in zip(evidence_bundle, prompts, strict=True)
+            ]
+            merged = _merge_extractions(task["research_id"], [r.output for r in results])
+            # The merged payload must pass the same whole-bundle validation the
+            # single-prompt design applied, so splitting can never weaken it.
+            verdict = validate_research_output(
+                merged, evidence_bundle, expected_research_id=task["research_id"]
             )
-            model_result = qwen_call(
-                extraction_prompt,
-                evidence_bundle,
-                expected_research_id=task["research_id"],
-                db_path=db_path,
-                run_id=run_id,
-                task_id=task_id,
+            if not verdict.ok:
+                raise QwenValidationError(
+                    [
+                        QwenAttempt(
+                            model="merge",
+                            duration_seconds=0.0,
+                            prompt_hash="",
+                            response_hash=hashlib.sha256(
+                                json.dumps(merged, sort_keys=True).encode("utf-8")
+                            ).hexdigest(),
+                            validator_ok=False,
+                            validator_reasons=tuple(
+                                f"merge: {reason}" for reason in verdict.reasons
+                            ),
+                        )
+                    ]
+                )
+            models_used = [r.model_used for r in results]
+            model_result = SimpleNamespace(
+                output=merged,
+                model_used=(
+                    ESCALATION_MODEL if ESCALATION_MODEL in models_used else models_used[0]
+                ),
+                repaired=any(r.repaired for r in results),
+                escalated=any(r.escalated for r in results),
             )
             sources = list(model_result.output["sources"])
 

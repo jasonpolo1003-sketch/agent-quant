@@ -17,6 +17,40 @@ from quant_brain.research.schema import RawResearchPayload
 DEFAULT_MODEL = "qwen3:14b"
 ESCALATION_MODEL = "qwen3.8:27b"
 
+# Context budget, calibrated on this machine (RTX 5070 12 GB, Ollama 0.34.3,
+# 2026-09-26). At 16k qwen3:14b runs 84% on GPU at ~18 tok/s; at 40k it drops
+# to ~2 tok/s, and qwen3.8:27b is ~6 tok/s at 16k. One constant for both
+# models, so Ollama never reloads a model between calls to change its context.
+EXTRACTION_NUM_CTX = 16384
+# One source's JSON payload is a few hundred tokens; this leaves headroom, and a
+# response that still hits it is refused as cut (done_reason=length).
+EXTRACTION_NUM_PREDICT = 1536
+# "Fits comfortably": prompt plus the output reserve within 80% of the window.
+PROMPT_TOKEN_BUDGET = int(EXTRACTION_NUM_CTX * 0.8) - EXTRACTION_NUM_PREDICT
+# 27B at 16k with a full output reserve measured close to 300s.
+EXTRACTION_TIMEOUT = 600
+# Fast pre-flight screen only. Measured prose and HTML snapshots ran 3.0-3.9
+# bytes per token (PDF mojibake 1.8), so dividing by 4 refuses a prompt only
+# when it is too large even under a generous ratio. The exact guards are the
+# server's refusal and the response's own prompt_eval_count.
+ESTIMATE_BYTES_PER_TOKEN = 4.0
+
+
+def estimate_prompt_tokens(prompt: str) -> int:
+    """Optimistic token estimate: an over-budget estimate means over budget."""
+    return -(-len(prompt.encode("utf-8")) // int(ESTIMATE_BYTES_PER_TOKEN))
+
+
+def prompt_budget_violation(prompt: str) -> str | None:
+    """Why this prompt cannot be sent within the extraction budget, if it cannot."""
+    estimated = estimate_prompt_tokens(prompt)
+    if estimated > PROMPT_TOKEN_BUDGET:
+        return (
+            f"context: prompt needs at least ~{estimated} tokens, above the "
+            f"{PROMPT_TOKEN_BUDGET}-token budget for num_ctx {EXTRACTION_NUM_CTX}"
+        )
+    return None
+
 
 @dataclass(frozen=True)
 class QwenAttempt:
@@ -48,12 +82,27 @@ class QwenValidationError(RuntimeError):
         super().__init__("local Qwen failed closed: " + "; ".join(reasons))
 
 
+class ContextBudgetError(QwenValidationError):
+    """A prompt did not fit the context budget, so the ladder stopped at once.
+
+    A repair or escalation prompt is always longer than the one that did not
+    fit, so continuing could only waste calls or read a cut prompt. Subclassing
+    keeps every existing fail-closed path that catches QwenValidationError.
+    """
+
+    def __init__(self, attempts: list[QwenAttempt], reason: str | None = None) -> None:
+        super().__init__(attempts)
+        if reason is not None and not attempts:
+            self.args = ("local Qwen failed closed: " + reason,)
+
+
 def _record_attempt(
     attempt: QwenAttempt,
     *,
     db_path: str | Path | None,
     run_id: str | None,
     task_id: str | None,
+    context: dict[str, Any] | None = None,
 ) -> None:
     if not run_id:
         return
@@ -75,6 +124,7 @@ def _record_attempt(
             "response_hash": attempt.response_hash,
             "validator_ok": attempt.validator_ok,
             "validator_reasons": list(attempt.validator_reasons),
+            **(context or {}),
         },
     )
 
@@ -93,24 +143,38 @@ def _attempt(
 ) -> tuple[dict[str, Any] | None, ValidationResult]:
     started = time.perf_counter()
     response = None
-    try:
-        response = client.generate(
-            prompt,
-            model,
-            temperature=0.0,
-            format=RawResearchPayload.model_json_schema(),
-        )
-        parsed = json.loads(response.text)
-        verdict = validate_research_output(
-            parsed, evidence, expected_research_id=expected_research_id
-        )
-    except Exception as exc:
+    context_failure = prompt_budget_violation(prompt)
+    if context_failure is not None:
+        # Refused before the model is called: nothing was sent, nothing was cut.
         parsed = None
-        if isinstance(exc, (json.JSONDecodeError, TypeError, ValueError)) and response is not None:
-            reason = f"schema: malformed JSON: {exc}"
-        else:
-            reason = f"client_error: {type(exc).__name__}: {exc}"
-        verdict = ValidationResult(False, (reason,))
+        verdict = ValidationResult(False, (context_failure,))
+    else:
+        try:
+            response = client.generate(
+                prompt,
+                model,
+                num_ctx=EXTRACTION_NUM_CTX,
+                num_predict=EXTRACTION_NUM_PREDICT,
+                prompt_token_budget=PROMPT_TOKEN_BUDGET,
+                timeout=EXTRACTION_TIMEOUT,
+                temperature=0.0,
+                format=RawResearchPayload.model_json_schema(),
+            )
+            parsed = json.loads(response.text)
+            verdict = validate_research_output(
+                parsed, evidence, expected_research_id=expected_research_id
+            )
+        except ollama_client.ContextOverflowError as exc:
+            parsed = None
+            context_failure = str(exc)
+            verdict = ValidationResult(False, (context_failure,))
+        except Exception as exc:
+            parsed = None
+            if isinstance(exc, (json.JSONDecodeError, TypeError, ValueError)) and response is not None:
+                reason = f"schema: malformed JSON: {exc}"
+            else:
+                reason = f"client_error: {type(exc).__name__}: {exc}"
+            verdict = ValidationResult(False, (reason,))
     text = getattr(response, "text", None)
     item = QwenAttempt(
         model=model,
@@ -131,7 +195,20 @@ def _attempt(
         validator_reasons=verdict.reasons,
     )
     attempts.append(item)
-    _record_attempt(item, db_path=db_path, run_id=run_id, task_id=task_id)
+    _record_attempt(
+        item,
+        db_path=db_path,
+        run_id=run_id,
+        task_id=task_id,
+        context={
+            "source_ids": [str(entry.get("source_id")) for entry in evidence],
+            "num_ctx": EXTRACTION_NUM_CTX,
+            "estimated_prompt_tokens": estimate_prompt_tokens(prompt),
+            "prompt_eval_count": getattr(response, "prompt_eval_count", None),
+        },
+    )
+    if context_failure is not None:
+        raise ContextBudgetError(attempts)
     return parsed, verdict
 
 
