@@ -14,11 +14,21 @@ and writes no research artifact, so running it is not a research run.
     uv run python scripts/gate_readiness.py --research-id RQ-6d9c12f4
     uv run python scripts/gate_readiness.py --research-id RQ-6d9c12f4 --min-sources 3
 
+With ``--candidate-list`` it instead checks a pre-registered candidate list
+(PROP-004) offline: the list loads, is registered for this question, and names
+at least the minimum number of distinct upstream *works*. That is a
+pre-registration check only -- it says nothing about relevance, access or
+support, which the run itself and human review decide.
+
+    uv run python scripts/gate_readiness.py --research-id RQ-6d9c12f4 \
+        --candidate-list brain/00_Inbox/Scout_Candidates/RQ-6d9c12f4.md
+
 Exit codes:
-    0  the available lanes can reach the minimum
+    0  the available lanes (or the list) can reach the minimum
     2  Agent Reach itself is unusable
     3  the research ID is unknown
-    4  the lanes answered, but cannot reach the minimum
+    4  the lanes answered (or the list loaded), but cannot reach the minimum
+    5  the candidate list is invalid or registered for another question
 """
 
 from __future__ import annotations
@@ -28,13 +38,15 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from quant_brain.config import PROJECT_ROOT
 from quant_brain.db.init_db import DEFAULT_DB_PATH, connect
 from quant_brain.discovery.agent_reach import (
     AgentReachAdapter,
     AgentReachError,
     plan_queries,
 )
-from quant_brain.discovery.source_quality import normalize_candidate_url
+from quant_brain.discovery.candidate_list import CandidateListError, load_candidate_list
+from quant_brain.discovery.work_identity import upstream_work_key
 
 # brain/_system/plan/phase_06_research_scout_agent.md: a raw research note must
 # cite at least three upstream sources. Imported rather than redeclared so this
@@ -73,13 +85,33 @@ def probe(
             "urls": [],
             "error": str(exc),
         }
-    unique = {normalize_candidate_url(str(hit.get("url") or "")) for hit in hits}
-    unique.discard("")
+    unique = {upstream_work_key(str(hit.get("url") or "")) for hit in hits if hit.get("url")}
     return {
         "queries": queries,
         "unique_urls": len(unique),
         "urls": sorted(unique),
         "error": None,
+    }
+
+
+def check_candidate_list(
+    project_root: str | Path,
+    list_path: str,
+    research_id: str,
+) -> dict[str, Any]:
+    """Offline pre-registration check. Fetches nothing and calls no model."""
+    candidate_list = load_candidate_list(project_root, list_path)
+    if candidate_list.research_id != research_id:
+        raise CandidateListError(
+            f"candidate list is registered for {candidate_list.research_id}, not {research_id}"
+        )
+    works = sorted({upstream_work_key(url) for url in candidate_list.urls})
+    return {
+        "path": candidate_list.path,
+        "sha256": candidate_list.sha256,
+        "listed": len(candidate_list.urls),
+        "distinct_works": len(works),
+        "works": works,
     }
 
 
@@ -93,6 +125,8 @@ def main() -> int:
         default=PHASE_6_MIN_SOURCES,
         help=f"Phase 6 minimum (default {PHASE_6_MIN_SOURCES})",
     )
+    parser.add_argument("--candidate-list", default=None)
+    parser.add_argument("--project-root", default=str(PROJECT_ROOT))
     args = parser.parse_args()
 
     task = load_question(args.db, args.research_id)
@@ -103,6 +137,33 @@ def main() -> int:
     print(f"research_id:   {task['research_id']}  (status {task['status']})")
     print(f"question:      {' '.join(task['question'].split())[:150]}...")
     print(f"min sources:   {args.min_sources}")
+
+    if args.candidate_list:
+        try:
+            checked = check_candidate_list(
+                args.project_root, args.candidate_list, task["research_id"]
+            )
+        except CandidateListError as exc:
+            print(f"invalid candidate list: {exc}", file=sys.stderr)
+            return 5
+        print(f"candidate list: {checked['path']}")
+        print(f"list sha256:    {checked['sha256']}")
+        print(f"listed urls:    {checked['listed']}")
+        print(f"distinct works: {checked['distinct_works']}")
+        for work in checked["works"]:
+            print(f"  - {work}")
+        if checked["distinct_works"] < args.min_sources:
+            print(
+                f"\nNOT READY: the list names {checked['distinct_works']} distinct work(s), "
+                f"Phase 6 requires {args.min_sources}.",
+                file=sys.stderr,
+            )
+            return 4
+        print(
+            "\nREGISTERED: the list names enough distinct works. This is not a "
+            "relevance, access or support check; the run and human review decide those."
+        )
+        return 0
 
     try:
         adapter = AgentReachAdapter()

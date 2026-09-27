@@ -51,6 +51,22 @@ def candidate_evidence(sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
+def _discovery_lane_markdown(lane: dict[str, Any]) -> str:
+    """Human-readable record of the pre-registered list that drove this run."""
+    lines = [
+        "## Discovery Lane",
+        "",
+        f"- Lane: `{lane.get('lane')}` (pre-registered candidate list; no search query)",
+        f"- List: `{lane.get('candidate_list_path')}`",
+        f"- List sha256: `{lane.get('candidate_list_sha256')}`",
+        f"- Candidates listed: {lane.get('candidate_count')}",
+        "",
+        "Listing a URL is discovery provenance only. Tiers come from the classifier, "
+        "and support comes only from the snapshots and validators above.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def distinct_upstream_keys(sources: list[dict[str, Any]]) -> list[str]:
     """Identity of each cited work, for counting against the minimum.
 
@@ -60,11 +76,12 @@ def distinct_upstream_keys(sources: list[dict[str, Any]]) -> list[str]:
     ``len(sources)`` would let one work satisfy the bar twice. arXiv identities
     are canonicalized here rather than trusting the lane that supplied them --
     a source can reach this point from any lane, or from a hand-written note.
+    The same holds for a DOI and its publisher landing page, which
+    ``upstream_work_key`` maps to one work for the hosts it recognizes.
     Sources without a URL fall back to their citation text so an offline
     reference still counts once, and only once.
     """
-    from quant_brain.discovery.arxiv_search import canonical_abs_url
-    from quant_brain.discovery.source_quality import normalize_candidate_url
+    from quant_brain.discovery.work_identity import upstream_work_key
 
     keys: list[str] = []
     for source in sources:
@@ -72,7 +89,7 @@ def distinct_upstream_keys(sources: list[dict[str, Any]]) -> list[str]:
         if not raw:
             continue
         if "://" in raw:
-            key = canonical_abs_url(raw) or normalize_candidate_url(raw)
+            key = upstream_work_key(raw)
         else:
             key = raw.casefold()
         if key and key not in keys:
@@ -217,6 +234,7 @@ def format_findings_markdown(
     task: dict[str, Any],
     sources: list[dict[str, Any]],
     rejected: list[dict[str, Any]] | None = None,
+    discovery_lane: dict[str, Any] | None = None,
 ) -> str:
     """Format selected sources into a raw research note section plus JSON block.
 
@@ -272,6 +290,11 @@ def format_findings_markdown(
             reason = str(record.get("reason", "")).replace("|", "\\|")
             lines.append(f"| {url} | {tier} | {reason} |")
         lines.append("")
+
+    if discovery_lane:
+        # Prose outside the JSON block, for the same reason as the rejection
+        # ledger: the payload contract forbids extra fields.
+        lines.extend([_discovery_lane_markdown(discovery_lane), ""])
 
     payload = build_raw_research_payload(task, sources)
     lines.extend(
@@ -746,6 +769,18 @@ def execute_discovery_task(
             task = _get_research_task(db_path, task["research_id"])
 
         stage = "discover"
+        # The identity of a pre-registered candidate list is an *input* to the
+        # run, known before anything is fetched, so it is captured here rather
+        # than after discovery: a failure inside ``discover`` must still name
+        # the list it was driven by. It is not candidate evidence, and a search
+        # run records nothing here.
+        discovery_lane = getattr(searcher, "discovery_provenance", None)
+        started_payload: dict[str, Any] = {
+            "backend": getattr(searcher, "name", type(searcher).__name__)
+        }
+        if discovery_lane:
+            started_payload["discovery_lane"] = discovery_lane
+            discovered_provenance = {"discovery_lane": discovery_lane}
         _record_scout_event(
             db_path,
             run_id=run_id,
@@ -753,7 +788,7 @@ def execute_discovery_task(
             event_type="discovery_started",
             status="running",
             message=f"Scout discovery started for {task['research_id']}",
-            payload={"backend": getattr(searcher, "name", type(searcher).__name__)},
+            payload=started_payload,
         )
         discovered = searcher.discover(
             task["question"],
@@ -765,6 +800,7 @@ def execute_discovery_task(
         sources = list(discovered.sources)
         rejected_records = [dict(record) for record in getattr(discovered, "rejected", ())]
         discovered_provenance = {
+            **discovered_provenance,
             "research_id": task["research_id"],
             "run_id": run_id,
             "task_id": task_id,
@@ -795,6 +831,7 @@ def execute_discovery_task(
                     "distinct_upstream_keys": distinct,
                     "rejected_candidates": rejected_records,
                     "search_query_expression": getattr(searcher, "last_query_expression", None),
+                    **({"discovery_lane": discovery_lane} if discovery_lane else {}),
                     "follow_up": (
                         "Not a refutation: the question was asked and the reachable "
                         "literature was thin. Widen the lane set (a discovery lane "
@@ -873,7 +910,9 @@ def execute_discovery_task(
             sources = list(model_result.output["sources"])
 
         stage = "write_note"
-        findings = format_findings_markdown(task, sources, rejected_records)
+        findings = format_findings_markdown(
+            task, sources, rejected_records, discovery_lane=discovery_lane
+        )
         # Remember the exact pre-write bytes so a later failure can put the file
         # back rather than leaving a half-finalized note behind.
         original_note_bytes = note_path.read_bytes()
@@ -897,7 +936,11 @@ def execute_discovery_task(
             event_type="discovery_completed",
             status="completed",
             message=f"Scout discovery completed for {task['research_id']}",
-            payload={"sources_count": len(sources), "backend": discovered.backend},
+            payload={
+                "sources_count": len(sources),
+                "backend": discovered.backend,
+                **({"discovery_lane": discovery_lane} if discovery_lane else {}),
+            },
         )
         return {
             "research_id": task["research_id"],
@@ -912,6 +955,7 @@ def execute_discovery_task(
             "model_used": model_result.model_used if model_result else None,
             "repaired": model_result.repaired if model_result else False,
             "escalated": model_result.escalated if model_result else False,
+            "discovery_lane": discovery_lane,
         }
     except Exception as exc:
         if task is not None:

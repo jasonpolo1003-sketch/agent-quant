@@ -19,6 +19,7 @@ from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 from quant_brain.config import PROJECT_ROOT
+from quant_brain.discovery.candidate_list import CandidateList
 
 SNAPSHOT_DIR = "brain/00_Inbox/Source_Snapshots"
 JINA_READER_PREFIX = "https://r.jina.ai/"
@@ -246,11 +247,15 @@ class LiveDiscoveryBackend:
         fetch_fn: FetchFn | None = None,
         allow_network: bool = False,
         adapter: Any | None = None,
+        candidate_list: CandidateList | None = None,
     ) -> None:
         self.search_fn = search_fn
         self.fetch_fn = fetch_fn
         self.allow_network = allow_network
         self.adapter = adapter
+        # A pre-registered list (PROP-004) replaces search for this run; it
+        # does not change anything after the candidate pool is formed.
+        self.candidate_list = candidate_list
         self._last_question: str | None = None
         self._last_method_family: str | None = None
 
@@ -262,6 +267,13 @@ class LiveDiscoveryBackend:
         return self.adapter
 
     @property
+    def discovery_provenance(self) -> dict[str, Any] | None:
+        """Identity of a pre-registered candidate list, or ``None`` for search."""
+        if self.candidate_list is None:
+            return None
+        return self.candidate_list.as_provenance()
+
+    @property
     def last_query_expression(self) -> str | None:
         """The generated search expression, when a lane recorded one.
 
@@ -271,8 +283,11 @@ class LiveDiscoveryBackend:
         ``search_fn`` there is no adapter, so the deterministic expression the
         arXiv lane *would* have generated is reported instead, marked as such.
         Reads the adapter only if one already exists: asking for the query must
-        never construct an adapter or touch the network.
+        never construct an adapter or touch the network. A run driven by a
+        pre-registered candidate list asked no query, so it reports none.
         """
+        if self.candidate_list is not None:
+            return None
         recorded = getattr(self.adapter, "last_arxiv_query", None)
         if recorded:
             return recorded
@@ -318,6 +333,12 @@ class LiveDiscoveryBackend:
         fetch, assess, snapshot. Everything cheap happens before anything
         expensive, so promotional and duplicate URLs never cost a fetch.
 
+        On the budget: ``limit`` caps *accepted sources*, not fetch attempts. A
+        page rejected after fetch is replaced by the next non-rejected
+        over-budget candidate, which costs another fetch, so attempts are
+        bounded by the size of the deduplicated, non-rejected pool (at most the
+        list length, when a pre-registered list drives the run).
+
         On snapshot ordering: the invariant is that nothing reaches the model
         unpersisted -- not that everything fetched is persisted. A page rejected
         for thin or promotional content never reaches the model, so it is
@@ -334,10 +355,18 @@ class LiveDiscoveryBackend:
         # even when the caller injected its own search function.
         self._last_question = question
         self._last_method_family = method_family
-        search_fn = self._resolve_search_fn()
         fetch_fn = self._resolve_fetch_fn()
-        raw_candidates = search_fn(question, method_family, limit=limit)
-        hits = [dict(hit) for hit in raw_candidates]
+        if self.candidate_list is not None:
+            # The pool is exactly the pre-registered, relevance-screened list:
+            # search is not consulted, so an off-topic hit cannot displace a
+            # listed source. Each hit is the URL alone -- nothing an entry says
+            # may reach the source record, and the tier comes from the
+            # classifier like any other candidate.
+            hits = [{"url": url, "source_type": "web"} for url in self.candidate_list.urls]
+        else:
+            search_fn = self._resolve_search_fn()
+            raw_candidates = search_fn(question, method_family, limit=limit)
+            hits = [dict(hit) for hit in raw_candidates]
         if not hits:
             raise LiveDiscoveryError("live discovery search returned no candidates")
 
@@ -464,6 +493,10 @@ def get_discovery_backend(
     """Return the named discovery backend. Default is live; seeded is the stub."""
     key = (name or os.environ.get("QUANT_BRAIN_DISCOVERY") or "live").strip().lower()
     if key in {"seeded", "stub", "starter"}:
+        if kwargs.get("candidate_list") is not None:
+            # The stub never fetches or runs the model, so a pre-registered list
+            # handed to it would look like a run that validated nothing.
+            raise ValueError("a pre-registered candidate list requires the live backend")
         return SeededDiscoveryBackend()
     if key in {"live", "agent-reach", "jina"}:
         return LiveDiscoveryBackend(**kwargs)
