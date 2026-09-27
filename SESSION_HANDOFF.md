@@ -1,5 +1,22 @@
 # Quant Agent Brain — Session Handoff
 
+## Independent review closeout and Phase 6 budget completion (2026-09-27)
+
+Reviewed all six incoming commits from `94b82be` through `1088084`, plus the unstaged E3 receipt and five snapshots. The context-window/extraction fix passed independent review without a material finding. The candidate-list implementation was also sound in its main path, but review found two material reliability gaps before another production run:
+
+1. A `Failed_Runs` retry command dropped `--candidate-list`, so following it silently switched from the frozen list to search. A prepare-stage failure also lost the lane provenance before the receipt was written.
+2. Per-source Qwen calls had 600-second timeouts but no shared run deadline. With up to five sources and three attempts each, the Phase 6 15-minute whole-run guardrail was not enforced.
+
+**Fixed and independently re-reviewed:** commit `c6ab150` (`[verified] fix(scout): preserve lane retries and enforce run deadline`). Candidate-list provenance is captured before note preparation, retry commands reproduce the same list, and one monotonic 15-minute deadline now covers discovery plus every Qwen ladder. Agent Reach subprocess/HTTP operations and Ollama generation each receive only the remaining shared time; expiry fails closed.
+
+**Deliberately unchanged:** candidate-list freezing remains procedural, as PROP-004 explicitly specifies. The committed list hash is recorded in every run, and the current RQ list still matches committed blob `88ba2d3c…`. Adding a runtime Git dependency solely to enforce the already-recorded limitation was not justified.
+
+**Evidence preserved:** `e064955` commits `RUN-9b0d5a6e12.md` and all five `2026-09-27` snapshots byte-for-byte, with exact-path `-text` rules. Every committed blob was SHA-256-identical to its working file, and all five snapshot `content_hash` values recompute from their bodies.
+
+**Verification:** 511 passed, 1 skipped; both Ruff checks and `git diff --check` clean; live context smoke 7/7 PASS with no truncation warning. Independent final review found no material or blocking defect. `db/brain.sqlite`, the historical receipt and the committed candidate-list blob are unchanged. Protected tables remain zero and all three child questions remain `queued` with NULL raw-note paths.
+
+**Next bounded step:** design deterministic, evidence-preserving windowing for a single oversize source before any re-run. Do not knowingly re-run the unchanged list yet: the 31,330-token NAAIM snapshot will correctly fail the current 11,571-token per-call budget before the first model call. Phase 6 / Gate D remain incomplete; no curator was dispatched and nothing was pushed or merged.
+
 ## Context-safe extraction fix (2026-09-26): prompts can no longer be silently truncated
 
 Fix and verification only. No Scout or curator dispatch, no research, and no push. The E3 receipt and snapshots are still unstaged. **Phase 6 / Gate D remain incomplete.**

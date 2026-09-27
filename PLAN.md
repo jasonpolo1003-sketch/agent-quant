@@ -205,6 +205,18 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 
 **Picking this up cold? Read this section, then start.**
 
+### Independent review closeout and Phase 6 budget completion (2026-09-27)
+
+- All six incoming commits from `94b82be` through `1088084` were reviewed. The context-safe extraction change passed independent review without a material finding.
+- Two material omissions were fixed in independently re-reviewed commit `c6ab150`:
+  - Failed-run retry commands for a candidate-list run now retain `--candidate-list`, including failures during note preparation before discovery starts.
+  - The required 15-minute whole-run cap is now real: one monotonic deadline spans discovery and every per-source Qwen ladder; Agent Reach subprocess/HTTP calls and Ollama generation receive only the remaining shared time and fail closed on expiry.
+- PROP-004's list freeze remains procedural by design. No Git-runtime enforcement was added; the list's committed hash is still recorded and verified.
+- `e064955` preserves the E3 receipt and five snapshots byte-for-byte with exact-path `-text` rules.
+- Verification: 511 passed, 1 skipped; both Ruff checks, `git diff --check`, the 7/7 live context smoke and independent final review are clean. Production DB and protected-state invariants are unchanged.
+- **Next:** design deterministic, evidence-preserving windowing for the single oversize NAAIM snapshot. Do not re-run the unchanged list until that design is approved and implemented; it is already known to fail before the first model call under the correct context guard.
+- **Status:** Phase 6 / Gate D remain incomplete. Nothing was pushed or merged.
+
 ### Context-safe extraction fix (2026-09-26): prompts can no longer be silently truncated
 
 - **Commit:** `9f963f1` (local `testing`, not pushed). No Scout or curator run, and no research.
@@ -371,17 +383,19 @@ Next recommended bounded step: append exact-quotation claims and offline verific
 ### What to do next
 What remains after the context fix. Each item needs its own approval.
 1. ~~**Fix prompt truncation.**~~ **Done in `9f963f1`**; see the context-safe extraction entry above.
-2. **Re-run RQ-6d9c12f4 on the same committed list** (`88ba2d3c…`). This is the next checkpoint.
-   - **Known before running:** the NAAIM snapshot (31,330 tokens) exceeds the 11,571-token per-call budget, so the run will fail closed at `qwen_extract` before any model call.
-   - Jason decides whether to run it anyway and record that outcome, or to first approve a separate design for oversize sources (for example, deterministic windowing).
+2. **Design deterministic, evidence-preserving windowing for an oversize single source.** This is the next checkpoint.
+   - The NAAIM snapshot is 31,330 tokens against an 11,571-token per-call budget. Re-running first would only duplicate a known fail-closed outcome before any model call.
+   - Windowing must keep exact quotations verifiable against the immutable full snapshot, remain all-or-nothing, and stay inside the shared 15-minute run deadline. It must not silently select only favorable passages.
    - Do not edit the committed list, and do not raise the context beyond what the 14B can run at usable speed.
+3. **After the windowing design is approved and implemented, re-run RQ-6d9c12f4 on the same committed list** (`88ba2d3c…`).
    - Dispatch the curator separately only if a raw note results. The honest ceiling remains about 2 promotable sources from 2 originators.
-3. ~~**Re-read the RUN-4e9d910742 attribution.**~~ **Settled:** its relevance finding stands; the truncation explains only the models' behaviour.
-4. **PROP-005:** Jason's decision. It is still undecided and not applied.
-5. **RQ-c920baeb and RQ-80be8cf7** are source-insufficient per the E1 dossier. They have no list and no run.
-6. **Diagnose the arXiv HTTP 406** as its own task.
-7. **Review the unstaged run artifacts:** `RUN-9b0d5a6e12.md` and `Source_Snapshots/2026-09-27/`. If they are committed, commit them byte-for-byte with `-text`.
-8. **Push or merge `testing`:** only when Jason asks.
+4. ~~**Add the Phase 6 whole-run wall-clock cap and same-lane retry.**~~ **Done in `c6ab150`.**
+5. ~~**Re-read the RUN-4e9d910742 attribution.**~~ **Settled:** its relevance finding stands; the truncation explains only the models' behaviour.
+6. **PROP-005:** Jason's decision. It is still undecided and not applied.
+7. **RQ-c920baeb and RQ-80be8cf7** are source-insufficient per the E1 dossier. They have no list and no run.
+8. **Diagnose the arXiv HTTP 406** as its own task.
+9. ~~**Review and preserve the E3 run artifacts.**~~ **Done in `e064955`, byte-for-byte with `-text`.**
+10. **Push or merge `testing`:** only when Jason asks.
 
 Do **not** lower `MIN_UPSTREAM_SOURCES`, relax extractive support, change tiers or edit a committed candidate list.
 
