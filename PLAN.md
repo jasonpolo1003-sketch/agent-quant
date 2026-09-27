@@ -205,7 +205,34 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 
 **Picking this up cold? Read this section, then start.**
 
-### Gate D checkpoint E2 (2026-09-26): PROP-004 implemented, uncommitted, awaiting Drew's review
+### Gate D checkpoint E3 (2026-09-26 local / 2026-09-27 UTC): first candidate-list run failed closed; prompt truncation found
+
+- **Commits (local `testing`, not pushed):**
+  - `94b82be`: E2 code and tests.
+  - `eb91355`: E1/E2 docs as they stood.
+  - `7093f92`: the RQ-6d9c12f4 list, committed before the run and not edited since.
+- **The list:** `brain/00_Inbox/Scout_Candidates/RQ-6d9c12f4.md`, sha256 `88ba2d3ce98b69623d050197c15c8e5d7adf82e107b3a6bb8ea5e045022faeae`. The working file, the committed blob and the `discovery_started` event all match. It holds the dossier's declared rule only (5 URLs). The Malaysian DOI chapter is excluded.
+- **Run `RUN-9b0d5a6e12`, the only one, with no retry.**
+  - Exit 1 after 188s: `QwenValidationError` at `qwen_extract`, and the question failed closed.
+  - All 5 listed URLs were fetched and snapshotted, with 0 rejected. There were 5 distinct works against the required 3. Tiers: 2 `practitioner` (StockCharts ×2), 3 `discovery-only`.
+  - All three model attempts failed validation:
+    - `qwen3:14b` invented `research_id: Double7sSetup` and omitted S1–S5.
+    - The repair mislabelled S1/S2 as the Double 7s page.
+    - `qwen3.8:27b` left S4/S5 evidence empty.
+- **Decisive cause: a runtime defect, not the sources.**
+  - The Ollama server log shows `truncating input prompt limit=2050` on all three attempts: 53,917 / 54,985 / 55,586 prompt tokens were cut to 2,050.
+  - `ollama_client` sends no `num_ctx`, so the server's 4,096 context applies, and nothing detects the truncation.
+  - The models saw only the tail of the evidence bundle (the end of the Double 7s snapshot), without the instructions or the question. Every dossier exit-rule span is present in the snapshots.
+  - **RUN-4e9d910742 (2026-09-20) was also truncated** (11,962–12,847 → 2,050), which confounds that run's "unsuitable source relevance" attribution.
+  - Not fixed, because this task allowed no code changes.
+- **Curator:** not dispatched, because no raw note was written.
+- **State:**
+  - Protected tables are 0. The DB changed only in `agent_tasks` (4→5) and `agent_events` (58→67). The DB sha256 is now `a6ab24f8…fb6b255f`.
+  - All three questions are `queued`/NULL. Historical evidence, `.gitattributes` and the intake catalog are sha256-identical. 488 passed, 1 skipped.
+  - The receipt and the five `2026-09-27` snapshots are left **unstaged**.
+- **Status:** Phase 6 / Gate D remain incomplete. PROP-005 remains undecided and is not applied.
+
+### Gate D checkpoint E2 (2026-09-26): PROP-004 implemented; committed in E3 as `94b82be`
 
 - **Built:** a pre-registered candidate-list lane (`brain/00_Inbox/Scout_Candidates/<RQ>.md`, lane `preregistered_candidate_list`) that feeds the **unchanged** live path: classify → rank → fetch → content floor → snapshot → Qwen → validators.
   - It replaces search for that run; it is not merged with search results.
@@ -312,7 +339,17 @@ Next recommended bounded step: append exact-quotation claims and offline verific
 6. The plan must be saved and portable enough for Claude Desktop to resume cold.
 
 ### What to do next
-**One child run has now been executed (2026-09-20): `RQ-6d9c12f4` only, and it failed research acceptance while correctly failing closed** — see the 2026-09-20 entries above. The failure-receipt provenance defect it exposed has since been **fixed and regression-tested**, and it is now **committed locally on `testing` (not pushed)**: the evidence in `54df8cf`, the fix in the commit that follows it. The follow-up that hardens `_fail_closed_discovery` (receipt and event failures can no longer mask the original exception or skip cleanup and the `queued` reset) is **committed locally on `testing` (not pushed)**, together with the reliability closeout: a failed note recovery is held at `needs_review`, and the dispatcher now preserves the original error (see `SESSION_HANDOFF.md`). Next toward research acceptance: an offline verbatim re-mapping of already-fetched external-intake spans for Jason's attributed review. This supersedes the earlier idea of a relevance check in `gate_readiness.py`, because the bottleneck turned out to be claim-to-source mapping, not discovery. Phase 6 and Gate D remain **incomplete**: the exit gate requires all three child runs, `RQ-c920baeb` and `RQ-80be8cf7` are still blocked at 1 candidate each, and no question has produced accepted research. The open decision is Jason's: review the unstaged provenance fix, then choose whether to widen the lane set toward sources that actually document RSI exit rules, stamp `run_id` into snapshot frontmatter as a follow-up, retain sources via the external intake, or accept the relevance gap as the finding. Do **not** lower `MIN_UPSTREAM_SOURCES` or relax extractive support — the source bar was cleared; the grounding was not.
+What remains, as of E3. Each item needs its own approval.
+1. **Fix prompt truncation.** Set an explicit context window (`num_ctx`) sized to the prompt, and fail closed when a prompt cannot fit rather than letting Ollama silently truncate it. Add a regression test. Neither Scout run so far is a valid test of extraction until this is fixed.
+2. **Re-run RQ-6d9c12f4 on the same committed list** (`88ba2d3c…`) after the fix. Then dispatch the curator separately if a raw note results. The honest ceiling remains about 2 promotable sources from 2 originators.
+3. **Re-read the RUN-4e9d910742 attribution** in the light of its truncation.
+4. **PROP-005:** Jason's decision. It is still undecided and not applied.
+5. **RQ-c920baeb and RQ-80be8cf7** are source-insufficient per the E1 dossier. They have no list and no run.
+6. **Diagnose the arXiv HTTP 406** as its own task.
+7. **Review the unstaged run artifacts:** `RUN-9b0d5a6e12.md` and `Source_Snapshots/2026-09-27/`. If they are committed, commit them byte-for-byte with `-text`.
+8. **Push or merge `testing`:** only when Jason asks.
+
+Do **not** lower `MIN_UPSTREAM_SOURCES`, relax extractive support, change tiers or edit a committed candidate list.
 
 Historical context below. Gate C is complete and verified (2026-09-16). **Gate D was attempted on 2026-09-17 and was blocked on an unconfigured search lane, not on authorization** — see the Gate D entry above; no child question was executed *at that time*. Originally: **Gate D requires Jason's explicit authorization** — it runs the three queued child research questions one at a time (`RQ-6d9c12f4` exit rules, then `RQ-c920baeb` maximum holding periods, then `RQ-80be8cf7` commission/slippage), each with its own dispatch, snapshots, validated raw note, events and separately dispatched curator verdict. Zero promotions is an acceptable Gate D outcome. Do **not** claim Phase 6 or research acceptance until those runs are performed and reviewed.
 
@@ -325,7 +362,7 @@ Historical context below. Gate C is complete and verified (2026-09-16). **Gate D
 | 4 — Agent Reach adapter | **done** | 2026-09-07 | Merged adapter + production discovery handler; fixture tests use zero network |
 | 5 — Qwen runtime + validators | **done** | 2026-09-07 | Gate B: hermetic ladder tests + bounded 14B live smoke; per-attempt hashes/timing recorded |
 | 5b — Gate C bounded acquisition | **done** | 2026-09-16 | 269 passed. Tier classifier, ranking, dedupe, pre-Qwen content floor, rejection ledger. Live sources can finally be promotable |
-| 6 — Research Scout agent | pending | — | **First child run executed 2026-09-20** (`RQ-6d9c12f4` only, `RUN-4e9d910742`): 5 distinct primary arXiv works cleared the ≥3 bar, then all three Qwen attempts failed validation on ungrounded/absent quotations. **Scout research acceptance failed; fail-closed safeguards verified.** Decisive blocker: unsuitable source relevance (zero RSI/ETF mentions in the retrieved papers); the models also produced invalid outputs, which the validators correctly caught. The failure-receipt provenance defect it exposed was **fixed the same day** (396 passed; 397 after the 2026-09-22 review follow-up, which also scoped the fix to receipt contents, not guaranteed receipt creation). Exit gate needs all three child runs — 2 of 3 still blocked at 1 candidate each |
+| 6 — Research Scout agent | pending | — | **First child run executed 2026-09-20** (`RQ-6d9c12f4` only, `RUN-4e9d910742`): 5 distinct primary arXiv works cleared the ≥3 bar, then all three Qwen attempts failed validation on ungrounded/absent quotations. **Scout research acceptance failed; fail-closed safeguards verified.** Decisive blocker: unsuitable source relevance (zero RSI/ETF mentions in the retrieved papers); the models also produced invalid outputs, which the validators correctly caught. The failure-receipt provenance defect it exposed was **fixed the same day** (396 passed; 397 after the 2026-09-22 review follow-up, which also scoped the fix to receipt contents, not guaranteed receipt creation). Exit gate needs all three child runs — 2 of 3 still blocked at 1 candidate each. **E3 (2026-09-26/27):** `RUN-9b0d5a6e12` on the committed candidate list fetched 5/5 and failed closed at extraction; both Scout runs had prompts truncated to 2,050 tokens by Ollama (no `num_ctx`) — runtime fix pending approval. **Incomplete** |
 | 7 — Re-verify 5 source notes | pending | — | See §4 |
 | 8 — Strategy card + backtest | pending | — | Needs Jason's explicit approval |
 | 9 — Second market door | pending | — | Do not scope until 8 done |

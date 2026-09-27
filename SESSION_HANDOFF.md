@@ -1,6 +1,83 @@
 # Quant Agent Brain — Session Handoff
 
-## Gate D checkpoint E2: pre-registered candidate-list lane (2026-09-26). Ready for Drew's review.
+## Gate D checkpoint E3: first candidate-list run for RQ-6d9c12f4 (2026-09-26 local, 2026-09-27 UTC). It failed closed, and the cause was prompt truncation.
+
+One approved run and no retry. No code change, push or merge. PROP-005 is still **undecided** and was not applied. **Phase 6 / Gate D remain incomplete.**
+
+**Commits** (local `testing`)
+
+| Commit | Content |
+|---|---|
+| `94b82be` | E2 code and tests (10 files). Committed blobs equal the LF-normalised working files. |
+| `eb91355` | PLAN.md, SESSION_HANDOFF.md, plan_change_proposals.md and the E1 dossier, as they stood before the run. |
+| `7093f92` | `brain/00_Inbox/Scout_Candidates/RQ-6d9c12f4.md`. |
+| next | This docs entry and PLAN.md §10. |
+
+**The list**
+- sha256: `88ba2d3ce98b69623d050197c15c8e5d7adf82e107b3a6bb8ea5e045022faeae`.
+- The working file (LF), `git cat-file blob HEAD:<path>`, `gate_readiness` and the `discovery_started` event all give this same value. The list was not edited after the run.
+- Contents: the dossier's declared rule only, 5 URLs. The Malaysian DOI chapter is excluded (Jason).
+- `gate_readiness --candidate-list` exited 0: 5 listed, 5 distinct works.
+- Originators: Connors (#1, #3, #5), Hill (#2), Pagonidis (#4).
+
+**Pre-flight** matched the baseline:
+- 488 passed, 1 skipped. Both Ruff checks and `git diff --check` are clean.
+- DB `6db65981…f530f9e29`.
+- `qwen3:14b` and `qwen3.8:27b` are present, and the `web` channel is `ok`.
+
+**Run `RUN-9b0d5a6e12`** (task `TASK-378a8d93cd`, 02:47:13 to 02:50:21 UTC, 188s, exit 1)
+
+- **Events (9):** `dispatch_started → discovery_started` (carries `discovery_lane` with the list sha) `→ qwen_attempt ×3 → discovery_failed (qwen_extract) → failed_run_written → handler_failed → dispatch_failed`. There is no `discovery_completed`, as expected on this path.
+- **Sources:** all 5 were accepted and 0 rejected. There were 5 distinct upstream works against the 3 required.
+
+| Label | Source | Tier | Snapshot `content_hash` prefix |
+|---|---|---|---|
+| S1 | ChartSchool | practitioner | `061e9f29` |
+| S2 | Hill | practitioner | `13a68c8f` |
+| S3 | Connors Research | discovery-only | `f57de4fc` |
+| S4 | NAAIM/Pagonidis | discovery-only | `c5f9673f` |
+| S5 | Double 7s | discovery-only | `576c861a` |
+
+  All five hashes recompute from the snapshot bodies (after CRLF normalisation). Each dossier exit-rule span is present in its snapshot.
+- **Model attempts** (all failed validation):
+
+| Attempt | Duration | Result |
+|---|---|---|
+| `qwen3:14b` | 28.2s | invented `research_id: Double7sSetup`, omitted S1–S5, and cited unknown `Double7sSetup_*` IDs |
+| repair | 18.0s | still omitted S4/S5; relabelled S1/S2 with Double 7s titles and URLs; quotes absent; ungrounded promotion |
+| `qwen3.8:27b` | 118.9s | schema failure: S4/S5 evidence empty |
+
+- **Receipt:** `brain/00_Inbox/Failed_Runs/RUN-9b0d5a6e12.md`. It holds full provenance (the lane block, the 5 accepted candidates with tier, snapshot path and sha256, and the counts 5/3), and records recovery as complete: raw note removed, question `queued`.
+
+**Finding: the decisive cause is prompt truncation in the model runtime.**
+- The Ollama `server.log` records `msg="truncating input prompt" limit=2050` at 21:47:46, 21:48:06 and 21:48:42 local time. The prompts were 53,917, 54,985 and 55,586 tokens, and each was cut to 2,050 (`keep=4`).
+- `llm/ollama_client.py` sends only `temperature`, with no `num_ctx`, so the server's `-c 4096` applies. Nothing in the harness notices.
+- The models therefore saw about 4% of each prompt: the tail of the evidence bundle, which is the end of the S5 Double 7s snapshot, without the instruction, the question or S1–S4. This explains the `Double7sSetup` research ID.
+- **The same happened to RUN-4e9d910742** on 2026-09-20 (`server-5.log`, 19:58–19:59: 11,962, 12,847 and 12,760 tokens → 2,050). The recorded attribution for that run ("unsuitable source relevance") is therefore confounded. Its arXiv sources still had zero RSI/ETF mentions, but the models could not have extracted from them either.
+- The validators and fail-closed path behaved correctly. Per the task constraints this was **not fixed** (no code changes).
+- The log lines are quoted here because Ollama rotates its logs.
+
+**Curator:** not dispatched, because no raw note exists. There is no curator verdict, and nothing was promoted. Originator independence was not tested by the pipeline. The ceiling is still about 2 promotable from 2 originators (Connors via ChartSchool, Hill). #3 and #5 are not independent of #1.
+
+**Post-run state**
+- Protected tables (`strategy_cards`, `backtests`, `price_datasets`, `reviews`) are 0.
+- `research_findings` 7, `notes` 23 and `sources` 7 are unchanged. `agent_tasks` went 4→5 and `agent_events` 58→67.
+- All three questions are `queued` with a NULL path.
+- DB sha256 is now `a6ab24f8a101599cd87f8e4bf9631db860fdf5263b16dd529186ce1e09a24e1a` (expected: run and audit rows only).
+- `external.sqlite`, `.gitattributes`, `RUN-4e9d910742.md` and the five `2026-09-21` snapshots are sha256-identical.
+- 488 passed, 1 skipped. Ruff and `git diff --check` are clean.
+- Unstaged: `RUN-9b0d5a6e12.md` (sha256 `5ffa7a507016253a80ff71dba9b733ce1baa70861d7025f4e929fe534dd5ee5a`) and `Source_Snapshots/2026-09-27/` (5 files).
+
+**Limitations**
+- "Frozen" is procedural: the list sha is recorded, but the code does not check git.
+- The receipt's suggested re-run command omits `--candidate-list`, so it would run the search lane. Its `retryable: true` is advisory.
+- The 27B's output failed schema first, so it is unknown whether it would have passed the other validators.
+- Unlisted publisher aliases are not collapsed. The arXiv 406 is untouched. PROP-005 is undecided.
+
+**Next, each needing approval:** fix the context window and add truncation detection; re-run on the same committed list; re-read the RUN-4e9d910742 attribution. See PLAN.md §10 "What to do next".
+
+
+## Gate D checkpoint E2: pre-registered candidate-list lane (2026-09-26). Ready for Drew's review; committed in E3 as `94b82be`.
 
 This implements the scope PROP-004 authorized for E2. Nothing is committed, and there was no Scout or curator dispatch, network research, list registration, arXiv repair or later-phase work. PROP-005 remains **proposed**. **Phase 6 / Gate D remain incomplete.** `HEAD` is still `7277a76`.
 
