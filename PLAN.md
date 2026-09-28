@@ -205,6 +205,28 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 
 **Picking this up cold? Read this section, then start.**
 
+### Oversize-source windowing implemented (PROP-006, 2026-09-27)
+
+- **Why:** the current schema cannot say "this window has no relevant evidence" honestly. Evidence must be non-empty, a claim is required, and an omitted source is rejected. Jason approved the smallest fix: a **window-only** outcome contract, used inside extraction and never written to a note or read by the curator. `schema.py` and `validators.py` are unchanged.
+- **What:**
+  - A source that the existing pre-flight refuses is read in deterministic, ordered, overlapping windows, of at most 9,000 UTF-8 bytes with a 1,200-byte overlap. Every window has a stable ID, offsets and a sha256.
+  - Every window runs the unchanged ladder and must return a validated `evidence` or `no_relevant_evidence`.
+  - Quotes are checked against both the window shown and the full snapshot.
+  - Any failed window, deadline expiry, unaccounted window, source with no evidence anywhere, or `source_type` disagreement fails the run.
+  - A non-generative merge produces one source record, which must pass the unchanged whole-bundle validator.
+  - More than 10 windows is refused before any model call.
+  - Provenance is recorded in `extraction_window` events, `window_id` on `qwen_attempt`, the `Failed_Runs` receipt, and a note section outside the JSON block.
+  - Sources that fit take exactly the old path.
+- **Real snapshots, measured without the model:** only NAAIM is windowed, into 8 windows of at most about 5.7k tokens each at the worst measured ratio. The other four are unchanged.
+- **Verification:**
+  - 548 passed, 1 skipped (37 new hermetic tests). Both Ruff checks and `git diff --check` are clean.
+  - All 15 mutations were caught.
+  - An independent review found no material defect. Its two low-severity findings (whitespace ID consistency, and recording the newline derivation of the offsets) are fixed.
+  - The live synthetic smoke (`scripts/window_smoke.py`) passed 12/12. The needle window only validated after the ladder escalated to the 27B.
+  - The DB, the list blob, the E3 receipt and snapshots, and `RUN-4e9d910742.md` are sha256-identical.
+- **Not done:** no RQ-6d9c12f4 rerun, curator run, push or merge. Phase 6 / Gate D remain incomplete.
+- **Next:** re-running RQ-6d9c12f4 on the unchanged list (`88ba2d3c…`) needs Jason's explicit authorization.
+
 ### Independent review closeout and Phase 6 budget completion (2026-09-27)
 
 - All six incoming commits from `94b82be` through `1088084` were reviewed. The context-safe extraction change passed independent review without a material finding.
@@ -383,11 +405,11 @@ Next recommended bounded step: append exact-quotation claims and offline verific
 ### What to do next
 What remains after the context fix. Each item needs its own approval.
 1. ~~**Fix prompt truncation.**~~ **Done in `9f963f1`**; see the context-safe extraction entry above.
-2. **Design deterministic, evidence-preserving windowing for an oversize single source.** This is the next checkpoint.
+2. ~~**Design deterministic, evidence-preserving windowing for an oversize single source.**~~ **Implemented under PROP-006 (2026-09-27); see the windowing entry above.** Original scope:
    - The NAAIM snapshot is 31,330 tokens against an 11,571-token per-call budget. Re-running first would only duplicate a known fail-closed outcome before any model call.
    - Windowing must keep exact quotations verifiable against the immutable full snapshot, remain all-or-nothing, and stay inside the shared 15-minute run deadline. It must not silently select only favorable passages.
    - Do not edit the committed list, and do not raise the context beyond what the 14B can run at usable speed.
-3. **After the windowing design is approved and implemented, re-run RQ-6d9c12f4 on the same committed list** (`88ba2d3c…`).
+3. **Next checkpoint, needing Jason's authorization: re-run RQ-6d9c12f4 on the same committed list** (`88ba2d3c…`). Windowing is now implemented.
    - Dispatch the curator separately only if a raw note results. The honest ceiling remains about 2 promotable sources from 2 originators.
 4. ~~**Add the Phase 6 whole-run wall-clock cap and same-lane retry.**~~ **Done in `c6ab150`.**
 5. ~~**Re-read the RUN-4e9d910742 attribution.**~~ **Settled:** its relevance finding stands; the truncation explains only the models' behaviour.

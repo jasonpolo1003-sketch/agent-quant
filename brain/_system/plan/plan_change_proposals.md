@@ -171,6 +171,24 @@ This exists because the project's core design rule is *move slowly, one verified
 - **Status:** proposed
 - **Jason's decision:** _pending_
 
+### PROP-006 — Window-only extraction outcome for a single oversize source
+- **Date:** 2026-09-27
+- **Proposed by:** oversize-source windowing checkpoint (PLAN.md §10 "What to do next" item 2)
+- **Affects:** Phase 6 extraction internals (`research/executor.py` `qwen_extract`). The curator-facing raw research contract (`research/schema.py`) and every validator in `llm/validators.py` are **unchanged**.
+- **Current plan says:** "Design deterministic, evidence-preserving windowing for an oversize single source … must keep exact quotations verifiable against the immutable full snapshot, remain all-or-nothing, and stay inside the shared 15-minute run deadline. It must not silently select only favorable passages."
+- **Problem:** the NAAIM snapshot (56,018 bytes, about 31,330 tokens) cannot fit the 11,571-token per-call budget. When it is split into windows, some windows will honestly contain nothing relevant. The existing one-source payload cannot say that. `evidence` must be non-empty, `main_claim` needs `min_length=1`, and the validator rejects any supplied source the model leaves out. The only way a window like that could pass is if the model quoted an arbitrary sentence and wrote a filler claim, which is fabrication.
+- **Proposed change:**
+  - Add a **window-only** `WindowOutcome` contract, used only inside extraction and never written to a note or read by the curator. Its `outcome` is either `evidence` (carrying one ordinary `RawResearchSource`, validated by the unchanged `validate_research_output` against the window text, and then with every quotation re-checked against the full snapshot) or `no_relevant_evidence` (no quotation, no claim and no recommendation, validated structurally).
+  - Windows are deterministic, ordered and overlapping, and each has a stable ID, offsets and a sha256. All of them are processed, with no keyword pre-selection.
+  - Every window must produce a validated outcome. Any failure fails the run.
+  - If no window finds evidence, the source fails, and so does the run.
+  - Evidence windows merge by deterministic, non-generative rules: verbatim unions, minimum confidence, AND for `mvp_testable`, and fail on a `source_type` disagreement. The merge produces exactly one ordinary source record, which must pass the unchanged whole-bundle validator.
+  - Windowing applies only to a source the existing pre-flight already refuses. At most 10 windows are allowed per source, and a source above that is refused before any model call.
+  - Model calls per windowed source rise to (windows × the per-call ladder), all under the same shared 15-minute deadline.
+- **Cost of not changing:** a rerun on the committed RQ-6d9c12f4 list fails closed before its first model call. Phase 6 / Gate D cannot progress on that list without editing it, which is forbidden.
+- **Status:** accepted for implementation (Jason approved the design plan, 2026-09-27). **No RQ-6d9c12f4 rerun is authorized by this acceptance.**
+- **Jason's decision:** approved the windowing design, 2026-09-27.
+
 ---
 
 ## Accepted changes log

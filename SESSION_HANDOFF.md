@@ -1,5 +1,50 @@
 # Quant Agent Brain — Session Handoff
 
+## Oversize-source windowing, PROP-006 (2026-09-27)
+
+Implementation and verification only. No RQ-6d9c12f4 rerun, no curator run, no push and no merge. **Phase 6 / Gate D remain incomplete.**
+
+**Schema finding (why a contract was needed):**
+- One-source payloads *can* carry a window that has evidence (validated against the window text).
+- They *cannot* say "nothing relevant here" honestly. `evidence` must be non-empty, `main_claim` needs `min_length=1`, and the validator rejects an omitted supplied source. The model could only pass by quoting an arbitrary sentence and writing a filler claim.
+- Jason approved a **window-only** `WindowOutcome` contract (PROP-006). It is internal to extraction, and the curator contract is unchanged.
+
+**What changed**
+- `src/quant_brain/research/windowing.py` (new):
+  - `plan_windows`: UTF-8-byte-bounded at 9,000 bytes (≈6k tokens at a pessimistic 1.5 B/token), 1,200-byte overlap, snapped back to a line or word break within the last 10%. Offsets are code points, each window has a sha256, and IDs look like `S4-W03`. Any passage of at most the overlap lies wholly inside some window (brute-force tested).
+  - `WindowOutcome`: all fields required; `no_relevant_evidence` must carry no source, no questions and no recommendation.
+  - `validate_window_outcome`: runs the unchanged `validate_research_output` on the window text, then checks every quote against the full snapshot and checks the window hash.
+  - `merge_window_outcomes`: verbatim unions; `main_claim` and rules joined with `"; "`; minimum confidence; AND for `mvp_testable`; most restrictive `data_access`; a `source_type` disagreement fails; no evidence anywhere fails; exact window accounting.
+  - Manifest and markdown helpers.
+- `research/executor.py`:
+  - Windowing applies only where the existing pre-flight refuses the single prompt. More than `MAX_WINDOWS_PER_SOURCE` (10) is refused before any model call.
+  - Every window prompt is screened before the first call.
+  - `_extract_windows` runs windows in order under the shared deadline and stops on the first failure.
+  - Records an `extraction_window` event per window, plus the manifest in `discovered_provenance["extraction_windows"]` (so Failed_Runs receipts carry it) and an "Extraction Windows" note section outside the JSON block.
+- `llm/qwen_call.py`: optional `validator`, `output_schema` and `attempt_context` parameters, all defaulting to the old behaviour.
+- `tests/test_windowing.py` (37 hermetic tests), `scripts/window_smoke.py` (live, writes nothing), PROP-006 in `plan_change_proposals.md`.
+
+**Verification**
+- 548 passed, 1 skipped. Both Ruff checks and `git diff --check` are clean. **All 15 mutations were caught.** M14 (window-prompt pre-flight) first survived, and a test was added for it.
+- The existing `test_one_source_too_large_…` passes unmodified. Its 80 KB source now fails through the window cap (it would need 11 windows), still before any model call.
+- **Real snapshots, measured read-only with no model:** NAAIM (55,481 decoded bytes) → 8 windows of at most about 5.7k tokens at 1.77 B/token. The other four fit and take the unchanged path.
+- **Independent review:** no material defect. Two low-severity findings were fixed with TDD:
+  - the merge now compares window IDs as the validator normalised them;
+  - the manifest records that offsets index the universal-newline-decoded text.
+- **Live smoke** (`uv run python scripts/window_smoke.py`, qwen3:14b/27b): passed 12/12, with no new truncation warning.
+  - Filler windows returned explicit `no_relevant_evidence`.
+  - The needle window validated only after the 14B failed twice and the ladder escalated to the 27B (about 51s).
+  - A first fixture's needle ("the synthetic position …", with no ETF or oversold entry) was judged irrelevant under every contract tried, including a flat passage list. It was replaced with a needle that directly answers the question. **This is a real behaviour:** the model applies relevance strictly.
+- **Integrity:** DB `a6ab24f8…`, list blob `88ba2d3c…`, the E3 receipt and five snapshots, and `RUN-4e9d910742.md` are sha256-identical. Protected tables are 0, and all three questions are `queued` with NULL paths.
+
+**Limitations**
+- `no_relevant_evidence` is the model's unverifiable negative judgment. The 14B applies relevance strictly, so evidence may be under-reported. If every window says none, the run fails closed.
+- A quote longer than 1,200 bytes that straddles a boundary cannot be extracted whole.
+- Up to 8 × 3 calls for NAAIM, and the 27B took about 51s per window. A slow ladder can exhaust the 15-minute deadline and fail closed.
+- The optimistic bytes/4 screen still decides what gets windowed. A dense source of about 25–46 KB can pass it and then overflow at the server; it fails closed, unchanged by design.
+
+**Next, needing authorization:** re-run RQ-6d9c12f4 on the unchanged committed list.
+
 ## Independent review closeout and Phase 6 budget completion (2026-09-27)
 
 Reviewed all six incoming commits from `94b82be` through `1088084`, plus the unstaged E3 receipt and five snapshots. The context-window/extraction fix passed independent review without a material finding. The candidate-list implementation was also sound in its main path, but review found two material reliability gaps before another production run:

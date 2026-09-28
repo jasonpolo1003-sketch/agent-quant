@@ -242,6 +242,7 @@ def format_findings_markdown(
     sources: list[dict[str, Any]],
     rejected: list[dict[str, Any]] | None = None,
     discovery_lane: dict[str, Any] | None = None,
+    extraction_windows: list[dict[str, Any]] | None = None,
 ) -> str:
     """Format selected sources into a raw research note section plus JSON block.
 
@@ -302,6 +303,13 @@ def format_findings_markdown(
         # Prose outside the JSON block, for the same reason as the rejection
         # ledger: the payload contract forbids extra fields.
         lines.extend([_discovery_lane_markdown(discovery_lane), ""])
+
+    if extraction_windows:
+        # Also prose outside the JSON block; the machine-readable copy is the
+        # ``extraction_window`` event trail.
+        from quant_brain.research.windowing import window_manifest_markdown
+
+        lines.extend([window_manifest_markdown(extraction_windows), ""])
 
     payload = build_raw_research_payload(task, sources)
     lines.extend(
@@ -746,6 +754,137 @@ def _merge_extractions(research_id: str, outputs: list[dict[str, Any]]) -> dict[
     }
 
 
+def _attempt_records(attempts: Any) -> list[dict[str, Any]]:
+    return [
+        {
+            "model": attempt.model,
+            "duration_seconds": attempt.duration_seconds,
+            "prompt_hash": attempt.prompt_hash,
+            "response_hash": attempt.response_hash,
+            "validator_ok": attempt.validator_ok,
+            "validator_reasons": list(attempt.validator_reasons),
+        }
+        for attempt in attempts
+    ]
+
+
+def _extract_windows(
+    task: dict[str, Any],
+    item: dict[str, Any],
+    windowed: list[tuple[Any, str]],
+    manifest: dict[str, Any],
+    *,
+    db_path: str | Path,
+    run_id: str | None,
+    task_id: str | None,
+    deadline: float,
+) -> tuple[list[Any], dict[str, Any]]:
+    """Run the ladder on every window of one source, in order, then merge them.
+
+    ``manifest`` is updated in place as each window finishes, so a failure
+    receipt records every window reached, the one that failed, and those never
+    run. The first failed window stops the source, and with it the run.
+    """
+    # Function-local for the same reason as in execute_discovery_task: tests
+    # rebind ``qwen_call`` on its module.
+    from quant_brain.llm.qwen_call import QwenAttempt, QwenValidationError, qwen_call
+    from quant_brain.research.windowing import (
+        WindowMergeError,
+        WindowOutcome,
+        merge_window_outcomes,
+        validate_window_outcome,
+    )
+
+    schema = WindowOutcome.model_json_schema()
+    results: list[Any] = []
+    outcomes: list[dict[str, Any]] = []
+    for (window, prompt), entry in zip(windowed, manifest["windows"], strict=True):
+
+        def validator(parsed: Any, window: Any = window) -> Any:
+            return validate_window_outcome(
+                parsed, item, window, expected_research_id=task["research_id"]
+            )
+
+        try:
+            result = qwen_call(
+                prompt,
+                [item],
+                expected_research_id=task["research_id"],
+                db_path=db_path,
+                run_id=run_id,
+                task_id=task_id,
+                deadline=deadline,
+                validator=validator,
+                output_schema=schema,
+                attempt_context={
+                    "window_id": window.window_id,
+                    "window_index": window.index,
+                    "window_count": window.count,
+                },
+            )
+        except QwenValidationError as exc:
+            entry.update(outcome="failed", validator_ok=False, attempts=_attempt_records(exc.attempts))
+            _record_window_event(db_path, run_id, task_id, manifest, entry)
+            raise
+        entry.update(
+            outcome=str(result.output["outcome"]).strip(),
+            validator_ok=True,
+            attempts=_attempt_records(getattr(result, "attempts", ())),
+        )
+        _record_window_event(db_path, run_id, task_id, manifest, entry)
+        results.append(result)
+        outcomes.append(result.output)
+
+    try:
+        merged = merge_window_outcomes(
+            task["research_id"], item, [window for window, _ in windowed], outcomes
+        )
+    except WindowMergeError as exc:
+        raise QwenValidationError(
+            [
+                QwenAttempt(
+                    model="window-merge",
+                    duration_seconds=0.0,
+                    prompt_hash="",
+                    response_hash=hashlib.sha256(
+                        json.dumps(outcomes, sort_keys=True).encode("utf-8")
+                    ).hexdigest(),
+                    validator_ok=False,
+                    validator_reasons=(str(exc),),
+                )
+            ]
+        ) from exc
+    return results, merged
+
+
+def _record_window_event(
+    db_path: str | Path,
+    run_id: str | None,
+    task_id: str | None,
+    manifest: dict[str, Any],
+    entry: dict[str, Any],
+) -> None:
+    _record_scout_event(
+        db_path,
+        run_id=run_id,
+        task_id=task_id,
+        event_type="extraction_window",
+        status="completed" if entry["validator_ok"] else "failed",
+        message=(
+            f"Window {entry['window_id']} ({entry['index']} of {manifest['window_count']}): "
+            f"{entry['outcome']}"
+        ),
+        payload={
+            "source_id": manifest["source_id"],
+            "snapshot_path": manifest["snapshot_path"],
+            "snapshot_sha256": manifest["snapshot_sha256"],
+            "snapshot_text_sha256": manifest["snapshot_text_sha256"],
+            "window_count": manifest["window_count"],
+            **entry,
+        },
+    )
+
+
 def execute_discovery_task(
     project_root: str | Path = PROJECT_ROOT,
     db_path: str | Path = DEFAULT_DB_PATH,
@@ -946,14 +1085,22 @@ def execute_discovery_task(
                 qwen_call,
             )
             from quant_brain.llm.validators import validate_research_output
+            from quant_brain.research.windowing import (
+                MAX_WINDOWS_PER_SOURCE,
+                plan_windows,
+                window_manifest,
+                window_prompt,
+            )
 
             evidence_bundle = []
+            snapshot_files = []
             for index, (source, snapshot) in enumerate(
                 zip(sources, discovered.snapshots, strict=True), start=1
             ):
                 snapshot_path = Path(snapshot)
                 if not snapshot_path.is_absolute():
                     snapshot_path = root / snapshot_path
+                snapshot_files.append((str(snapshot), snapshot_path))
                 evidence_bundle.append(
                     {
                         "source_id": f"S{index}",
@@ -966,32 +1113,86 @@ def execute_discovery_task(
             # One source per extraction call (Phase 6 design). A single prompt
             # holding every snapshot ran to ~55k tokens and Ollama silently kept
             # only its tail, so each call now carries exactly one snapshot and
-            # must fit the context budget on its own.
-            prompts = [_source_extraction_prompt(task, item) for item in evidence_bundle]
-            # Every prompt is screened before the first model call, so a source
-            # that cannot fit fails the run at once instead of after four others.
-            for item, prompt in zip(evidence_bundle, prompts, strict=True):
+            # must fit the context budget on its own. A source that cannot is
+            # read in deterministic windows instead (PROP-006); a source that
+            # fits takes exactly the single-prompt path it always did.
+            plans: list[tuple[dict[str, Any], str | None, list[tuple[Any, str]] | None]] = []
+            for item in evidence_bundle:
+                prompt = _source_extraction_prompt(task, item)
                 violation = prompt_budget_violation(prompt)
-                if violation is not None:
+                if violation is None:
+                    plans.append((item, prompt, None))
+                    continue
+                label = f"source {item['source_id']}: {item['url_or_citation']}"
+                windows = plan_windows(item["snapshot_text"], item["source_id"])
+                if len(windows) > MAX_WINDOWS_PER_SOURCE:
                     raise ContextBudgetError(
-                        [], f"{violation} (source {item['source_id']}: {item['url_or_citation']})"
+                        [],
+                        f"{violation}; reading it needs {len(windows)} windows, above the "
+                        f"{MAX_WINDOWS_PER_SOURCE}-window cap ({label})",
                     )
+                windowed = [(window, window_prompt(task, item, window)) for window in windows]
+                plans.append((item, None, windowed))
+            # Every prompt, including every window's, is screened before the
+            # first model call, so a source that cannot fit fails the run at
+            # once instead of after four others.
+            for item, prompt, windowed in plans:
+                screened = [(item["source_id"], prompt)] if prompt is not None else [
+                    (window.window_id, text) for window, text in windowed or []
+                ]
+                for name, text in screened:
+                    violation = prompt_budget_violation(text)
+                    if violation is not None:
+                        where = "" if name == item["source_id"] else f"window {name} of "
+                        raise ContextBudgetError(
+                            [],
+                            f"{violation} ({where}source {item['source_id']}: "
+                            f"{item['url_or_citation']})",
+                        )
 
-            # All or nothing, as before: any source that fails its ladder fails
-            # the run. Dropping it could only make the run look better.
-            results = [
-                qwen_call(
-                    prompt,
-                    [item],
-                    expected_research_id=task["research_id"],
+            # All or nothing, as before: any source -- or any window of a
+            # source -- that fails its ladder fails the run. Dropping it could
+            # only make the run look better.
+            window_manifests: list[dict[str, Any]] = []
+            discovered_provenance["extraction_windows"] = window_manifests
+            results = []
+            outputs = []
+            for (item, prompt, windowed), (snapshot_ref, snapshot_path) in zip(
+                plans, snapshot_files, strict=True
+            ):
+                if windowed is None:
+                    result = qwen_call(
+                        prompt,
+                        [item],
+                        expected_research_id=task["research_id"],
+                        db_path=db_path,
+                        run_id=run_id,
+                        task_id=task_id,
+                        deadline=run_deadline,
+                    )
+                    results.append(result)
+                    outputs.append(result.output)
+                    continue
+                manifest = window_manifest(
+                    item,
+                    [window for window, _ in windowed],
+                    snapshot_path=snapshot_ref,
+                    snapshot_sha256=hashlib.sha256(snapshot_path.read_bytes()).hexdigest(),
+                )
+                window_manifests.append(manifest)
+                window_results, window_outputs = _extract_windows(
+                    task,
+                    item,
+                    windowed,
+                    manifest,
                     db_path=db_path,
                     run_id=run_id,
                     task_id=task_id,
                     deadline=run_deadline,
                 )
-                for item, prompt in zip(evidence_bundle, prompts, strict=True)
-            ]
-            merged = _merge_extractions(task["research_id"], [r.output for r in results])
+                results.extend(window_results)
+                outputs.append(window_outputs)
+            merged = _merge_extractions(task["research_id"], outputs)
             # The merged payload must pass the same whole-bundle validation the
             # single-prompt design applied, so splitting can never weaken it.
             verdict = validate_research_output(
@@ -1027,7 +1228,11 @@ def execute_discovery_task(
 
         stage = "write_note"
         findings = format_findings_markdown(
-            task, sources, rejected_records, discovery_lane=discovery_lane
+            task,
+            sources,
+            rejected_records,
+            discovery_lane=discovery_lane,
+            extraction_windows=discovered_provenance.get("extraction_windows") or None,
         )
         # Remember the exact pre-write bytes so a later failure can put the file
         # back rather than leaving a half-finalized note behind.

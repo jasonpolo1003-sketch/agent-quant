@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -145,6 +146,9 @@ def _attempt(
     run_id: str | None,
     task_id: str | None,
     deadline: float | None,
+    validator: Callable[[Any], ValidationResult] | None = None,
+    output_schema: dict[str, Any] | None = None,
+    attempt_context: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any] | None, ValidationResult]:
     started = time.perf_counter()
     response = None
@@ -171,7 +175,11 @@ def _attempt(
                 prompt_token_budget=PROMPT_TOKEN_BUDGET,
                 timeout=timeout,
                 temperature=0.0,
-                format=RawResearchPayload.model_json_schema(),
+                format=(
+                    output_schema
+                    if output_schema is not None
+                    else RawResearchPayload.model_json_schema()
+                ),
             )
             if deadline is not None and time.monotonic() >= deadline:
                 parsed = None
@@ -179,8 +187,12 @@ def _attempt(
                 verdict = ValidationResult(False, (run_failure,))
             else:
                 parsed = json.loads(response.text)
-                verdict = validate_research_output(
-                    parsed, evidence, expected_research_id=expected_research_id
+                verdict = (
+                    validator(parsed)
+                    if validator is not None
+                    else validate_research_output(
+                        parsed, evidence, expected_research_id=expected_research_id
+                    )
                 )
         except ollama_client.ContextOverflowError as exc:
             parsed = None
@@ -226,6 +238,7 @@ def _attempt(
             "num_ctx": EXTRACTION_NUM_CTX,
             "estimated_prompt_tokens": estimate_prompt_tokens(prompt),
             "prompt_eval_count": getattr(response, "prompt_eval_count", None),
+            **(attempt_context or {}),
         },
     )
     if run_failure is not None:
@@ -254,12 +267,26 @@ def qwen_call(
     run_id: str | None = None,
     task_id: str | None = None,
     deadline: float | None = None,
+    validator: Callable[[Any], ValidationResult] | None = None,
+    output_schema: dict[str, Any] | None = None,
+    attempt_context: dict[str, Any] | None = None,
 ) -> QwenResult:
-    """Run at most three local attempts, bounded by an optional whole-run deadline."""
+    """Run at most three local attempts, bounded by an optional whole-run deadline.
+
+    ``validator``/``output_schema`` replace the raw-research contract for a
+    caller with its own (the PROP-006 window outcome); the ladder, caps and
+    context guards are the same. ``attempt_context`` is added to every
+    ``qwen_attempt`` event.
+    """
+    hooks = {
+        "validator": validator,
+        "output_schema": output_schema,
+        "attempt_context": attempt_context,
+    }
     attempts: list[QwenAttempt] = []
     prior, verdict = _attempt(
         prompt, DEFAULT_MODEL, evidence, expected_research_id, client, attempts,
-        db_path=db_path, run_id=run_id, task_id=task_id, deadline=deadline,
+        db_path=db_path, run_id=run_id, task_id=task_id, deadline=deadline, **hooks,
     )
     if verdict.ok and prior is not None:
         return _result(prior, attempts, repaired=False, escalated=False)
@@ -267,7 +294,7 @@ def qwen_call(
     repair = _repair_prompt(prompt, prior, verdict.reasons)
     prior, verdict = _attempt(
         repair, DEFAULT_MODEL, evidence, expected_research_id, client, attempts,
-        db_path=db_path, run_id=run_id, task_id=task_id, deadline=deadline,
+        db_path=db_path, run_id=run_id, task_id=task_id, deadline=deadline, **hooks,
     )
     if verdict.ok and prior is not None:
         return _result(prior, attempts, repaired=True, escalated=False)
@@ -275,7 +302,7 @@ def qwen_call(
     escalation = _repair_prompt(prompt, prior, verdict.reasons)
     prior, verdict = _attempt(
         escalation, ESCALATION_MODEL, evidence, expected_research_id, client, attempts,
-        db_path=db_path, run_id=run_id, task_id=task_id, deadline=deadline,
+        db_path=db_path, run_id=run_id, task_id=task_id, deadline=deadline, **hooks,
     )
     if verdict.ok and prior is not None:
         return _result(prior, attempts, repaired=True, escalated=True)
