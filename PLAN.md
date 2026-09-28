@@ -205,6 +205,19 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 
 **Picking this up cold? Read this section, then start.**
 
+### Gate D checkpoint E5 (2026-09-28): all extractions validated; note write failed closed on a latent bug
+
+- **Run:** `RUN-871299ea31` on the unchanged list, 652s.
+  - All 5 sources validated, including two windowed sources (Hill 7 windows, NAAIM 8), and the merged payload passed the whole-bundle validator.
+  - It **failed at `write_note`** with `KeyError: 'possible_strategy_rule'`.
+- **Cause:** the executor writes the raw model output instead of the validator's normalized payload, and the model may omit that optional field. This has been latent since `0b37d65` and was never reached before.
+- **Recovery and diagnostics:** recovery was complete, and 10 failed responses were kept as untrusted diagnostics.
+- **Also found:** same-day re-fetches overwrite existing snapshot paths. Two E4 snapshots were rewritten (only `captured_at` changed; the E4 blobs remain in `c6d13d1`).
+- **Baseline is red:** 1 test fails, correctly. Per §11, fix it before anything else.
+- **Evidence:** preserved in `8265dca`.
+- **Status:** no curator run; Phase 6 / Gate D incomplete.
+- **Next (needs approval):** write notes from normalized output, make snapshots immutable, pin the E4 test to `c6d13d1`; then ask before another rerun.
+
 ### PROP-006 amendment A (2026-09-28): window-contract fix verified; no rerun yet
 
 - **Changes:**

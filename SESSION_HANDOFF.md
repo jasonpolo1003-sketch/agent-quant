@@ -1,5 +1,60 @@
 # Quant Agent Brain — Session Handoff
 
+## Gate D checkpoint E5: second windowed rerun of RQ-6d9c12f4 (2026-09-28 UTC). Extraction and validation passed, then the note write failed closed on a latent bug.
+
+One authorized run, not retried. No code change. No curator run, push or merge. **Phase 6 / Gate D remain incomplete.**
+
+**Readiness (all passed before dispatch)**
+- `c9a3db1`; 567 passed, 1 skipped; both Ruff checks clean.
+- The list is still `88ba2d3c…`, and `gate_readiness` exited 0.
+- The dry-run routed to `research_scout`. Both Qwen models were present, and the `web` channel was `ok`.
+- DB `4e80d281…`; the question was `queued`.
+
+**Run `RUN-871299ea31`** (04:11:02–04:21:54 UTC, 652s of the 900s deadline, exit 1)
+- 5 of 5 sources were fetched and accepted. **Every source's extraction validated** (first time on this question):
+
+| Source | Extraction |
+|---|---|
+| S1 ChartSchool | 14B, after one repair |
+| **S2 Hill** | **Windowed** (it is larger this fetch: 7 windows). W03 gave evidence after one repair; the other 6 returned `no_relevant_evidence`. |
+| S3 Connors | 27B, after two 14B quote failures |
+| **S4 NAAIM** | 8 windows. W03 gave evidence after one repair. W02 and W07 fell back to `no_relevant_evidence` after failed evidence attempts. The rest returned `no_relevant_evidence`. |
+| S5 Double 7s | 27B after two 14B quote failures; 117s |
+
+- The merged payload then passed the whole-bundle validator. **The run failed at `write_note`** with `KeyError: 'possible_strategy_rule'`.
+- It failed closed: raw note removed, question back to `queued`, recovery complete, no secondary failures.
+- **Diagnostics worked on their first real run:** `Failed_Runs/diagnostics/RUN-871299ea31.responses.json` holds 10 failed responses, labelled untrusted.
+- No truncation warning.
+
+**Cause (pre-existing, latent since `0b37d65`, and never reached because no live run had passed validation before)**
+- `possible_strategy_rule` is optional in `RawResearchSource` (default `""`), so the constrained schema lets the model omit it.
+- The validators accept that; their normalized copy fills in `""`.
+- `executor.py:1321` writes the **raw** model output (`model_result.output["sources"]`), not the validated, normalized payload, and `format_findings_markdown` indexes the missing key.
+- The windowed merge always sets the field, so the omission came from S1, S3 or S5. The run keeps hashes, not successful response text, so which one is not recorded.
+
+**Second finding: snapshot overwrite (provenance defect)**
+- Snapshot paths are `<UTC date>/<content hash>-<URL hash>`. Re-fetching unchanged content on the same UTC day reuses the path, and this run **rewrote two E4 snapshots in place**: `c5f9673f32a4-97d0dbd7.md` and `f57de4fc3101-1bb9664e.md`. Only `captured_at` changed.
+- The E4 versions remain at `c6d13d1`. The E4 receipt's recorded file hashes no longer match the files on disk.
+- **The test suite is now red:** `test_window_failure_e4.py::test_the_planned_windows_are_exactly_the_ones_the_run_recorded` fails, correctly, for this reason. It was left failing on purpose, not weakened.
+
+**Preserved:** `8265dca` holds the receipt, the diagnostics, three new snapshots and the two rewritten ones, byte-for-byte, with exact-path `-text` rules and blob = working-file sha256.
+
+**State**
+- DB `aa4d042f…` (`agent_tasks` 6→7, `agent_events` 85→134).
+- Protected tables are 0; `research_findings` 7, `notes` 23 and `sources` 7 are unchanged. All three questions are `queued`, and no raw note exists.
+
+**What remains uncertain**
+- Whether the next run passes: the model is not byte-stable, and this run used 652 of 900 seconds.
+- The "none" fallback after failed evidence attempts happened again on S4-W02 and W07. The overlap still carried the rule through W03.
+- Validation passing is not complete evidence coverage, and it is **not** evidence of a profitable strategy.
+
+**Recommended next step (needs approval)**
+1. Write the note from the validator's normalized payload, not the raw model output.
+2. Make snapshots immutable: never overwrite an existing path (reuse it only when the bytes match, else fail or use a distinct name).
+3. Pin the E4 fixture test to the `c6d13d1` blob so the suite is green again.
+
+Use TDD and an independent review. Then ask before another rerun.
+
 ## PROP-006 amendment A: window-contract fix after E4 (2026-09-28)
 
 Implementation and verification only. **No production rerun, no curator dispatch, no push or merge.** Phase 6 / Gate D remain incomplete.
