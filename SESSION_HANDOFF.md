@@ -1,5 +1,57 @@
 # Quant Agent Brain — Session Handoff
 
+## Gate D checkpoint E4: windowed rerun of RQ-6d9c12f4 (2026-09-28 UTC). It failed closed at NAAIM window 2 because of a window-contract trap.
+
+One authorized run, not retried. No code change. No curator dispatch, push or merge. **Phase 6 / Gate D remain incomplete.**
+
+**Readiness (all passed before dispatch)**
+- `5f3b7fc`; 548 passed, 1 skipped; both Ruff checks clean.
+- The list is still `88ba2d3c…` (working file and committed blob), and `gate_readiness` exited 0 (5 listed, 5 distinct works).
+- The dispatch dry-run routed to `research_scout`. Both Qwen models were present, and the `web` channel was `ok`.
+- DB `a6ab24f8…`. The `server.log` truncation count was 0.
+
+**Run `RUN-d67b1d121b`** (02:15:53–02:20:54 UTC, 301s, exit 1)
+- **Sources:** 5 of 5 fetched and accepted; S4 = NAAIM/Pagonidis (windowed into 8 windows).
+- **S1–S3 extracted and validated:**
+
+| Source | Result |
+|---|---|
+| S1 | 14B, after one repair |
+| S2 | 14B, first attempt |
+| S3 | 27B, after two 14B failures on absent quotes and high confidence |
+
+- **S4:** W01 returned a validated `no_relevant_evidence`. **W02 failed all three attempts**, so the run failed closed. W03–W08 were recorded `not_run`, and S5 was never reached.
+- **Receipt:** `Failed_Runs/RUN-d67b1d121b.md` holds the full window manifest (offsets, hashes, attempts), the recovery is complete, and the retry command keeps `--candidate-list`.
+- There was no truncation warning, and the most prompt tokens any call used was about 5k.
+
+**Why W02 failed (investigated with diagnostic model calls on the saved snapshot; no dispatch, no writes)**
+- The NAAIM exit rule sits at characters 15,648–15,760: "• Go long at the close if RSI(3) < 10 • Maintain the position while RSI(3) ≤ 40". That is inside **both** W02 [7,755, 15,836) and W03 [14,690, 23,608), so the overlap worked.
+- **In-run attempt 1:** the model chose `evidence` but left `curator_recommendation` null. The rejection message is "an evidence outcome needs a source and a curator_recommendation".
+  - A replay of the exact prompt matched the run's prompt hash and response hash, so this was reproduced exactly.
+  - **The trap:** the window contract requires a recommendation for evidence, but the JSON schema allows null.
+- **Attempts 2–3:** the repair prompt then pushed the model to "fix" the output. Both 14B-repair and 27B produced a source record **without `source_id`**, which is optional in the nested schema. One of them also quoted text that is absent from the full snapshot. The validators caught all of it.
+- **The same trap on W03**, replayed once under the current contract: the model quoted all three rule lines verbatim, but again left the recommendation null and was rejected. With the recommendation set to the most conservative value, **every quote passed both the window and full-snapshot checks**. The remaining rejections were ordinary ones that the ladder can repair: high confidence on discovery-only, and `mvp_testable` with an ungrounded `main_claim`.
+- **A stricter either/or schema made things worse:** the model chose `no_relevant_evidence` for both W02 and W03, which is a false negative. Schema shape steers this model.
+- **Ollama is not byte-stable at temperature 0.** The first replay reproduced the run's response hash; two later identical calls returned a valid `no_relevant_evidence` for W02 instead.
+- **Provenance gap:** failed attempts store only response hashes, so the raw failing output was only recoverable by chance of an exact replay.
+
+**Integrity**
+- DB `4e80d281…`. The change from `a6ab24f8…` is expected: `agent_tasks` 5→6 and `agent_events` 67→85.
+- Protected tables are 0; `research_findings` 7, `notes` 23 and `sources` 7 are unchanged. All three questions are `queued` with NULL paths, and no raw note exists.
+- The list blob, the E3 receipt and snapshots, and `RUN-4e9d910742.md` are unchanged.
+- Evidence is preserved byte-for-byte in `c6d13d1`: the receipt plus five `2026-09-28` snapshots, with exact-path `-text` rules and blob = working-file sha256.
+
+**What this is and is not**
+- The pipeline read an oversize PDF without truncation and located a source-stated RSI(3) exit rule (NAAIM/Pagonidis, tier discovery-only).
+- That is evidence that the harness can find and verify exact quotations. It is **not** evidence of a profitable strategy, and nothing was promoted.
+
+**Recommended next step (needs approval: an amendment to PROP-006's window contract; validators unchanged)**
+1. Remove `curator_recommendation` from the window outcome. The windowed source's merged recommendation becomes `needs_more_work`, which is the most conservative value. The curator does not read the field anyway.
+2. Require the nested `source_id` in the window's model-facing schema.
+3. Optionally store the raw response text of failed attempts in the receipt.
+
+Test with TDD and an independent review, then replay the saved W02/W03 prompts diagnostically, with no dispatch. Only then ask for one more rerun. Watch the false-negative risk that the either/or experiment showed.
+
 ## Oversize-source windowing, PROP-006 (2026-09-27)
 
 Implementation and verification only. No RQ-6d9c12f4 rerun, no curator run, no push and no merge. **Phase 6 / Gate D remain incomplete.**

@@ -205,6 +205,23 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 
 **Picking this up cold? Read this section, then start.**
 
+### Gate D checkpoint E4 (2026-09-28): windowed rerun failed closed at NAAIM window 2
+
+- **Run:** `RUN-d67b1d121b` on the unchanged list `88ba2d3c…`, 301s. One authorized run, no retry, no code change.
+  - S1–S3 validated.
+  - S4 (NAAIM) was windowed into 8 windows. W01 returned a validated `no_relevant_evidence`.
+  - **W02 failed all 3 attempts**, so the run failed closed with full recovery and a complete window manifest in the receipt. S5 was never reached.
+  - No truncation warning.
+  - Evidence preserved in `c6d13d1`.
+- **Cause: a window-contract trap, not the data or the validators.**
+  - The model chose `evidence` but left `curator_recommendation` null. The contract requires it, but the schema allows null.
+  - The repairs then produced a source without the optional `source_id`, and one attempt quoted text absent from the snapshot. The validators caught everything.
+  - The NAAIM exit rule ("Maintain the position while RSI(3) ≤ 40") lies in both W02 and W03. A diagnostic replay of W03 quoted it verbatim, and every quote passed the window and full-snapshot checks; that replay was rejected for the same null recommendation.
+  - A stricter either/or schema pushed the model to false negatives.
+  - Ollama output is not byte-stable at temperature 0.
+- **State:** protected tables 0; all three questions `queued` with no raw note; no curator run. Phase 6 / Gate D remain incomplete.
+- **Next (needs Jason's approval):** amend the PROP-006 window contract. Drop the window-level `curator_recommendation` (the merge uses `needs_more_work`), and require the nested `source_id` in the model-facing schema. Optionally keep the raw text of failed responses. Then TDD, review and a diagnostic replay of the saved windows, before asking for one more rerun.
+
 ### Oversize-source windowing implemented (PROP-006, 2026-09-27)
 
 - **Why:** the current schema cannot say "this window has no relevant evidence" honestly. Evidence must be non-empty, a claim is required, and an omitted source is rejected. Jason approved the smallest fix: a **window-only** outcome contract, used inside extraction and never written to a note or read by the curator. `schema.py` and `validators.py` are unchanged.
@@ -409,7 +426,7 @@ What remains after the context fix. Each item needs its own approval.
    - The NAAIM snapshot is 31,330 tokens against an 11,571-token per-call budget. Re-running first would only duplicate a known fail-closed outcome before any model call.
    - Windowing must keep exact quotations verifiable against the immutable full snapshot, remain all-or-nothing, and stay inside the shared 15-minute run deadline. It must not silently select only favorable passages.
    - Do not edit the committed list, and do not raise the context beyond what the 14B can run at usable speed.
-3. **Next checkpoint, needing Jason's authorization: re-run RQ-6d9c12f4 on the same committed list** (`88ba2d3c…`). Windowing is now implemented.
+3. ~~**Re-run RQ-6d9c12f4 on the same committed list** (`88ba2d3c…`).~~ **Done 2026-09-28 as E4 (`RUN-d67b1d121b`); it failed closed at NAAIM W02.** Next, needing approval: amend the window contract as described in the E4 entry above, then one more rerun only if authorized.
    - Dispatch the curator separately only if a raw note results. The honest ceiling remains about 2 promotable sources from 2 originators.
 4. ~~**Add the Phase 6 whole-run wall-clock cap and same-lane retry.**~~ **Done in `c6ab150`.**
 5. ~~**Re-read the RUN-4e9d910742 attribution.**~~ **Settled:** its relevance finding stands; the truncation explains only the models' behaviour.
