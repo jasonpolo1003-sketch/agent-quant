@@ -243,8 +243,14 @@ def format_findings_markdown(
     rejected: list[dict[str, Any]] | None = None,
     discovery_lane: dict[str, Any] | None = None,
     extraction_windows: list[dict[str, Any]] | None = None,
+    validated_payload: dict[str, Any] | None = None,
 ) -> str:
     """Format selected sources into a raw research note section plus JSON block.
+
+    ``validated_payload`` is the whole payload that passed validation; when
+    given, the JSON block is exactly that payload (re-checked against the
+    schema), never the template questions and recommendation below, which
+    only the offline seeded catalog uses.
 
     ``rejected`` is rendered as prose *outside* the validated JSON block. The
     raw-research payload forbids extra fields, and honest rejection reporting is
@@ -311,7 +317,11 @@ def format_findings_markdown(
 
         lines.extend([window_manifest_markdown(extraction_windows), ""])
 
-    payload = build_raw_research_payload(task, sources)
+    payload = (
+        validate_raw_research_payload(validated_payload)
+        if validated_payload is not None
+        else build_raw_research_payload(task, sources)
+    )
     lines.extend(
         ["## Required JSON Block", "", "```json", json.dumps(payload, indent=2), "```", ""]
     )
@@ -1311,7 +1321,11 @@ def execute_discovery_task(
                 )
             models_used = [r.model_used for r in results]
             model_result = SimpleNamespace(
-                output=merged,
+                # What was validated, as the validator normalized it. The raw
+                # model output may legally omit fields the schema defaults
+                # (E5, RUN-871299ea31: ``possible_strategy_rule``), and the note
+                # must record exactly the payload that passed, not a variant.
+                output=verdict.normalized,
                 model_used=(
                     ESCALATION_MODEL if ESCALATION_MODEL in models_used else models_used[0]
                 ),
@@ -1327,6 +1341,7 @@ def execute_discovery_task(
             rejected_records,
             discovery_lane=discovery_lane,
             extraction_windows=discovered_provenance.get("extraction_windows") or None,
+            validated_payload=model_result.output if model_result else None,
         )
         # Remember the exact pre-write bytes so a later failure can put the file
         # back rather than leaving a half-finalized note behind.

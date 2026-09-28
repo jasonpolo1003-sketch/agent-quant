@@ -205,6 +205,16 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 
 **Picking this up cold? Read this section, then start.**
 
+### After E5 (2026-09-28): note writing and snapshot immutability fixed; historical receipts verify again
+
+- **Notes:** the JSON block is now exactly the whole-bundle validator's normalized payload: sources, questions and recommendation.
+- **Snapshots:** immutable. Created exclusively, with a same-day refetch getting `<name>.<n>.md`. A failed run can no longer overwrite or delete earlier evidence.
+- **Collided snapshots:** E4's bytes are restored at their recorded paths and E5's are at `.2.md`, both kept. The move is recorded in `Source_Snapshots/reconciliation.json`.
+- **Verifier:** `scripts/verify_receipts.py` checks E3 (5), E4 (15) and E5 (34) recorded hashes plus 2 ledger owner hashes: all OK.
+- **Checks:** 590 passed, 1 skipped; both Ruff checks clean; 31/31 mutations caught; independent review, with two findings fixed and re-verified.
+- **Open, material and pre-existing:** snapshot front-matter digits (timestamps, hashes) can make invented numbers look grounded. The next step, pending approval, is to validate against fetched content only.
+- **Status:** no rerun; Phase 6 / Gate D incomplete.
+
 ### Gate D checkpoint E5 (2026-09-28): all extractions validated; note write failed closed on a latent bug
 
 - **Run:** `RUN-871299ea31` on the unchanged list, 652s.

@@ -1,5 +1,76 @@
 # Quant Agent Brain — Session Handoff
 
+## Note writing and snapshot immutability fixed; historical evidence verifiable again (2026-09-28)
+
+Fix and verification only. **No production rerun, no curator run, no push or merge.** Phase 6 / Gate D remain incomplete.
+
+**1. Notes are written from the validated payload**
+
+The E5 cause: the executor wrote the raw model output, and the model had legally omitted the optional `possible_strategy_rule`.
+- Model output now takes `verdict.normalized`.
+- **The independent review found more.** `build_raw_research_payload` still hard-coded the note's `open_questions` (RSI boilerplate) and `curator_recommendation: "promote_source"`. So a note could claim `promote_source` even though validation ran against `needs_more_work`, and the promotion check never saw the written value. This dates from before today.
+- Fixed: `format_findings_markdown(validated_payload=…)` makes the JSON block exactly the validated payload, re-checked against the schema.
+- The offline seeded path keeps its template.
+- Tests (`tests/test_note_writing.py`):
+  - omitted optional fields, on a normal source and on a windowed source;
+  - note JSON == the whole-bundle validator's normalized output, including disagreement → `needs_more_work` and the model's own open question;
+  - **E5's five recorded pages** run through validation to a schema-valid note. The body hashes are checked against E5's receipt, and the model is scripted.
+
+**2. Snapshots are immutable** (`discovery/live_discovery.py`)
+- Created with exclusive mode `"x"`. An existing name gets the next free `<name>.<n>.md`.
+- Never reused, even when byte-identical: failed discovery deletes the snapshots it wrote.
+- **The old writer could delete earlier evidence, not just overwrite it.** A failed discovery that re-fetched an unchanged page overwrote the earlier run's file, then deleted it as its own. A test demonstrated this on the old code.
+- Tests (`tests/test_snapshot_immutability.py`):
+  - same-day refetch;
+  - byte-identical refetch;
+  - failed discovery beside an earlier snapshot;
+  - two same-day dispatches, with the first run's files unchanged byte-for-byte;
+  - an existing snapshot is never opened for writing.
+
+**3. Historical evidence reconciled** (no receipt edited)
+- **Rule: the first writer keeps the recorded path.**
+  - E4's bytes are restored from `c6d13d1` to `…/2026-09-28/c5f9673f32a4-97d0dbd7.md` (`cdc7a0e5…`) and `…/f57de4fc3101-1bb9664e.md` (`23410dfd…`).
+  - E5's bytes moved to the `.2.md` names (`2af38021…`, `a8d295cb…`), identical to the `8265dca` blobs. Git history keeps both.
+- **Ledger:** `brain/00_Inbox/Source_Snapshots/reconciliation.json`. It maps E5's recorded paths to the moved files, with their sha256 and the original owner's file hash.
+- **Verifier:** `src/quant_brain/research/receipts.py` and `scripts/verify_receipts.py` (read-only). It checks:
+  - each candidate content hash;
+  - each window manifest's file-bytes, text and per-window hashes;
+  - each kept diagnostic response hash;
+  - the ledger's target hashes and original-owner hashes. The owner check was added after the review showed E4's content-only record of the Connors page could not tell E4's bytes from E5's.
+- **Current result:**
+
+| Record | Hashes verified |
+|---|---|
+| E3 | 5 |
+| E4 | 15 |
+| E5 | 34 |
+| Ledger | 2 |
+
+- `RUN-4e9d910742` records no hashes: it predates snapshot lineage.
+- `scripts/window_replay.py` now follows the ledger.
+- The E4 fixture test passes again **unchanged**, because the bytes are back where E4 recorded them.
+- Tests (`tests/test_receipts.py`), each detected in isolation:
+  - newline normalisation (file-bytes hash only);
+  - an unwindowed body edit (content hash only);
+  - an edited window offset (window hash only);
+  - a ledger target with different bytes;
+  - E5's bytes at E4's path.
+
+**Verification**
+- 590 passed, 1 skipped. Both Ruff checks and `git diff --check` are clean.
+- **All 10 new mutations and the 21 earlier ones were caught.** Three verifier checks initially survived because a single tamper test tripped them all together; separate tests now pin each one.
+- Evidence files are staged byte-exact with `-text` in effect.
+- The DB (`aa4d042f…`), the list blob, and all receipts and diagnostics are unchanged.
+- An independent review found three material points. Two are fixed and re-verified; the third is below.
+
+**Open (material, pre-existing, not fixed here): front matter counts as source text**
+- The model and validators see the full snapshot file, including the harness-written front matter (`url`, `title`, `channel`, `backend`, `captured_at`, hashes). So:
+  - quotes of that metadata pass the exact-passage check;
+  - more seriously, **digits from `captured_at` and the hashes make invented numbers look grounded.** The reviewer showed "Uses a 28-day lookback" and "Tested over 16 years" judged supported against the Connors snapshot, and unsupported against its body alone. This affects `main_claim`, `risks`, `data_required` and `open_questions`.
+  - `possible_strategy_rule` is protected, because it must also be an exact passage.
+
+**Next (needs approval):** give the model and validators only the fetched content, never the front matter. This changes window offsets for future runs only. Use TDD and an independent review. Then ask before another rerun.
+
 ## Gate D checkpoint E5: second windowed rerun of RQ-6d9c12f4 (2026-09-28 UTC). Extraction and validation passed, then the note write failed closed on a latent bug.
 
 One authorized run, not retried. No code change. No curator run, push or merge. **Phase 6 / Gate D remain incomplete.**

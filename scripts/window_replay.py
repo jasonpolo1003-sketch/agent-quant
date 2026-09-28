@@ -25,6 +25,7 @@ import sys
 from quant_brain.config import PROJECT_ROOT
 from quant_brain.db.init_db import DEFAULT_DB_PATH
 from quant_brain.llm.qwen_call import QwenValidationError, qwen_call
+from quant_brain.research.receipts import resolve_recorded_snapshot
 from quant_brain.research.windowing import (
     WindowOutcome,
     plan_windows,
@@ -62,7 +63,8 @@ def main() -> int:
     wanted = set(args.windows.split(",")) if args.windows else None
     ok = True
     for manifest in receipt.get("extraction_windows") or []:
-        snapshot = PROJECT_ROOT / manifest["snapshot_path"]
+        # Follows the reconciliation ledger if the run's snapshot bytes moved.
+        snapshot = resolve_recorded_snapshot(PROJECT_ROOT, args.run_id, manifest["snapshot_path"])
         if hashlib.sha256(snapshot.read_bytes()).hexdigest() != manifest["snapshot_sha256"]:
             raise SystemExit(f"{snapshot} no longer matches the run's recorded sha256")
         candidate = next(

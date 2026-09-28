@@ -92,6 +92,36 @@ def snapshot_relative_path(
     return f"{SNAPSHOT_DIR}/{day}/{content_hash[:12]}-{url_hash[:8]}.md"
 
 
+MAX_SNAPSHOT_VERSIONS = 1000
+
+
+def _create_snapshot_file(
+    project_root: str | Path,
+    relative: str,
+    text: str,
+    resolve_write: ResolveWriteFn | None,
+) -> Path:
+    """Create ``relative`` (or the next free ``.<n>.md`` sibling) exclusively.
+
+    Mode ``"x"`` makes the existence check and the creation one atomic step, so
+    no existing file is ever opened for writing, even by a concurrent writer.
+    """
+    stem = relative.removesuffix(".md")
+    for version in range(1, MAX_SNAPSHOT_VERSIONS + 1):
+        candidate = relative if version == 1 else f"{stem}.{version}.md"
+        dest = resolve_write(candidate) if resolve_write else Path(project_root) / candidate
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with dest.open("x", encoding="utf-8") as handle:
+                handle.write(text)
+        except FileExistsError:
+            continue
+        return dest
+    raise LiveDiscoveryError(
+        f"{MAX_SNAPSHOT_VERSIONS} snapshots already exist for {relative}; refusing to overwrite"
+    )
+
+
 def save_source_snapshot(
     project_root: str | Path,
     *,
@@ -108,6 +138,13 @@ def save_source_snapshot(
     Filenames include both a content hash and a URL hash so two different
     upstreams that happen to return identical body text cannot overwrite each
     other's identity metadata.
+
+    A snapshot is immutable once written. The same page fetched again on the
+    same UTC day maps to the same name, so the new snapshot is created
+    exclusively at the next free ``<name>.<n>.md`` instead. Never reused, even
+    when byte-identical: a failed discovery deletes the snapshots it wrote, so
+    sharing a file would let one run delete another run's evidence. (E5,
+    RUN-871299ea31, rewrote two E4 snapshots in place before this.)
     """
     if not url.strip():
         raise ValueError("snapshot url cannot be empty")
@@ -116,8 +153,6 @@ def save_source_snapshot(
 
     captured = captured_at or datetime.now(UTC)
     relative = snapshot_relative_path(content, url, captured)
-    dest = resolve_write(relative) if resolve_write else Path(project_root) / relative
-    dest.parent.mkdir(parents=True, exist_ok=True)
 
     content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
     url_hash = hashlib.sha256(normalize_snapshot_url(url).encode("utf-8")).hexdigest()
@@ -133,7 +168,7 @@ def save_source_snapshot(
         "---\n\n"
         f"{content.rstrip()}\n"
     )
-    dest.write_text(text, encoding="utf-8")
+    dest = _create_snapshot_file(project_root, relative, text, resolve_write)
     root = Path(project_root).resolve()
     try:
         return dest.resolve().relative_to(root).as_posix()
