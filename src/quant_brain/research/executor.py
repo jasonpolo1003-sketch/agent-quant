@@ -549,6 +549,60 @@ def _record_scout_event(
     )
 
 
+DIAGNOSTICS_DIR = "brain/00_Inbox/Failed_Runs/diagnostics"
+
+
+def _failed_responses(
+    attempts: Any, *, source_id: str, window_id: str | None
+) -> list[dict[str, Any]]:
+    """The failed attempts of one ladder, with their raw text, for diagnostics."""
+    return [
+        {
+            "source_id": source_id,
+            "window_id": window_id,
+            "model": attempt.model,
+            "prompt_hash": attempt.prompt_hash,
+            "response_hash": attempt.response_hash,
+            "validator_reasons": list(attempt.validator_reasons),
+            "response_text": getattr(attempt, "response_text", None),
+        }
+        for attempt in attempts
+        if not attempt.validator_ok
+    ]
+
+
+def _write_failed_responses(
+    project_root: Path,
+    *,
+    run_id: str,
+    research_id: str,
+    responses: list[dict[str, Any]],
+    resolve_write: Any | None,
+) -> str:
+    """Keep what the model actually said in a failed run, apart from research.
+
+    JSON, not Markdown, so the brain indexer (``*.md``) never picks it up, and
+    under ``Failed_Runs`` so nothing reads it as a raw note or a source. The run
+    events keep only hashes; each ``response_hash`` here joins to them.
+    """
+    relative = f"{DIAGNOSTICS_DIR}/{run_id}.responses.json"
+    dest = resolve_write(relative) if resolve_write else project_root / relative
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    document = {
+        "kind": "untrusted_model_responses",
+        "trust": (
+            "Diagnostic only: raw model output from failed validation attempts. "
+            "It is not evidence, was rejected by the validators, and must never be "
+            "promoted, indexed or cited."
+        ),
+        "run_id": run_id,
+        "research_id": research_id,
+        "responses": responses,
+    }
+    dest.write_text(json.dumps(document, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return relative
+
+
 def _fail_closed_discovery(
     *,
     project_root: Path,
@@ -563,6 +617,7 @@ def _fail_closed_discovery(
     resolve_write: Any | None,
     original_note_bytes: bytes | None = None,
     run_provenance: dict[str, Any] | None = None,
+    failed_responses: list[dict[str, Any]] | None = None,
 ) -> str | None:
     """Recover retryable state, then write a Failed_Runs receipt saying what happened.
 
@@ -650,6 +705,20 @@ def _fail_closed_discovery(
         question = "queued" if reset else "update-failed"
 
     failed_run_id = run_id or f"FAIL-{uuid4().hex[:10]}"
+    diagnostics_path = None
+    if failed_responses:
+        # Before the receipt, so a failure here is listed among its secondary
+        # failures, and so the receipt can point at the file.
+        _, diagnostics_path = _attempt(
+            failures,
+            "diagnostic_responses",
+            _write_failed_responses,
+            project_root,
+            run_id=failed_run_id,
+            research_id=research_id or "unknown",
+            responses=failed_responses,
+            resolve_write=resolve_write,
+        )
     recovery = {
         "raw_note": scaffold,
         "question": question,
@@ -677,6 +746,7 @@ def _fail_closed_discovery(
         # an exception that does carry its own richer detail still wins.
         extra={
             "task_id": task_id,
+            **({"diagnostic_responses_path": diagnostics_path} if diagnostics_path else {}),
             "created_scaffold": created_scaffold,
             **(run_provenance or {}),
             **getattr(error, "detail", {}),
@@ -778,12 +848,14 @@ def _extract_windows(
     run_id: str | None,
     task_id: str | None,
     deadline: float,
+    failed_responses: list[dict[str, Any]],
 ) -> tuple[list[Any], dict[str, Any]]:
     """Run the ladder on every window of one source, in order, then merge them.
 
     ``manifest`` is updated in place as each window finishes, so a failure
     receipt records every window reached, the one that failed, and those never
-    run. The first failed window stops the source, and with it the run.
+    run. The first failed window stops the source, and with it the run. Every
+    failed attempt's raw response goes into ``failed_responses``.
     """
     # Function-local for the same reason as in execute_discovery_task: tests
     # rebind ``qwen_call`` on its module.
@@ -823,9 +895,17 @@ def _extract_windows(
                 },
             )
         except QwenValidationError as exc:
+            failed_responses.extend(
+                _failed_responses(exc.attempts, source_id=item["source_id"], window_id=window.window_id)
+            )
             entry.update(outcome="failed", validator_ok=False, attempts=_attempt_records(exc.attempts))
             _record_window_event(db_path, run_id, task_id, manifest, entry)
             raise
+        failed_responses.extend(
+            _failed_responses(
+                getattr(result, "attempts", ()), source_id=item["source_id"], window_id=window.window_id
+            )
+        )
         entry.update(
             outcome=str(result.output["outcome"]).strip(),
             validator_ok=True,
@@ -925,6 +1005,8 @@ def execute_discovery_task(
     # model-shaped values instead of what discovery actually fetched. Before
     # discovery it contains only the lane input, never fabricated candidate
     # evidence.
+    # Raw text of every failed model attempt, kept only if the run fails closed.
+    failed_responses: list[dict[str, Any]] = []
     discovered_provenance: dict[str, Any] = (
         {"discovery_lane": discovery_lane} if discovery_lane else {}
     )
@@ -1161,14 +1243,25 @@ def execute_discovery_task(
                 plans, snapshot_files, strict=True
             ):
                 if windowed is None:
-                    result = qwen_call(
-                        prompt,
-                        [item],
-                        expected_research_id=task["research_id"],
-                        db_path=db_path,
-                        run_id=run_id,
-                        task_id=task_id,
-                        deadline=run_deadline,
+                    try:
+                        result = qwen_call(
+                            prompt,
+                            [item],
+                            expected_research_id=task["research_id"],
+                            db_path=db_path,
+                            run_id=run_id,
+                            task_id=task_id,
+                            deadline=run_deadline,
+                        )
+                    except QwenValidationError as exc:
+                        failed_responses.extend(
+                            _failed_responses(exc.attempts, source_id=item["source_id"], window_id=None)
+                        )
+                        raise
+                    failed_responses.extend(
+                        _failed_responses(
+                            getattr(result, "attempts", ()), source_id=item["source_id"], window_id=None
+                        )
                     )
                     results.append(result)
                     outputs.append(result.output)
@@ -1189,6 +1282,7 @@ def execute_discovery_task(
                     run_id=run_id,
                     task_id=task_id,
                     deadline=run_deadline,
+                    failed_responses=failed_responses,
                 )
                 results.extend(window_results)
                 outputs.append(window_outputs)
@@ -1295,6 +1389,7 @@ def execute_discovery_task(
                 error=exc,
                 resolve_write=resolve_write,
                 original_note_bytes=original_note_bytes,
+                failed_responses=failed_responses,
                 run_provenance={
                     **discovered_provenance,
                     "stage": stage,

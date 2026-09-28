@@ -15,6 +15,7 @@ import json
 import re
 import time
 from itertools import pairwise
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -187,16 +188,14 @@ def _source(quote, **overrides):
 def evidence_outcome(window, quote, **overrides):
     return {
         "research_id": "RQ-w", "source_id": window.source_id, "window_id": window.window_id,
-        "outcome": "evidence", "source": _source(quote), "open_questions": [],
-        "curator_recommendation": "needs_more_work", **overrides,
+        "outcome": "evidence", "source": _source(quote), "open_questions": [], **overrides,
     }
 
 
 def none_outcome(window, **overrides):
     return {
         "research_id": "RQ-w", "source_id": window.source_id, "window_id": window.window_id,
-        "outcome": "no_relevant_evidence", "source": None, "open_questions": [],
-        "curator_recommendation": None, **overrides,
+        "outcome": "no_relevant_evidence", "source": None, "open_questions": [], **overrides,
     }
 
 
@@ -236,11 +235,67 @@ def test_a_no_evidence_outcome_cannot_carry_a_claim(overrides):
     assert not check(none_outcome(window, **overrides), window).ok
 
 
-def test_an_evidence_outcome_needs_a_source_and_a_recommendation():
+def test_an_evidence_outcome_needs_a_source():
     window = _window_with(NEEDLE)
 
     assert not check(evidence_outcome(window, NEEDLE, source=None), window).ok
-    assert not check(evidence_outcome(window, NEEDLE, curator_recommendation=None), window).ok
+
+
+# --- the E4 amendment: no window recommendation, enforced source identity ------------
+
+
+def test_the_window_contract_asks_for_no_recommendation_and_requires_source_identity():
+    """E4: the model found evidence but left a required-yet-nullable recommendation
+    null, and its repairs then dropped the optional source_id. Neither may be
+    representable in what constrained decoding is allowed to emit."""
+    schema = WindowOutcome.model_json_schema()
+    source_ref = next(
+        option["$ref"] for option in schema["properties"]["source"]["anyOf"] if "$ref" in option
+    )
+    source_schema = schema["$defs"][source_ref.rsplit("/", 1)[-1]]
+
+    assert "curator_recommendation" not in schema["properties"]
+    assert "source_id" in source_schema["required"]
+    assert source_schema["properties"]["source_id"]["type"] == "string"
+
+
+@pytest.mark.parametrize("source_id", [None, "", "   "])
+def test_a_window_source_without_its_identity_is_refused(source_id):
+    window = _window_with(NEEDLE)
+    payload = evidence_outcome(window, NEEDLE)
+    if source_id is None:
+        del payload["source"]["source_id"]
+    else:
+        payload["source"]["source_id"] = source_id
+
+    verdict = check(payload, window)
+
+    assert not verdict.ok
+    assert any("source_id" in reason for reason in verdict.reasons)
+
+
+def test_a_window_recommendation_is_not_part_of_the_contract():
+    window = _window_with(NEEDLE)
+
+    verdict = check(evidence_outcome(window, NEEDLE, curator_recommendation=None), window)
+
+    assert not verdict.ok
+    assert any("curator_recommendation" in reason for reason in verdict.reasons)
+
+
+def test_without_a_recommendation_the_evidence_validators_still_bite():
+    """The window is validated as ``needs_more_work``, the most conservative value,
+    and promotion authority is still refused to an ungrounded claim."""
+    window = _window_with(NEEDLE)
+    payload = evidence_outcome(window, NEEDLE)
+    payload["source"].update(main_claim="This exit rule is profitable.", mvp_testable=True,
+                             confidence="high")
+
+    verdict = check(payload, window)
+
+    assert not verdict.ok
+    assert any(r.startswith("ungrounded-promotion:S4") for r in verdict.reasons)
+    assert any(r.startswith("contradiction:S4") for r in verdict.reasons)
 
 
 def test_a_quote_from_elsewhere_in_the_snapshot_is_refused_for_this_window():
@@ -300,8 +355,7 @@ def test_the_merge_builds_one_record_without_inventing_anything():
     outcomes = [none_outcome(w) for w in windows]
     first, second = 1, len(windows) - 1
     outcomes[first] = evidence_outcome(
-        windows[first], "Filler one.", curator_recommendation="promote_source",
-        open_questions=["Which average?"],
+        windows[first], "Filler one.", open_questions=["Which average?"],
     )
     outcomes[first]["source"].update(
         confidence="medium", mvp_testable=True, risks=["Single paper.", "PDF text."],
@@ -470,16 +524,14 @@ class FakeOllama:
                     "window_id": window_id}
             if self.bad_window and window_id.endswith(self.bad_window):
                 payload = {**base, "outcome": "evidence", "open_questions": [],
-                           "curator_recommendation": "needs_more_work",
                            "source": {**_normal_source(meta), "evidence": "Invented quote."}}
             elif NEEDLE in text:
                 payload = {**base, "outcome": "evidence", "open_questions": [],
-                           "curator_recommendation": "needs_more_work",
                            "source": {**_normal_source(meta), "main_claim": NEEDLE,
                                       "evidence": NEEDLE}}
             else:
                 payload = {**base, "outcome": "no_relevant_evidence", "source": None,
-                           "open_questions": [], "curator_recommendation": None}
+                           "open_questions": []}
         text = json.dumps(payload)
         return OllamaResponse(text, model, 0.01, _sha(prompt), _sha(text), prompt_eval_count=100)
 
@@ -698,3 +750,157 @@ def test_the_window_prompt_carries_only_its_window_and_says_none_is_acceptable()
     assert window.window_id in prompt and "no_relevant_evidence" in prompt
     assert f"{window.index} of {window.count}" in prompt
     assert WindowOutcome.model_json_schema()["properties"]["outcome"]
+
+
+# --- failed model responses are kept as untrusted diagnostics ------------------------
+
+
+def test_every_ladder_attempt_keeps_the_raw_response_text():
+    window = _window_with(NEEDLE)
+    bad = evidence_outcome(window, "Invented quote.")
+    client = Client([bad, bad, evidence_outcome(window, NEEDLE)])
+
+    result = qwen_call(
+        "prompt", [_item()], expected_research_id="RQ-w", client=client,
+        validator=lambda parsed: check(parsed, window),
+    )
+
+    texts = [attempt.response_text for attempt in result.attempts]
+    assert [json.loads(text) for text in texts] == [bad, bad, evidence_outcome(window, NEEDLE)]
+    assert all(_sha(text) == a.response_hash for text, a in zip(texts, result.attempts))
+
+
+def _diagnostics(root):
+    files = list((root / "brain" / "00_Inbox" / "Failed_Runs" / "diagnostics").glob("*"))
+    return files
+
+
+def test_failed_model_responses_are_kept_as_untrusted_diagnostics(project, monkeypatch):  # noqa: F811
+    root, db_path = project
+    research_id = new_question(db_path)
+    relative = write_list(root, research_id, list(URLS[:3]))
+    monkeypatch.setattr(ollama_client, "generate", FakeOllama(bad_window="-W02"))
+
+    with pytest.raises(QwenValidationError):
+        dispatch_list(project, relative, WindowedFetcher({URLS[1]}), research_id=research_id,
+                      run_id="RUN-diag")
+
+    [path] = _diagnostics(root)
+    assert path.name == "RUN-diag.responses.json"
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    assert doc["kind"] == "untrusted_model_responses"
+    assert "not evidence" in doc["trust"]
+    assert doc["run_id"] == "RUN-diag" and doc["research_id"] == research_id
+    failed = doc["responses"]
+    assert [r["window_id"] for r in failed] == [failed[0]["window_id"]] * 3
+    assert failed[0]["window_id"].endswith("-W02")
+    assert [r["model"] for r in failed] == ["qwen3:14b", "qwen3:14b", "qwen3.8:27b"]
+    events = [e["payload"] for e in list_events(db_path, run_id="RUN-diag")
+              if e["event_type"] == "qwen_attempt" and not e["payload"]["validator_ok"]]
+    assert [r["response_hash"] for r in failed] == [e["response_hash"] for e in events]
+    for record in failed:
+        assert _sha(record["response_text"]) == record["response_hash"]
+        assert json.loads(record["response_text"])["source"]["evidence"] == "Invented quote."
+        assert record["validator_reasons"]
+
+    receipt = _receipt_payload(root)
+    assert receipt["diagnostic_responses_path"] == (
+        "brain/00_Inbox/Failed_Runs/diagnostics/RUN-diag.responses.json"
+    )
+    # Kept apart from research: not markdown, so never indexed; no raw note.
+    assert path.suffix == ".json"
+    assert not list((root / "brain" / "00_Inbox" / "Raw_Research").glob("*.md"))
+
+
+def test_failed_attempts_that_a_later_attempt_repaired_are_kept_when_the_run_fails(
+    project, monkeypatch  # noqa: F811
+):
+    """A repaired source's failed first try is part of what went wrong in a
+    failed run, so it is kept too, labelled with its source."""
+    root, db_path = project
+    research_id = new_question(db_path)
+    relative = write_list(root, research_id, list(URLS[:3]))
+    fake = FakeOllama(bad_window="-W02")
+    calls = {"n": 0}
+
+    def flaky(prompt, model, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:  # the very first call is a normal source; fail it once
+            text = json.dumps({"research_id": "x"})
+            return OllamaResponse(text, model, 0.01, _sha(prompt), _sha(text),
+                                  prompt_eval_count=100)
+        return fake(prompt, model, **kwargs)
+
+    monkeypatch.setattr(ollama_client, "generate", flaky)
+
+    with pytest.raises(QwenValidationError):
+        dispatch_list(project, relative, WindowedFetcher({URLS[1]}), research_id=research_id,
+                      run_id="RUN-diag2")
+
+    [path] = _diagnostics(root)
+    failed = json.loads(path.read_text(encoding="utf-8"))["responses"]
+    assert failed[0]["window_id"] is None and failed[0]["source_id"] == "S1"
+    assert json.loads(failed[0]["response_text"]) == {"research_id": "x"}
+    assert len(failed) == 4
+
+
+def test_a_successful_run_writes_no_diagnostics(project, monkeypatch):  # noqa: F811
+    root, db_path = project
+    research_id = new_question(db_path)
+    relative = write_list(root, research_id, list(URLS[:3]))
+    monkeypatch.setattr(ollama_client, "generate", FakeOllama())
+
+    result = dispatch_list(project, relative, WindowedFetcher({URLS[1]}), research_id=research_id,
+                           run_id="RUN-ok")
+
+    assert result.status == "completed"
+    assert _diagnostics(root) == []
+    _, payload = _note_payload(root, result)
+    [windowed] = [s for s in payload["sources"] if s["url_or_citation"] == URLS[1]]
+    assert windowed["evidence"] == [NEEDLE]
+
+
+def test_raw_response_text_never_enters_the_event_log(project, monkeypatch):  # noqa: F811
+    root, db_path = project
+    research_id = new_question(db_path)
+    relative = write_list(root, research_id, list(URLS[:3]))
+    monkeypatch.setattr(ollama_client, "generate", FakeOllama(bad_window="-W02"))
+
+    with pytest.raises(QwenValidationError):
+        dispatch_list(project, relative, WindowedFetcher({URLS[1]}), research_id=research_id,
+                      run_id="RUN-noleak")
+
+    for event in list_events(db_path, run_id="RUN-noleak"):
+        assert "response_text" not in json.dumps(event["payload"])
+        assert "Invented quote." not in json.dumps(event["payload"])
+
+
+def test_a_refused_diagnostics_write_neither_loses_the_receipt_nor_masks_the_error(
+    project, monkeypatch  # noqa: F811
+):
+    from quant_brain.harness import paths
+
+    root, db_path = project
+    research_id = new_question(db_path)
+    relative = write_list(root, research_id, list(URLS[:3]))
+    monkeypatch.setattr(ollama_client, "generate", FakeOllama(bad_window="-W02"))
+    real = paths.resolve_write_target
+
+    def refuse_diagnostics(*args, **kwargs):
+        target = args[1] if len(args) > 1 else kwargs.get("target")
+        if "Failed_Runs/diagnostics" in Path(target).as_posix():
+            raise paths.PathViolation(f"refused for test: {target}")
+        return real(*args, **kwargs)
+
+    # The dispatcher binds the name at import, so its reference is the one to patch.
+    monkeypatch.setattr("quant_brain.harness.dispatcher.resolve_write_target", refuse_diagnostics)
+
+    with pytest.raises(QwenValidationError, match="quote:"):
+        dispatch_list(project, relative, WindowedFetcher({URLS[1]}), research_id=research_id,
+                      run_id="RUN-refused")
+
+    assert _diagnostics(root) == []
+    receipt = _receipt_payload(root)
+    assert "diagnostic_responses_path" not in receipt
+    assert [f["step"] for f in receipt["recovery"]["secondary_failures"]] == ["diagnostic_responses"]
+    assert question_state(db_path, research_id) == ("queued", None)

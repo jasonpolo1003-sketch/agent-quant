@@ -205,6 +205,24 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 
 **Picking this up cold? Read this section, then start.**
 
+### PROP-006 amendment A (2026-09-28): window-contract fix verified; no rerun yet
+
+- **Changes:**
+  - Windows no longer carry a model-chosen recommendation; windowed sources are fixed at `needs_more_work`.
+  - The window source's `source_id` is required in the model-facing schema.
+  - Failed runs keep their failed model responses as untrusted JSON diagnostics in `Failed_Runs/diagnostics/`, never indexed or promoted.
+  - Evidence validators are unchanged.
+- **Verified:**
+  - 567 passed, 1 skipped; both Ruff checks clean; 21/21 mutations caught.
+  - Independent review found no material defect.
+  - Saved-response tests against the preserved E4 evidence pass.
+  - One fresh live replay of all 8 NAAIM windows validated, with W03 quoting the RSI(3) exit rule.
+  - The synthetic smoke passed 12/12.
+- **Uncertain:**
+  - Model output is not byte-stable, so the replay is one sample.
+  - A failed evidence attempt can end as an unverifiable `no_relevant_evidence`; this happened on W02 and W07.
+- **Next (needs authorization):** one more RQ-6d9c12f4 rerun on the unchanged list.
+
 ### Gate D checkpoint E4 (2026-09-28): windowed rerun failed closed at NAAIM window 2
 
 - **Run:** `RUN-d67b1d121b` on the unchanged list `88ba2d3c…`, 301s. One authorized run, no retry, no code change.
@@ -426,7 +444,7 @@ What remains after the context fix. Each item needs its own approval.
    - The NAAIM snapshot is 31,330 tokens against an 11,571-token per-call budget. Re-running first would only duplicate a known fail-closed outcome before any model call.
    - Windowing must keep exact quotations verifiable against the immutable full snapshot, remain all-or-nothing, and stay inside the shared 15-minute run deadline. It must not silently select only favorable passages.
    - Do not edit the committed list, and do not raise the context beyond what the 14B can run at usable speed.
-3. ~~**Re-run RQ-6d9c12f4 on the same committed list** (`88ba2d3c…`).~~ **Done 2026-09-28 as E4 (`RUN-d67b1d121b`); it failed closed at NAAIM W02.** Next, needing approval: amend the window contract as described in the E4 entry above, then one more rerun only if authorized.
+3. ~~**Re-run RQ-6d9c12f4 on the same committed list** (`88ba2d3c…`).~~ **Done 2026-09-28 as E4 (`RUN-d67b1d121b`); it failed closed at NAAIM W02.** The window-contract amendment is implemented and verified (PROP-006 amendment A above). **Next, needing authorization: one more rerun on the unchanged list.**
    - Dispatch the curator separately only if a raw note results. The honest ceiling remains about 2 promotable sources from 2 originators.
 4. ~~**Add the Phase 6 whole-run wall-clock cap and same-lane retry.**~~ **Done in `c6ab150`.**
 5. ~~**Re-read the RUN-4e9d910742 attribution.**~~ **Settled:** its relevance finding stands; the truncation explains only the models' behaviour.

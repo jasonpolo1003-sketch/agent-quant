@@ -21,7 +21,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from quant_brain.llm.validators import ValidationResult, validate_research_output
-from quant_brain.research.schema import CuratorRecommendation, RawResearchSource
+from quant_brain.research.schema import RawResearchSource
 
 # Sized in UTF-8 bytes at a deliberately pessimistic 1.5 bytes per token: the
 # worst snapshot measured (NAAIM PDF mojibake) ran 1.77. ~6,000 window tokens
@@ -38,6 +38,12 @@ SNAP_FRACTION = 0.1
 # Refused before any model call above this: ~8 windows for NAAIM, and each
 # window is a full ladder under the one shared run deadline.
 MAX_WINDOWS_PER_SOURCE = 10
+# A windowed source's recommendation is fixed, never asked of the model. It is
+# the most conservative value (it asserts nothing a validator did not already
+# check), the one the merge already fell back to on any disagreement, and the
+# curator does not read it. Asking each window for it gave the model a
+# required-yet-nullable field to leave null, which failed E4 (RUN-d67b1d121b).
+WINDOW_RECOMMENDATION = "needs_more_work"
 
 _CONFIDENCE_ORDER = ("low", "medium", "high")
 _ACCESS_ORDER = ("available-now", "available-later", "not-realistic")
@@ -126,6 +132,17 @@ def plan_windows(
     ]
 
 
+class WindowSource(RawResearchSource):
+    """A source record whose identity is required, not legacy-optional.
+
+    ``RawResearchSource.source_id`` stays optional for old manual notes. Here it
+    is required in the schema sent to the model, so constrained decoding cannot
+    emit a source without it (E4's repair and escalation attempts both did).
+    """
+
+    source_id: str = Field(min_length=1)
+
+
 class WindowOutcome(BaseModel):
     """One window's answer. Every field is required so "nothing here" is explicit."""
 
@@ -135,19 +152,18 @@ class WindowOutcome(BaseModel):
     source_id: str = Field(min_length=1)
     window_id: str = Field(min_length=1)
     outcome: Literal["evidence", "no_relevant_evidence"]
-    source: RawResearchSource | None
+    source: WindowSource | None
     open_questions: list[str]
-    curator_recommendation: CuratorRecommendation | None
 
     @model_validator(mode="after")
     def _outcome_matches_content(self) -> WindowOutcome:
         if self.outcome == "evidence":
-            if self.source is None or self.curator_recommendation is None:
-                raise ValueError("an evidence outcome needs a source and a curator_recommendation")
-        elif self.source is not None or self.open_questions or self.curator_recommendation:
+            if self.source is None:
+                raise ValueError("an evidence outcome needs a source")
+        elif self.source is not None or self.open_questions:
             raise ValueError(
-                "a no_relevant_evidence outcome asserts nothing: source and "
-                "curator_recommendation must be null and open_questions empty"
+                "a no_relevant_evidence outcome asserts nothing: source must be null "
+                "and open_questions empty"
             )
         return self
 
@@ -163,11 +179,10 @@ def window_prompt(task: dict[str, Any], item: dict[str, Any], window: SourceWind
         "this source is read separately.\n"
         f"Return research_id, source_id and window_id exactly as given. If this window "
         "holds no passage relevant to the question, return outcome "
-        '"no_relevant_evidence" with source null, open_questions [] and '
-        "curator_recommendation null. That is an honest, acceptable answer: do not quote "
-        'an unrelated sentence. Otherwise return outcome "evidence" with exactly one '
-        f"source whose source_id is {source_id}, preserving its source_id, title, URL, "
-        "and source_quality exactly. Evidence values must be exact quotations of this "
+        '"no_relevant_evidence" with source null and open_questions []. That is an '
+        "honest, acceptable answer: do not quote an unrelated sentence. Otherwise return "
+        'outcome "evidence" with exactly one source whose source_id is '
+        f"{source_id}, preserving its source_id, title, URL, and source_quality exactly. Evidence values must be exact quotations of this "
         "window's text. Do not invent rules, thresholds, holding periods, or costs.\n\n"
         f"Research ID: {task['research_id']}\nQuestion: {task['question']}\n"
         f"Window ID: {window.window_id}\n"
@@ -222,7 +237,7 @@ def validate_window_outcome(
             "status": "raw_saved",
             "sources": [outcome.source.model_dump()],
             "open_questions": outcome.open_questions,
-            "curator_recommendation": outcome.curator_recommendation,
+            "curator_recommendation": WINDOW_RECOMMENDATION,
         },
         [{**item, "snapshot_text": shown}],
         expected_research_id=expected_research_id,
@@ -287,7 +302,6 @@ def merge_window_outcomes(
         raise WindowMergeError(
             f"window: {source_id} windows disagree on source_type {source_types}; not arbitrated"
         )
-    recommendations = _union(outcome.curator_recommendation for outcome in found)
     merged = {
         "source_id": source_id,
         "title": item["title"],
@@ -319,9 +333,7 @@ def merge_window_outcomes(
         "status": "raw_saved",
         "sources": [merged],
         "open_questions": _union(q for outcome in found for q in outcome.open_questions),
-        "curator_recommendation": (
-            recommendations[0] if len(recommendations) == 1 else "needs_more_work"
-        ),
+        "curator_recommendation": WINDOW_RECOMMENDATION,
     }
 
 

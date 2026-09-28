@@ -188,6 +188,11 @@ This exists because the project's core design rule is *move slowly, one verified
 - **Cost of not changing:** a rerun on the committed RQ-6d9c12f4 list fails closed before its first model call. Phase 6 / Gate D cannot progress on that list without editing it, which is forbidden.
 - **Status:** accepted for implementation (Jason approved the design plan, 2026-09-27). **No RQ-6d9c12f4 rerun is authorized by this acceptance.**
 - **Jason's decision:** approved the windowing design, 2026-09-27.
+- **Amendment A (2026-09-28, approved by Jason after the E4 failure):**
+  - **Window recommendation removed.** The window contract no longer asks the model for a `curator_recommendation`. Every windowed source carries the fixed, most conservative value `needs_more_work`, both when a window is validated and after the merge.
+  - **Source identity required.** The window source's `source_id` is now mandatory in the schema sent to the model, where it had been legacy-optional.
+  - **Failed runs keep diagnostics.** A failed run keeps its failed model responses as untrusted diagnostics in `Failed_Runs/diagnostics/<run>.responses.json`, separate from research.
+  - **Evidence validators unchanged.** No Scout rerun is authorized by this amendment.
 
 ---
 

@@ -61,6 +61,9 @@ class QwenAttempt:
     response_hash: str
     validator_ok: bool
     validator_reasons: tuple[str, ...]
+    # The raw model output, kept so a failed run can preserve what the model
+    # actually said (untrusted, diagnostic only). Never written to events.
+    response_text: str | None = None
 
 
 @dataclass(frozen=True)
@@ -226,6 +229,7 @@ def _attempt(
         ),
         validator_ok=verdict.ok,
         validator_reasons=verdict.reasons,
+        response_text=text if isinstance(text, str) else None,
     )
     attempts.append(item)
     _record_attempt(

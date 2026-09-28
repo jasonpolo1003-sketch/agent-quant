@@ -1,5 +1,53 @@
 # Quant Agent Brain — Session Handoff
 
+## PROP-006 amendment A: window-contract fix after E4 (2026-09-28)
+
+Implementation and verification only. **No production rerun, no curator dispatch, no push or merge.** Phase 6 / Gate D remain incomplete.
+
+**What changed**
+- **`research/windowing.py`**
+  - The window contract no longer asks the model for a `curator_recommendation`. A windowed source always carries `WINDOW_RECOMMENDATION = "needs_more_work"`, both while a window is validated and after the merge.
+  - The new `WindowSource` makes `source_id` required (min length 1, whitespace stripped) in the schema sent to Ollama, where it had been legacy-optional. `RawResearchSource` and every validator are unchanged.
+- **`llm/qwen_call.py`**
+  - `QwenAttempt.response_text` keeps the raw model output.
+  - It is never written to `agent_events`, and a test covers this.
+- **`research/executor.py`**
+  - Every failed attempt's raw response is collected across all ladders, including attempts that a later attempt repaired.
+  - **Only when a run fails closed**, they are written to `brain/00_Inbox/Failed_Runs/diagnostics/<run>.responses.json`, labelled `untrusted_model_responses` / "not evidence".
+  - The file is written through path enforcement and before the receipt, and the receipt records `diagnostic_responses_path`.
+  - It is JSON, so the `*.md` indexer never picks it up. Nothing in curation, retrieval or indexing reads `Failed_Runs`.
+  - A refused or failed diagnostics write becomes a secondary failure. The receipt is still written and the original error is still raised (tested).
+- **`scripts/window_replay.py` (new):** replays a preserved run's windows through live Qwen under the current contract.
+  - It first checks the snapshot hash and the recorded offsets and hashes.
+  - It writes nothing: no DB, events or files.
+
+**Verification: saved responses versus fresh inference, kept separate**
+- **Saved-response validation** (`tests/test_window_failure_e4.py`, no model call). It uses the committed E4 receipt and snapshot plus `tests/fixtures/e4_window_failure/w03_replay_response.json`, a real qwen3:14b response to the exact W03 prompt, obtained by diagnostic replay. It is *not* in-run text, because the run kept hashes only.
+  - The planned windows equal the run's recorded windows.
+  - The exit rule lies in W02 and W03.
+  - The saved response is refused for carrying the dropped field.
+  - Without that field, its quotes pass both checks and only the two genuine defects remain (high confidence on a discovery-only source; `mvp_testable` with an ungrounded claim).
+  - The same quotes are refused in W02, because the third quote starts exactly at W02's end.
+  - A source without `source_id` is refused. This case is reconstructed from the recorded reasons.
+  - A repaired copy merges into one conservative record that passes the whole-bundle validator.
+- **Fresh inference** (`uv run python scripts/window_replay.py RUN-d67b1d121b`, one sample, no writes): **all 8 NAAIM windows validated.**
+  - **W03 returned evidence** after one repair. It quoted "• Go long at the close if RSI(3) < 10", "• Maintain the position while RSI(3) ≤ 40" and "• Enter or maintain long position only if IBS ≤ 0.5", with confidence medium and `mvp_testable` false.
+  - The other seven windows returned `no_relevant_evidence`.
+  - No truncation warning, and the DB was unchanged.
+- **Synthetic live smoke** (`scripts/window_smoke.py`): passed 12/12 under the amended contract.
+- **Checks:** 567 passed, 1 skipped (+19 tests). Both Ruff checks and `git diff --check` are clean. **All 21 mutations were caught**, including 6 new ones: source identity optional again, response text dropped, diagnostics not written, window or repaired failures not collected, and the merge trusting a model recommendation.
+- **Independent review:** no material defect. Its two untested-but-correct points are now tests: a refused diagnostics write, and no response text in events.
+- **Integrity:** DB `4e80d281…`, the list `88ba2d3c…`, and the E3 and E4 receipts and snapshots are unchanged. Protected tables are 0, and all three questions are `queued` with NULL paths.
+
+**What remains uncertain**
+- **The fix is verified on saved data, plus a single fresh sample.** Ollama is not byte-stable at temperature 0, so one clean replay is not a guarantee that a production run passes.
+- **Evidence can escape to "none".** On W02 and W07, the 14B first claimed evidence with quotes absent from the text. The validators caught those, and a repair or the 27B then settled on `no_relevant_evidence`, which cannot be verified. Nothing was lost here because the overlap delivered the rule through W03, but in general this route can hide evidence.
+- **Failed attempts of successful runs keep only hashes.** Diagnostics are written for failed runs only.
+- A response containing a lone surrogate would fail the diagnostics write. It is recorded as a secondary failure and nothing else is affected.
+- The pipeline being able to quote an RSI(3) exit rule is **not** evidence of a profitable strategy. NAAIM is tier discovery-only.
+
+**Next (needs Jason's authorization):** one more production rerun of RQ-6d9c12f4 on the unchanged list.
+
 ## Gate D checkpoint E4: windowed rerun of RQ-6d9c12f4 (2026-09-28 UTC). It failed closed at NAAIM window 2 because of a window-contract trap.
 
 One authorized run, not retried. No code change. No curator dispatch, push or merge. **Phase 6 / Gate D remain incomplete.**
