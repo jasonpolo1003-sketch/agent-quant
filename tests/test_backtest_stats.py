@@ -122,3 +122,7 @@ def test_a_run_that_cannot_place_every_trade_is_discarded_and_counted():
 
     assert result.completed == 0 and result.discarded == 40
     assert result.average_returns == []
+
+
+def test_max_drawdown_counts_a_first_day_loss_from_the_starting_equity():
+    assert st.max_drawdown(pd.Series([0.9, 0.95, 1.0])) == pytest.approx(-0.1)

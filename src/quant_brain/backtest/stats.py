@@ -32,8 +32,9 @@ def annualised_sharpe(returns: Sequence[float] | pd.Series) -> float:
     return sharpe_per_period(returns) * math.sqrt(TRADING_DAYS)
 
 
-def max_drawdown(equity: pd.Series) -> float:
-    values = np.asarray(equity, dtype=float)
+def max_drawdown(equity: pd.Series, start: float = 1.0) -> float:
+    """Worst peak-to-trough, measured from the starting equity (so a day-1 loss counts)."""
+    values = np.concatenate([[start], np.asarray(equity, dtype=float)])
     return float((values / np.maximum.accumulate(values) - 1).min())
 
 

@@ -33,7 +33,9 @@ from quant_brain.data.market_data import load_dataset
 from quant_brain.strategy import card as sc
 
 REPORT_DIR = "brain/04_Backtest_Reports"
-CODE_PATHS = ("src/quant_brain/backtest",)
+# Everything a run depends on: all package code (card checks, data loading, the
+# engine), the runner script, and the locked dependency set.
+CODE_PATHS = ("src/quant_brain", "scripts/run_backtest.py", "pyproject.toml", "uv.lock")
 NOT_PROOF = "A backtest is not proof of future profit."
 
 
@@ -100,6 +102,27 @@ def code_commit(root: Path) -> str:
         raise RunnerError(f"uncommitted backtest code; commit it first:\n{status}")
     return subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True,
                           text=True, check=True).stdout.strip()
+
+
+def ledger_committed(root: Path, path: Path) -> bool:
+    """True when the trial ledger is tracked by git and has no uncommitted change.
+
+    Deleting or editing an uncommitted ledger would otherwise reset the gates
+    that depend on it (approval, cross-check, held-out-once).
+    """
+    relative = path.resolve().relative_to(root.resolve()).as_posix()
+    tracked = subprocess.run(["git", "ls-files", "--error-unmatch", relative], cwd=root,
+                             capture_output=True, text=True).returncode == 0
+    clean = not subprocess.run(["git", "status", "--porcelain", "--", relative], cwd=root,
+                               capture_output=True, text=True, check=True).stdout.strip()
+    return tracked and clean
+
+
+def _latest_in_sample(root: Path, card_id: str) -> tuple[list[dict[str, Any]], int]:
+    """The ledger, and the index of the latest in_sample_started record (or -1)."""
+    ledger = read_ledger(root, card_id)
+    starts = [i for i, r in enumerate(ledger) if r.get("event") == "in_sample_started"]
+    return ledger, (starts[-1] if starts else -1)
 
 
 def gated_inputs(root: Path, db_path: Path, card_id: str) -> tuple[sc.StrategyCard, dict, dict]:
@@ -242,17 +265,35 @@ def run_held_out(root: Path, db_path: Path, card_id: str) -> dict[str, Any]:
     commit = code_commit(root)
     if _events(root, card_id, "held_out_started"):
         raise RunnerError(f"{card_id}: the held-out period was already read; it is read once")
-    if not _events(root, card_id, "in_sample_approved"):
+    ledger, start = _latest_in_sample(root, card_id)
+    if start < 0:
+        raise RunnerError(f"{card_id}: no in-sample run")
+    latest = ledger[start:]
+    if ledger[start].get("code_commit") != commit:
+        raise RunnerError(
+            f"{card_id}: current commit {commit} is not the commit of the approved in-sample "
+            f"run ({ledger[start].get('code_commit')}); re-run in-sample and re-approve"
+        )
+    completed = [i for i, r in enumerate(latest) if r.get("event") == "in_sample_completed"]
+    approvals = [i for i, r in enumerate(latest) if r.get("event") == "in_sample_approved"]
+    if not completed or not approvals or approvals[-1] < completed[-1]:
         raise RunnerError(f"{card_id}: in-sample results are not approved")
-    checks = _events(root, card_id, "reference_check")
+    checks = [r for r in latest if r.get("event") == "reference_check"]
     if not checks or not all(c["match"] for c in checks):
         raise RunnerError(f"{card_id}: the second implementation has not matched the engine")
+    if not ledger_committed(root, ledger_path(root, card_id)):
+        raise RunnerError(f"{card_id}: commit the trial ledger before the held-out read")
     append_ledger(root, card_id, {"event": "held_out_started", "code_commit": commit})
-    results = _run_grid(root, db_path, card, entry, frames, "held_out", commit)
-    verdict = compute_verdict(card, frames, results)
+    try:
+        results = _run_grid(root, db_path, card, entry, frames, "held_out", commit)
+        verdict = compute_verdict(card, frames, results)
+    except Exception as exc:
+        append_ledger(root, card_id, {"event": "held_out_failed",
+                                      "error": f"{type(exc).__name__}: {exc}"})
+        raise
     append_ledger(root, card_id, {"event": "held_out_completed", "verdict": verdict["verdict"],
                                   "criteria": verdict["criteria"]})
-    write_report(root, card, frames, results, "held_out", verdict=verdict, reference_match=True)
+    write_report(root, card, frames, results, "held_out", verdict=verdict, reference_match=None)
     return {"results": results, "verdict": verdict}
 
 
@@ -319,7 +360,10 @@ def write_report(root, card, frames, results, phase, *, verdict, reference_match
     start, end = _period(card, phase)
     lines = [f"# {card.card_id}: {phase.replace('_', '-')} report ({start}..{end})", "",
              f"> {NOT_PROOF}", "",
-             f"Second-implementation cross-check of rule A: **{'match' if reference_match else 'MISMATCH'}**.",
+             ("Second-implementation cross-check of rule A: not re-run on this period; the "
+              "in-sample cross-check matched (required before the held-out read)."
+              if reference_match is None else
+              f"Second-implementation cross-check of rule A: **{'match' if reference_match else 'MISMATCH'}**."),
              ""]
     if verdict is not None:
         lines += [f"## Verdict: **{verdict['verdict']}**", "",
@@ -329,7 +373,7 @@ def write_report(root, card, frames, results, phase, *, verdict, reference_match
                          f"| {'yes' if c['passed'] else 'no'} |")
         lines.append("")
     lines += ["## Trials", "", "| Rule | Symbol | Cost bps | Trades | Avg trade | Win rate | "
-              "Total return | CAGR | Sharpe | Max DD | Exposure |",
+              "Total return | CAGR | Sharpe | Max DD | Days held |",
               "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"]
     for record in results["buy_and_hold"] + results["trials"]:
         m = record["metrics"]

@@ -63,6 +63,8 @@ def project(tmp_path, monkeypatch):
                          encoding="utf-8")
     sc.freeze_card(tmp_path, db, card_path)
     monkeypatch.setattr(rn, "code_commit", lambda root: "test-commit")
+    # The synthetic project is not a git repository; the ledger-commit gate has its own test.
+    monkeypatch.setattr(rn, "ledger_committed", lambda root, path: True)
     return tmp_path, db, card_path
 
 
@@ -194,3 +196,78 @@ def test_the_reference_implementation_matches_the_engine_on_a_random_walk():
     assert len(got) > 20
     assert [g[:3] for g in got] == [e[:3] for e in expected]
     assert all(abs(g[3] - e[3]) < 1e-12 for g, e in zip(got, expected, strict=True))
+
+
+# --- review follow-ups: tie the held-out read to the approved in-sample run --------------
+
+
+def approved(project):
+    root, db, _ = project
+    rn.run_in_sample(root, db, "SC-9001")
+    rn.approve_in_sample(root, "SC-9001", by="Jason")
+    return root, db
+
+
+def test_the_held_out_read_must_use_the_code_that_ran_in_sample(project, monkeypatch):
+    root, db = approved(project)
+    monkeypatch.setattr(rn, "code_commit", lambda root: "a-later-commit")
+
+    with pytest.raises(rn.RunnerError, match="commit"):
+        rn.run_held_out(root, db, "SC-9001")
+
+
+def test_an_approval_older_than_the_latest_in_sample_run_does_not_count(project):
+    root, db = approved(project)
+    rn.run_in_sample(root, db, "SC-9001")  # re-run after the approval
+
+    with pytest.raises(rn.RunnerError, match="not approved"):
+        rn.run_held_out(root, db, "SC-9001")
+
+
+def test_only_the_latest_in_sample_cross_check_counts(project):
+    root, db, _ = project
+    rn.run_in_sample(root, db, "SC-9001")
+    rn.append_ledger(root, "SC-9001", {"event": "reference_check", "match": False})
+    rn.approve_in_sample(root, "SC-9001", by="Jason")
+
+    with pytest.raises(rn.RunnerError, match="second implementation"):
+        rn.run_held_out(root, db, "SC-9001")
+
+
+def test_the_trial_ledger_must_be_committed_before_the_held_out_read(project, monkeypatch):
+    root, db = approved(project)
+    monkeypatch.setattr(rn, "ledger_committed", lambda root, path: False)
+
+    with pytest.raises(rn.RunnerError, match="commit the trial ledger"):
+        rn.run_held_out(root, db, "SC-9001")
+
+
+def test_a_crash_during_the_held_out_read_is_recorded_as_failed(project, monkeypatch):
+    root, db = approved(project)
+    monkeypatch.setattr(rn, "compute_verdict", lambda *a: (_ for _ in ()).throw(RuntimeError("boom")))
+
+    with pytest.raises(RuntimeError, match="boom"):
+        rn.run_held_out(root, db, "SC-9001")
+
+    [failed] = events(root, "held_out_failed")
+    assert "boom" in failed["error"]
+
+
+def test_the_held_out_report_does_not_claim_a_cross_check_it_did_not_run(project):
+    root, db = approved(project)
+    rn.run_held_out(root, db, "SC-9001")
+
+    report = (root / rn.REPORT_DIR / "SC-9001-held-out.md").read_text(encoding="utf-8")
+    assert "cross-check of rule A: **match**" not in report
+    assert "in-sample cross-check matched" in report
+
+
+def test_the_code_gate_covers_everything_the_run_depends_on(tmp_path):
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    for relative in ("src/quant_brain/strategy/card.py", "scripts/run_backtest.py", "uv.lock"):
+        target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("x\n", encoding="utf-8")
+        with pytest.raises(rn.RunnerError, match="uncommitted"):
+            rn.code_commit(tmp_path)
+        target.unlink()
