@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 from quant_brain.data import market_data as md
 from quant_brain.db.init_db import init_database
 from quant_brain.ops.events import record_event
-from quant_brain.ui import backends, jobs, readers, sessions, store, tutor, winsched
+from quant_brain.ui import backends, jobs, readers, sessions, store, summary, tutor, winsched
 from quant_brain.ui.app import TerminalConfig, create_app
 
 REPO = Path(__file__).resolve().parents[1]
@@ -466,3 +466,76 @@ def test_claude_and_codex_session_parsing(tmp_path):
     assert [x["id"] for x in found] == ["c1"]
     assert found[0]["prompt"] == "add a test"
     assert found[0]["activity"][0]["what"] == "shell: bash -lc pytest"
+
+
+# --- plain-language summaries -------------------------------------------------------------
+
+
+def test_steps_and_headline_point_at_the_first_empty_step():
+    counts = {"sources": 7, "price_datasets": 3, "strategy_cards": 2, "backtests": 0, "reviews": 0}
+    assert [s["state"] for s in summary.steps(counts)] == ["done", "done", "done", "now", "later"]
+    h = summary.headline(counts)
+    assert h["title"] == "Step 4 of 5: backtest"
+    assert "2 strategies are written and frozen" in h["detail"]
+    everything = dict.fromkeys(("sources", "price_datasets", "strategy_cards", "backtests",
+                                "reviews"), 1)
+    assert summary.steps(everything)[-1]["state"] == "now"
+
+
+def ev(i, stage, status, message="", event_type="x", role="research_scout", at="2026-09-28 04:11:0"):
+    return {"event_id": i, "run_id": "RUN-1", "agent_role": role, "stage": stage,
+            "status": status, "event_type": event_type, "message": message,
+            "created_at": f"{at}{i}"}
+
+
+def test_describe_run_gives_title_outcome_and_reason():
+    evs = [ev(1, "dispatch", "running", "Routing discovery to research_scout"),
+           ev(2, "discovery", "running", "Scout discovery started for RQ-6d9c12f4"),
+           ev(3, "qwen_validation", "failed", "14b validation failed"),
+           ev(4, "qwen_validation", "completed", "27b passed"),
+           ev(5, "discovery", "failed", "'possible_strategy_rule'"),
+           ev(6, "discovery", "failed", "Wrote Failed_Runs receipt x.md")]
+    d = summary.describe_run(evs)
+    assert d["title"] == "Research run for RQ-6d9c12f4"
+    assert d["status"] == "failed" and d["outcome"] == "Stopped with an error."
+    assert d["reason"] == "'possible_strategy_rule'"
+    assert d["steps"] == 6 and d["seconds"] == 5
+    checks = next(p for p in d["phases"] if p["stage"] == "qwen_validation")
+    assert (checks["label"], checks["ok"], checks["failed"]) == (
+        "Checking the model's answers", 1, 1)
+    done = summary.describe_run([ev(1, "health_check", "completed", role="brain_terminal")])
+    assert done["title"] == "Terminal job: health check" and done["reason"] is None
+
+
+def test_timeline_merges_sources_newest_first():
+    items = summary.timeline(
+        [{"date": "2026-09-28T22:00:00-05:00", "subject": "feat: x", "short": "abc1234"}],
+        [{"ended_at": "2026-09-29 04:00:00", "title": "Research run", "outcome": "Stopped.",
+          "reason": "boom", "run_id": "RUN-1", "status": "failed"}],
+        [{"started_at": "2026-09-29T02:00:00+00:00", "finished_at": "2026-09-29T02:01:00+00:00",
+          "job_id": "nightly", "summary": "pytest ok", "run_id": "JOB-1", "status": "completed"}])
+    assert [i["kind"] for i in items] == ["run", "commit", "job"]
+    assert (items[1]["who"], items[1]["text"]) == ("Built", "x")
+    assert items[0]["text"] == "Stopped. boom"
+
+
+def test_today_endpoint_is_plain_and_read_only(client):
+    c, cfg = client
+    before = sha(cfg.brain_db)
+    t = c.get("/api/today").json()
+    assert t["headline"]["title"].startswith("Step 1 of 5")
+    assert t["steps"][0]["key"] == "research"
+    assert any(i["kind"] == "run" and i["ref"] == "RUN-abc" for i in t["timeline"])
+    assert c.get("/api/runs/described").json()[0]["title"] == "Research run"
+    assert c.get("/api/runs/RUN-abc").json()["summary"]["status"] == "failed"
+    assert sha(cfg.brain_db) == before
+
+
+@pytest.mark.parametrize(("subject", "expected"), [
+    ("feat(backtest): two-phase runner", ("Built: backtest", "two-phase runner")),
+    ("[verified] fix(scout): ground evidence", ("Fixed: scout", "ground evidence")),
+    ("docs: plan Gate F", ("Plan or notes updated", "plan Gate F")),
+    ("Preserve experimental work", ("Code change", "Preserve experimental work")),
+])
+def test_commit_subjects_become_plain_labels(subject, expected):
+    assert summary.describe_commit(subject) == expected

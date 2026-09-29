@@ -195,6 +195,23 @@ diagnostics preselected as sources.
   `agent_events` rows to `brain.sqlite`, so the first one is deferred until the
   builder's backtest step no longer depends on a fixed DB hash.
 
+## 9b. Simplification pass (2026-09-28)
+
+- **Why:** Jason found the eight-screen Bloomberg layout too complicated to
+  follow.
+- **Method:** redesigned using the redesign protocol from the `taste-skill`
+  pack (github.com/Leonxlnx/taste-skill, MIT), installed as `/taste-skill`.
+  Its own scope excludes dashboards, so only its redesign, copy and
+  consistency rules were applied.
+- **Pages:** six plain pages (Today, Activity, Markets, Strategies, Learn,
+  Setup), each opening with one sentence that says what it shows. Technical
+  detail stays behind "show" toggles.
+- **Backend:** a plain-language layer, `ui/summary.py`, turns database state
+  into "Step N of 5", run events into "what it did and why it stopped", and
+  commit subjects into plain labels.
+- **Look:** calm dark theme, sans-serif text, one accent, sentence-case
+  headings. No em-dashes in UI copy.
+
 ## 10. Deliberately out of scope
 
 - Live or real-time market feeds, quotes or brokers.

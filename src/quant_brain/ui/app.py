@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import iterate_in_threadpool, run_in_threadpool
 
 from quant_brain.data.market_data import MarketDataError
-from quant_brain.ui import jobs, readers, sessions, skills, store, tutor, winsched
+from quant_brain.ui import jobs, readers, sessions, skills, store, summary, tutor, winsched
 from quant_brain.ui.backends import BACKENDS, BackendError, get_backend
 
 STATIC_DIR = Path(__file__).resolve().parents[3] / "ui" / "static"
@@ -86,6 +86,35 @@ def create_app(config: TerminalConfig) -> FastAPI:
             "project_root": str(root),
         }
 
+    def _described_runs(limit: int) -> list[dict[str, Any]]:
+        out = []
+        for run in readers.runs(config.brain_db, limit):
+            evs = readers.events(config.brain_db, run_id=run["run_id"], limit=5000)
+            if evs:
+                out.append(summary.describe_run(evs))
+        return out
+
+    @app.get("/api/today")
+    def today() -> dict[str, Any]:
+        counts = readers.brain_counts(config.brain_db)
+        git = readers.git_activity(root, 12)
+        job_runs = store.list_runs(config.terminal_db, limit=12)
+        last_health = next((r for r in job_runs if r["kind"] == "health_check"
+                            and r["status"] in ("completed", "failed")), None)
+        return {
+            "headline": summary.headline(counts),
+            "steps": summary.steps(counts),
+            "next": readers.plan_checkpoint(root)["next"],
+            "timeline": summary.timeline(git["commits"], _described_runs(8), job_runs),
+            "health": last_health,
+            "git": {"branch": git["branch"], "head": git["head"],
+                    "uncommitted": len(git["changes"])},
+        }
+
+    @app.get("/api/runs/described")
+    def described_runs(limit: int = 40):
+        return _described_runs(min(limit, 200))
+
     # --- runs & events ---------------------------------------------------------------
 
     @app.get("/api/events")
@@ -103,7 +132,7 @@ def create_app(config: TerminalConfig) -> FastAPI:
         if not evs:
             raise HTTPException(404, "no such run")
         receipt = root / "brain/00_Inbox/Failed_Runs" / f"{run_id}.md"
-        return {"run_id": run_id, "events": evs,
+        return {"run_id": run_id, "events": evs, "summary": summary.describe_run(evs),
                 "receipt": receipt.relative_to(root).as_posix() if receipt.is_file() else None}
 
     @app.get("/api/activity")

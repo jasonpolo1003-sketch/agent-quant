@@ -47,7 +47,7 @@ KINDS: dict[str, JobKind] = {
     "data_refresh": JobKind("data_refresh", "Market data refresh", 900,
                             "Fetch daily bars as new immutable datasets, then verify",
                             config_keys=("symbols", "start")),
-    "agent_prompt": JobKind("agent_prompt", "Agent prompt", 600,
+    "agent_prompt": JobKind("agent_prompt", "Ask Claude a saved question", 600,
                             "Send a saved prompt to a read-only model; output lands in "
                             "terminal/scheduled/, never promoted",
                             config_keys=("prompt", "context", "backend")),

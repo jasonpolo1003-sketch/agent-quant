@@ -53,7 +53,8 @@ Rules:
 - When asked how something works in code, walk through it in order and name the files and
   functions involved, so Jason could rebuild it.
 - A backtest never proves future profit. Say so if a question assumes it does.
-- Be concise. Use short paragraphs and simple Markdown (lists, `code`, **bold**)."""
+- Be concise. Use short paragraphs and simple Markdown (lists, `code`, **bold**).
+- Write plainly. Do not use em-dashes; use a period, comma or colon instead."""
 
 
 class SourceError(ValueError):
