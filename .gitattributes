@@ -36,3 +36,7 @@ brain/00_Inbox/Source_Snapshots/2026-09-28/b047e0cb9183-f90199dd.md -text
 # (see brain/00_Inbox/Source_Snapshots/reconciliation.json).
 brain/00_Inbox/Source_Snapshots/2026-09-28/c5f9673f32a4-97d0dbd7.2.md -text
 brain/00_Inbox/Source_Snapshots/2026-09-28/f57de4fc3101-1bb9664e.2.md -text
+
+# Frozen strategy cards and their freeze ledger: byte-exact, because the ledger records file sha256.
+brain/03_Strategy_Cards/*.md -text
+brain/03_Strategy_Cards/freeze_ledger.json -text
