@@ -1,5 +1,60 @@
 # Quant Agent Brain — Session Handoff
 
+## Gate F complete: local market data with provenance (2026-09-28/29)
+
+PROP-007 step 3, built per `brain/_system/plan/gate_f_market_data.md`, including Jason's three pre-build corrections. No strategy, signal or backtest work.
+
+**Built**
+- **`src/quant_brain/data/market_data.py`:** validation, immutable ordered ingest, manifest, DB registration, a read-only verifier, and a loader for accepted datasets only.
+  - **Dataset IDs** are `<SYM>-1d-yfinance-<UTC second>-<random run id>`, so every download is a new dataset. The full content sha256 lets identical downloads be matched by hash.
+  - **Price basis:** Yahoo's **split-adjusted** OHLC and volume (not the as-traded tape) plus `adj_close`; `adj_close / close` is Yahoo's dividend factor. The manifest records `price_basis: yahoo_split_adjusted`, and a backtest must state its execution basis.
+  - **Write order:** `.partial` Parquet, read back and hashed; rename, never overwriting; the manifest via temp file and rename; re-verify; the DB row last. A dataset is *accepted* only when file, manifest and row agree, and only accepted datasets load. Otherwise the verifier reports `incomplete`, `unregistered` or `invalid`; nothing is auto-deleted.
+  - **Validation rejects:**
+    - duplicate, unsorted or weekend dates;
+    - missing or non-positive prices;
+    - a high below the body or a low above it;
+    - negative volume;
+    - NaN or negative dividends or splits;
+    - a dividend factor outside (0, 1.0001];
+    - a last bar on or after the download day (it may still be forming).
+
+    Gaps of more than 4 weekdays, zero volume and moves above 25% become warnings.
+- **Scripts:** `scripts/fetch_market_data.py` (the only network code) and `scripts/verify_market_data.py` (read-only; exit 1 on `invalid`).
+- **Datasets** (Parquet gitignored; manifests committed in `data/manifests/`):
+
+| Symbol | Dataset | Rows | Range | Warnings |
+|---|---|---|---|---|
+| SPY | `SPY-1d-yfinance-20260929T024440Z-472338d8` | 6,723 | 2000-01-03..2026-09-25 | 0 |
+| QQQ | `QQQ-1d-yfinance-20260929T024440Z-d0bbceb5` | 6,723 | 2000-01-03..2026-09-25 | 0 |
+| IWM | `IWM-1d-yfinance-20260929T024441Z-9857eca7` | 6,622 | 2000-05-26..2026-09-25 | 0 |
+
+  All three verify `accepted` and pass the stricter post-review validation.
+
+**Spot checks** (read-only)
+- SPY closed 338.34 on 2020-02-19 and 222.95 on 2020-03-23, the known values.
+- Splits: QQQ 2:1 on 2000-03-20 (already adjusted; no price jump) and IWM 2:1 on 2005-06-09.
+- Dividend factors: SPY 0.63–1.0, QQQ 0.84–1.0, IWM 0.71–1.0.
+- No weekend rows. The missing weekdays match NYSE holidays and closures.
+
+**Second source: unavailable.** pandas-datareader 0.11.1 dropped Stooq, and Stooq's CSV endpoint now serves a browser challenge to scripts. The manifests honestly record `cross_check: unavailable`, and no workaround was attempted.
+
+**Verification**
+- 636 passed, 1 skipped. Both Ruff checks are clean. 11/11 targeted mutations are caught; three first survived, and isolating tests were added.
+- An independent review found no blocker. Its gaps are fixed with tests:
+  - NaN or negative corporate actions;
+  - weekend dates;
+  - incomplete same-day bars;
+  - a corrupt manifest crashing the verifier;
+  - the volume basis note.
+- The receipt verifier is still OK.
+- DB `6205b230…`: its only change is the 3 `price_datasets` rows.
+
+**Limitations**
+- Only one source (Yahoo, unofficial and able to restate history). There is no official exchange calendar, so gaps are flagged heuristically.
+- The three existing manifests predate the "volume is split-adjusted too" wording. They are immutable and left as written.
+
+**Next (PROP-007 step 4):** one frozen, hashed strategy card, written before any result is seen. Plan it first.
+
 ## Content-only grounding (2026-09-28)
 
 Approved by Jason. The fix is model-agnostic: it changes what *any* extraction model is shown and what its output is checked against. Per Jason, testing stayed hermetic and on saved evidence, with **no live Qwen runs**. Qwen may be replaced later by a Claude or Codex CLI on his subscription; that would be a §9 model-policy change needing its own approval. No production rerun, curator run, push or merge.

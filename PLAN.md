@@ -217,7 +217,8 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
   4. An adversarial review whose verdict can be "reject".
 - Prop-firm fit comes only if the strategy survives.
 - The full text is in `brain/_system/plan/plan_change_proposals.md`. Where older §7/§10 text conflicts with PROP-007, PROP-007 wins.
-- **Next bounded step:** Gate F (market data).
+- **Gate F: done 2026-09-29.** SPY, QQQ and IWM daily data from 2000 are accepted and verified, with a committed manifest per dataset. The Yahoo split-adjusted price basis is recorded. There is no second source (Stooq is now blocked). See the handoff.
+- **Next bounded step:** PROP-007 step 4, one frozen strategy card. Plan it first.
 
 ### Content-only grounding (2026-09-28)
 
