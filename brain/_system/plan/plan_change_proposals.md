@@ -194,6 +194,42 @@ This exists because the project's core design rule is *move slowly, one verified
   - **Failed runs keep diagnostics.** A failed run keeps its failed model responses as untrusted diagnostics in `Failed_Runs/diagnostics/<run>.responses.json`, separate from research.
   - **Evidence validators unchanged.** No Scout rerun is authorized by this amendment.
 
+### PROP-007 — Scale down: freeze the research harness and move to data and the first honest backtest
+- **Date:** 2026-09-28
+- **Proposed by:** Claude session, at Jason's request
+- **Affects:** PLAN.md §7 (Phase 6 exit, Phase 8 entry), §9 (model policy), §10; `phase_08_first_backtest.md` entry gate. The evidence rules in AGENTS.md are **unchanged**.
+- **Current plan says:**
+  - Phase 6 exit needs all three child Scout runs to produce honestly validated outcomes.
+  - Phase 8 entry needs "Phase 6 produced source-supported exit rule + max holding period + cost assumptions, **and** Jason approved moving to card stage".
+- **Problem:**
+  - About a month went into the research harness: scraping, local-Qwen extraction, windowing, validators and receipts. It works and fails safe.
+  - Nothing yet tests whether a strategy makes money (`price_datasets = 0`, no card, no backtest).
+  - The holding-period and cost questions are source-insufficient (E1 dossier), so the current gate may never open.
+  - Jason no longer needs 24/7 scraping, the main reason local Qwen was chosen.
+- **Proposed change:**
+  1. **Freeze the research harness.** Validators, receipts and the verifier stay; no new harness features and no further Qwen tuning; the 24/7 scraping goal is dropped. A Claude or Codex subscription-CLI backend would be a separate §9 proposal, made only if research is needed again.
+  2. **Close Phase 6 as "pipeline verified, research partial".** At most one more RQ-6d9c12f4 rerun, as the end-to-end check with no retry. `RQ-c920baeb` and `RQ-80be8cf7` are closed as source-insufficient. This is not research acceptance and not evidence of edge.
+  3. **Gate F: market data.** Daily OHLCV for SPY, QQQ and IWM, fetched with the existing yfinance/pandas/pyarrow/DuckDB dependencies.
+     - Stored as Parquet and registered in `price_datasets`.
+     - Records the source, download time, adjustment method, sha256 and date range.
+     - Tests use a small committed fixture and no network.
+  4. **Phase 8 entry, relaxed honestly.**
+     - Exit rules come only from quoted, preserved sources: ChartSchool/Connors RSI(2) (exit above 70, or close above the 5-day MA) and NAAIM RSI(3) ≤ 40.
+     - Holding period and costs are **declared assumptions**, labelled as such, over a small grid fixed in advance (for example 5 or 10-day time stops, and 2, 5 or 10 bps per side plus slippage). Every combination is run and logged.
+  5. **One frozen, hashed strategy card, then one backtest** with a small, readable in-repo pandas runner.
+     - Close-based signals execute at the next bar, enforced in code.
+     - Costs apply to every trade.
+     - Same-engine comparisons against buy-and-hold and random entry.
+     - The in-sample/held-out split is fixed on the card.
+     - An immutable trial ledger records every run.
+     - No vectorbt (Commons Clause) or backtesting.py (AGPL).
+  6. **Adversarial review with a verdict that can be "reject".** It covers lookahead, costs, sample size, regimes, multiple testing (deflated Sharpe across the grid) and the benchmark and random-entry comparisons.
+  7. **Prop-firm fit only if the strategy survives,** as a later separate step. No paper or live trading.
+- **Still forbidden:** live trading and brokers, paid APIs, claiming a backtest proves profit, editing the committed candidate list, lowering validators.
+- **Honest expectation:** RSI(2) ETF mean reversion may show no edge after costs. That is a valid outcome.
+- **Status:** accepted
+- **Jason's decision:** approved the direction, 2026-09-28. The optional Phase 6 rerun was not yet chosen.
+
 ---
 
 ## Accepted changes log
@@ -206,3 +242,4 @@ Once Jason accepts a proposal, apply it to `PLAN.md`, then record the applied ch
 | 2026-09-18 | PROP-002 | `PLAN.md` §5 amendment section | Added the authorized external-report retention intake. Isolated workspace only; no production promotion, no Gate D execution. |
 | 2026-09-19 | PROP-003 | `PLAN.md`, `src/quant_brain/discovery/arxiv_search.py`, `agent_reach.py`, `research/executor.py`, `scripts/{gate_readiness,agent_reach_check}.py` | Added the zero-account arXiv lane; made the ≥3-source bar enforceable over distinct upstream works; quarantined sparse results in Failed_Runs. One of three questions became probe-ready; no child run executed. |
 | 2026-09-26 | PROP-004 (E2 scope only) | `discovery/{work_identity,candidate_list}.py`, `live_discovery.py`, `research/executor.py`, `harness/handlers.py` (Scout handler only), `scripts/{dispatch_task,gate_readiness}.py` | Added a pre-registered candidate-list lane through the unchanged live path, and DOI-alias collapse in the source minimum. No list registered, no run executed. PROP-005 remains proposed. |
+| 2026-09-28 | PROP-007 | PLAN.md §10 (direction note) | Freeze research harness; move to Gate F data, one frozen card, one honest backtest |

@@ -205,6 +205,20 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 
 **Picking this up cold? Read this section, then start.**
 
+### Direction change accepted: PROP-007 (2026-09-28)
+
+**Jason approved scaling down.**
+- The research harness is frozen: no new features, no Qwen tuning, no 24/7 scraping.
+- Phase 6 closes as "pipeline verified, research partial". At most one optional RQ-6d9c12f4 rerun remains.
+- **Work now moves to:**
+  1. Gate F: local SPY/QQQ/IWM daily data with full provenance.
+  2. One frozen, hashed strategy card: sourced RSI exit rules, with holding period and costs as labelled assumptions over a pre-declared grid.
+  3. One honest backtest: next-bar execution, costs, buy-and-hold and random-entry comparisons, a held-out period, and a trial ledger.
+  4. An adversarial review whose verdict can be "reject".
+- Prop-firm fit comes only if the strategy survives.
+- The full text is in `brain/_system/plan/plan_change_proposals.md`. Where older §7/§10 text conflicts with PROP-007, PROP-007 wins.
+- **Next bounded step:** Gate F (market data).
+
 ### Content-only grounding (2026-09-28)
 
 - **Change:** extraction models and evidence validators now see only a snapshot's fetched content, never the harness front matter. This closes metadata quotes and timestamp or hash digits making invented numbers look grounded.
