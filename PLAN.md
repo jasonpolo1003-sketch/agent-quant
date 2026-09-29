@@ -4,7 +4,7 @@ type: master_plan
 status: active
 owner: jason
 created: 2026-08-28
-last_updated: 2026-09-16
+last_updated: 2026-09-28
 revision: 4
 supersedes: revision 3 (harness architecture retained; statistical validation gates strengthened)
 read_first: true
@@ -100,7 +100,7 @@ Use maintained `pypdf` extraction; empty/failed native extraction is honestly bl
 - A universal alpha-generating LLM.
 - A general-purpose web scraper.
 - A "trading bot."
-- A GUI/dashboard/TUI. CLI + Markdown + SQLite is the interface.
+- A GUI that writes around the harness. PROP-008 (accepted 2026-09-28) allows only the local Brain Terminal: it reads by default, runs allowlisted jobs and has a tutor with no tools. See `brain/_system/plan/ui_terminal_plan.md`.
 - Multi-user or cloud-deployed anything.
 - Agents that spawn agents.
 - Anything that costs money without explicit escalation.
@@ -204,6 +204,15 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 ## 10. Handoff checkpoint
 
 **Picking this up cold? Read this section, then start.**
+
+### PROP-008 accepted (2026-09-28): local Brain Terminal UI
+
+- Jason accepted it as written.
+- **Claude builds it** on branch `ui-terminal`, only in terminal-owned paths (`ui_terminal_plan.md` §8).
+- The Codex builder is not involved.
+- The scheduler is always-on through Windows Task Scheduler.
+- The only model backend for now is Claude (`claude -p`). The Codex CLI comes later.
+- This does not change the harness's §9 model policy or PROP-007's research freeze.
 
 ### Direction change accepted: PROP-007 (2026-09-28)
 
