@@ -20,3 +20,7 @@ src/*.egg-info/
 
 # Throwaway debugging scripts from ad-hoc audit runs
 brain/00_Inbox/Failed_Runs/audit_*_tmp_*/
+
+# Brain Terminal (PROP-008): job logs and scheduled model output are local, untrusted
+terminal/logs/
+terminal/scheduled/

@@ -96,10 +96,16 @@ diagnostics preselected as sources.
   claim, says "the sources don't say" instead of guessing, and offers "how
   would I rebuild this?" walk-throughs of the code.
 - **Concept library:** saved answers become study notes in
-  `brain/80_Summaries/Learning/`, with `type: study_note` and
+  `terminal/learning/`, with `type: study_note` and
   `trusted: false`. They are **never indexed into RAG** as evidence.
 - **Decision journal:** a timeline of PROP-001…, DEC-* and handoff entries,
   read as a story ("what we tried, what broke, what we decided").
+
+> **Correction (build, 2026-09-28):** the indexer indexes every `brain/**`
+> note except `_system` and `Source_Snapshots`. So the terminal writes study
+> notes and scheduled outputs under a repo-root `terminal/` folder
+> (`learning/`, `scheduled/`, `logs/`), never under `brain/`. That keeps them
+> out of RAG by construction.
 
 ## 6. Scheduler
 
@@ -113,7 +119,7 @@ diagnostics preselected as sources.
   |---|---|---|
   | `health_check` | `uv run pytest -q`, `scripts/verify_receipts.py`, `scripts/verify_market_data.py` | Result into `job_runs` only |
   | `data_refresh` | `scripts/fetch_market_data.py` then verify | New immutable datasets (Gate F rules unchanged) |
-  | `agent_prompt` | A saved prompt via `claude -p` / `codex exec` in read-only mode | Output into `brain/00_Inbox/Scheduled/`, never promoted |
+  | `agent_prompt` | A saved prompt via `claude -p` / `codex exec` in read-only mode | Output into `terminal/scheduled/`, never promoted |
   | `research_run` | Dispatcher `discovery` task | **Disabled while PROP-007's freeze holds** |
 
 - **Caps:** a timeout, max runs per day and one concurrent job per kind.
@@ -143,8 +149,8 @@ diagnostics preselected as sources.
 ## 8. No cross-over with the Codex builder
 
 - **Terminal-owned paths:** the terminal owns only its own paths (§7),
-  `db/terminal.sqlite`, `brain/00_Inbox/Scheduled/` and
-  `brain/80_Summaries/Learning/`.
+  `db/terminal.sqlite`, `terminal/scheduled/` and
+  `terminal/learning/`.
 - **Never touched:** it never edits `src/quant_brain/{data,harness,research,discovery,curation,llm}`,
   `db/schema.sql`, `brain/03`–`07`, or `data/`.
 - **LAB contract:** LAB **adapts to** whatever PROP-007 step 5 writes. It
@@ -163,6 +169,31 @@ diagnostics preselected as sources.
 | U4 | TASKS + scheduler: health_check first, then data_refresh, agent_prompt | Caps enforced; every run evented; research_run refuses while frozen |
 | U5 | SKILLS catalogue | All three sources listed with provenance |
 | U6 | LAB | After PROP-007 step 5 lands; renders the full ledger |
+
+## 9a. Build status (2026-09-28, branch `ui-terminal`)
+
+- **Built in one pass:** U0–U6, all eight screens. Everything lives in its own
+  worktree (`../quant-agent-brain-ui`) so the builder working on `testing` in
+  the main checkout is never switched or blocked.
+- **Run it:**
+  `uv run python scripts/serve_terminal.py --root ../quant-agent-brain --open`.
+  After merge, drop `--root`.
+- **Verified:**
+  - 44 terminal tests: read-only hash check, host/origin guards, source
+    allowlist, caps, freeze refusal, Task Scheduler argument building and drift.
+  - Full suite: 693 passed, 1 skipped. Ruff is clean.
+- **Live checks:**
+  - Every screen was driven in Chrome with no console errors.
+  - A tutor answer through the real `claude -p` cited `[PLAN.md:208-219]`,
+    and the citation opened the highlighted lines.
+  - A real `schtasks` register → query → delete round trip passed.
+- **Known finding (not in terminal code):** `market_data.verify_datasets`
+  raises on a corrupt Parquet file instead of reporting `invalid`. The terminal
+  contains it (it shows `unverified` or `invalid`), but the Gate F owner should
+  fix it.
+- **Not yet exercised against the live brain:** job runs. A run appends
+  `agent_events` rows to `brain.sqlite`, so the first one is deferred until the
+  builder's backtest step no longer depends on a fixed DB hash.
 
 ## 10. Deliberately out of scope
 
