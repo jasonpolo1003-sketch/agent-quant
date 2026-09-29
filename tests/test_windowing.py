@@ -32,6 +32,7 @@ from test_context_guard import Client, big_body
 from test_failed_run_provenance import _receipt_payload
 
 from quant_brain.db.init_db import init_database
+from quant_brain.discovery.live_discovery import snapshot_content
 from quant_brain.llm import ollama_client
 from quant_brain.llm.ollama_client import OllamaResponse
 from quant_brain.llm.qwen_call import (
@@ -587,7 +588,10 @@ def test_an_oversize_source_is_read_in_windows_and_merged_into_one_record(projec
     assert [_WINDOW_RE.search(p).group(1) for p in prompts] == [
         e["payload"]["window_id"] for e in window_events
     ]
-    snapshot = (root / window_events[0]["payload"]["snapshot_path"]).read_text(encoding="utf-8")
+    # Offsets index the fetched content, not the front matter (snapshot_content).
+    snapshot = snapshot_content(
+        (root / window_events[0]["payload"]["snapshot_path"]).read_text(encoding="utf-8")
+    )
     for prompt, event in zip(prompts, window_events, strict=True):
         start, end = event["payload"]["start"], event["payload"]["end"]
         assert _WINDOW_RE.search(prompt).group(2) == snapshot[start:end]

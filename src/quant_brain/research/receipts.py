@@ -83,7 +83,21 @@ def resolve_recorded_snapshot(project_root: str | Path, run_id: str, recorded_pa
 
 
 def _content_of(snapshot_text: str) -> str:
-    return snapshot_text.split("\n---\n", 1)[1].removeprefix("\n")
+    from quant_brain.discovery.live_discovery import snapshot_content
+
+    return snapshot_content(snapshot_text)
+
+
+def manifest_text(path: Path, manifest: dict[str, Any]) -> str:
+    """The text a window manifest's offsets index, by the derivation it recorded.
+
+    Receipts before the content-only change (E4, E5) windowed the whole decoded
+    file; later ones window the fetched content only.
+    """
+    text = _decode(path)
+    if "front matter excluded" in str(manifest.get("snapshot_text_derivation", "")):
+        return _content_of(text)
+    return text
 
 
 def verify_receipt(project_root: str | Path, receipt: str | Path) -> ReceiptResult:
@@ -126,7 +140,7 @@ def verify_receipt(project_root: str | Path, receipt: str | Path) -> ReceiptResu
         result.checked += 2
         if _sha256(path.read_bytes()) != manifest["snapshot_sha256"]:
             result.problems.append(f"{label}: file sha256 of {manifest['snapshot_path']} differs")
-        text = _decode(path)
+        text = manifest_text(path, manifest)
         if _sha256(text.encode("utf-8")) != manifest["snapshot_text_sha256"]:
             result.problems.append(f"{label}: text sha256 differs")
         for window in manifest["windows"]:

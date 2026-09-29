@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -92,6 +93,36 @@ def snapshot_relative_path(
     return f"{SNAPSHOT_DIR}/{day}/{content_hash[:12]}-{url_hash[:8]}.md"
 
 
+def canonical_content(content: str) -> str:
+    """Fetched content with line endings canonicalised to ``\\n``.
+
+    The only change ever made to fetched text. Snapshots are written in text
+    mode and read with universal newlines, so a raw ``\\r`` cannot round-trip;
+    canonicalising once, before hashing and writing, keeps the recorded
+    content hash re-verifiable from the file.
+    """
+    return content.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _one_line(value: str) -> str:
+    """A front-matter value that cannot end the front matter early."""
+    return re.sub(r"[\r\n]+", " ", str(value))
+
+
+def snapshot_content(snapshot_text: str) -> str:
+    """The fetched content of a snapshot: everything after its front matter.
+
+    The front matter (url, title, channel, backend, captured_at, hashes) is the
+    harness's own metadata, not the source's text. Models are shown, and
+    quotes and numbers are checked against, this content only -- otherwise a
+    quote of ``backend: jina`` counts as evidence and timestamp or hash digits
+    make invented numbers look grounded.
+    """
+    if not snapshot_text.startswith("---\n") or "\n---\n" not in snapshot_text:
+        raise ValueError("snapshot text has no front matter to separate from its content")
+    return snapshot_text.split("\n---\n", 1)[1].removeprefix("\n")
+
+
 MAX_SNAPSHOT_VERSIONS = 1000
 
 
@@ -152,21 +183,24 @@ def save_source_snapshot(
         raise ValueError("snapshot content cannot be empty")
 
     captured = captured_at or datetime.now(UTC)
+    content = canonical_content(content)
     relative = snapshot_relative_path(content, url, captured)
 
     content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
     url_hash = hashlib.sha256(normalize_snapshot_url(url).encode("utf-8")).hexdigest()
     text = (
         "---\n"
-        f"url: {url}\n"
-        f"title: {title or ''}\n"
-        f"channel: {channel}\n"
-        f"backend: {backend}\n"
+        f"url: {_one_line(url)}\n"
+        f"title: {_one_line(title or '')}\n"
+        f"channel: {_one_line(channel)}\n"
+        f"backend: {_one_line(backend)}\n"
         f"captured_at: {captured.isoformat()}\n"
         f"content_hash: {content_hash}\n"
         f"url_hash: {url_hash}\n"
         "---\n\n"
-        f"{content.rstrip()}\n"
+        # Verbatim after line-ending canonicalisation, so snapshot_content()
+        # returns exactly the hashed content (``rstrip() + "\n"`` did not).
+        f"{content}"
     )
     dest = _create_snapshot_file(project_root, relative, text, resolve_write)
     root = Path(project_root).resolve()
@@ -504,7 +538,9 @@ class LiveDiscoveryBackend:
                         fetched,
                         snapshot_path,
                         tier=candidate.tier,
-                        snapshot_sha256=hashlib.sha256(content.encode("utf-8")).hexdigest(),
+                        snapshot_sha256=hashlib.sha256(
+                            canonical_content(content).encode("utf-8")
+                        ).hexdigest(),
                     )
                 )
         except Exception:

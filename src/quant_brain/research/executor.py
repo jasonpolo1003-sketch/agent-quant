@@ -1168,6 +1168,7 @@ def execute_discovery_task(
             # Deliberately function-local: the module attribute is re-read on
             # every call, which is the seam tests rebind. Hoisting this to
             # module scope would silently break that injection point.
+            from quant_brain.discovery.live_discovery import snapshot_content
             from quant_brain.llm.qwen_call import (
                 ESCALATION_MODEL,
                 ContextBudgetError,
@@ -1199,7 +1200,11 @@ def execute_discovery_task(
                         "title": source["title"],
                         "url_or_citation": source["url_or_citation"],
                         "source_quality": source["source_quality"],
-                        "snapshot_text": snapshot_path.read_text(encoding="utf-8"),
+                        # Fetched content only: the front matter is the
+                        # harness's metadata, not evidence (see snapshot_content).
+                        "snapshot_text": snapshot_content(
+                            snapshot_path.read_text(encoding="utf-8")
+                        ),
                     }
                 )
             # One source per extraction call (Phase 6 design). A single prompt

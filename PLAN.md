@@ -205,6 +205,15 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 
 **Picking this up cold? Read this section, then start.**
 
+### Content-only grounding (2026-09-28)
+
+- **Change:** extraction models and evidence validators now see only a snapshot's fetched content, never the harness front matter. This closes metadata quotes and timestamp or hash digits making invented numbers look grounded.
+- **Snapshot bodies:** stored verbatim after one line-ending canonicalisation; front-matter values are single-line.
+- **Receipts:** old ones still verify, because the verifier follows each manifest's recorded derivation.
+- **Checks:** 601 passed; focused independent review, with both findings fixed. No live Qwen runs by Jason's direction, since the change is model-agnostic.
+- **Model backend:** Jason may move extraction to a Claude or Codex CLI on his subscription. That is a §9 policy change needing a proposal and approval.
+- **Next (needs authorization):** one more RQ-6d9c12f4 rerun, or first the backend decision.
+
 ### After E5 (2026-09-28): note writing and snapshot immutability fixed; historical receipts verify again
 
 - **Notes:** the JSON block is now exactly the whole-bundle validator's normalized payload: sources, questions and recommendation.

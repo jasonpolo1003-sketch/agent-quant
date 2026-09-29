@@ -632,10 +632,12 @@ def test_grounded_extraction_of_list_sources_passes_the_real_validators(project,
     assert [client.models for client in seen["clients"]] == [["qwen3:14b"]] * 3
     # Exactly one source per extraction call.
     assert [len(call) for call in seen["calls"]] == [1, 1, 1]
-    # The model was shown the persisted snapshots, one per acquired source.
+    # The model was shown the persisted snapshots' fetched content, one per
+    # acquired source -- never the harness-written front matter (2026-09-28).
     for item in seen["evidence"]:
         assert "Exact evidence passage." in item["snapshot_text"]
-        assert item["snapshot_text"].startswith("---\nurl: ")
+        assert not item["snapshot_text"].startswith("---\n")
+        assert "captured_at:" not in item["snapshot_text"]
     assert sorted(item["url_or_citation"] for item in seen["evidence"]) == sorted(URLS[:3])
 
 

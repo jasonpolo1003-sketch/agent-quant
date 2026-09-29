@@ -44,6 +44,14 @@ MAX_WINDOWS_PER_SOURCE = 10
 # curator does not read it. Asking each window for it gave the model a
 # required-yet-nullable field to leave null, which failed E4 (RUN-d67b1d121b).
 WINDOW_RECOMMENDATION = "needs_more_work"
+# How window offsets index the snapshot. Receipts before 2026-09-28's
+# content-only change recorded the whole decoded file (front matter included);
+# the verifier reads this string to tell the two apart.
+SNAPSHOT_TEXT_DERIVATION = (
+    "snapshot file decoded as UTF-8 with universal newlines (Path.read_text: CRLF and CR "
+    "become LF), front matter excluded (live_discovery.snapshot_content); offsets are "
+    "character indexes into that content"
+)
 
 _CONFIDENCE_ORDER = ("low", "medium", "high")
 _ACCESS_ORDER = ("available-now", "available-later", "not-realistic")
@@ -351,10 +359,7 @@ def window_manifest(
         "url_or_citation": item["url_or_citation"],
         "snapshot_path": snapshot_path,
         "snapshot_sha256": snapshot_sha256,
-        "snapshot_text_derivation": (
-            "snapshot file decoded as UTF-8 with universal newlines (Path.read_text: "
-            "CRLF and CR become LF); offsets are character indexes into that text"
-        ),
+        "snapshot_text_derivation": SNAPSHOT_TEXT_DERIVATION,
         "snapshot_text_sha256": _sha256(full_text),
         "snapshot_text_length": len(full_text),
         "window_max_bytes": WINDOW_MAX_BYTES,

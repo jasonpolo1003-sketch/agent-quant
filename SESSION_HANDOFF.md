@@ -1,5 +1,28 @@
 # Quant Agent Brain — Session Handoff
 
+## Content-only grounding (2026-09-28)
+
+Approved by Jason. The fix is model-agnostic: it changes what *any* extraction model is shown and what its output is checked against. Per Jason, testing stayed hermetic and on saved evidence, with **no live Qwen runs**. Qwen may be replaced later by a Claude or Codex CLI on his subscription; that would be a §9 model-policy change needing its own approval. No production rerun, curator run, push or merge.
+
+**What changed**
+- **Models and validators see only fetched content.** `live_discovery.snapshot_content()` strips the harness-written front matter (url, title, channel, backend, captured_at, hashes). The executor builds every evidence item from it: single prompts, windows, repairs and the whole-bundle validation.
+  - Before this, a quote of `backend: jina` passed as exact evidence, and timestamp or hash digits made invented numbers look grounded.
+  - Now, on the preserved Connors snapshot, "Uses a 28-day lookback" and "Tested over 16 years" are unsupported.
+- **Snapshot bodies are stored verbatim** (they used to be `rstrip() + "\n"`), after one canonicalisation: `\r\n` and `\r` become `\n`, via `canonical_content()`, which is also used for the recorded content hash. So the content hash always re-verifies.
+- **Front-matter values are single-line.** A title like `Evil\n---\nx` can no longer end the front matter early and leak metadata into the content.
+- **Window manifests record a new derivation** ("front matter excluded"). `receipts.manifest_text()` chooses the whole file or the content by that string, so **E4 and E5 receipts still verify** (E3 5, E4 15, E5 34, ledger 2), and new receipts verify against content. `window_replay.py` uses the same rule.
+- **One existing assertion changed on purpose.** `test_candidate_list_lane.py` required the model to see front matter; it now requires the reverse.
+
+**Verification**
+- 601 passed, 1 skipped. Both Ruff checks and `git diff --check` are clean.
+- Mutations caught: model shown the whole file; content trimmed; verifier ignoring the derivation.
+- A focused independent review found two material issues (`\r` round-trip, front-matter injection through the title or URL). Both are fixed with tests that reproduce the reviewer's demonstrations.
+- The DB (`aa4d042f…`) and all receipts are unchanged.
+
+**Remaining**
+- A title containing a newline is now stored flattened to one line. Titles are metadata, not evidence.
+- Everything else from E5 still applies. The next step, needing authorization, is one more rerun on the unchanged list, or first a decision on the model backend.
+
 ## Note writing and snapshot immutability fixed; historical evidence verifiable again (2026-09-28)
 
 Fix and verification only. **No production rerun, no curator run, no push or merge.** Phase 6 / Gate D remain incomplete.

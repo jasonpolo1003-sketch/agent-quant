@@ -25,7 +25,7 @@ import sys
 from quant_brain.config import PROJECT_ROOT
 from quant_brain.db.init_db import DEFAULT_DB_PATH
 from quant_brain.llm.qwen_call import QwenValidationError, qwen_call
-from quant_brain.research.receipts import resolve_recorded_snapshot
+from quant_brain.research.receipts import manifest_text, resolve_recorded_snapshot
 from quant_brain.research.windowing import (
     WindowOutcome,
     plan_windows,
@@ -75,7 +75,7 @@ def main() -> int:
             "title": candidate["title"],
             "url_or_citation": candidate["url"],
             "source_quality": candidate["tier"],
-            "snapshot_text": snapshot.read_text(encoding="utf-8"),
+            "snapshot_text": manifest_text(snapshot, manifest),
         }
         windows = plan_windows(item["snapshot_text"], item["source_id"])
         recorded = [(w["window_id"], w["start"], w["end"], w["text_sha256"]) for w in manifest["windows"]]
