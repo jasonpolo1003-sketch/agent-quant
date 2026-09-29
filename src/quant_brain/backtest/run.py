@@ -104,6 +104,39 @@ def code_commit(root: Path) -> str:
                           text=True, check=True).stdout.strip()
 
 
+def code_unchanged_since(root: Path, commit: str) -> bool:
+    """True when no file under CODE_PATHS differs between ``commit`` and HEAD.
+
+    Compares code, not commit IDs: committing the ledger or a report after the
+    in-sample run moves HEAD without changing anything the run depends on.
+    """
+    result = subprocess.run(["git", "diff", "--quiet", commit, "HEAD", "--", *CODE_PATHS],
+                            cwd=root, capture_output=True, text=True)
+    if result.returncode not in (0, 1):
+        raise RunnerError(f"cannot compare code with {commit}: {result.stderr.strip()}")
+    return result.returncode == 0
+
+
+HELD_OUT_MARKER = "{card_id}:held_out_started"
+
+
+def _held_out_marked(db_path: Path, card_id: str) -> bool:
+    with sqlite3.connect(db_path) as conn:
+        return conn.execute("SELECT 1 FROM backtests WHERE backtest_id = ?",
+                            (HELD_OUT_MARKER.format(card_id=card_id),)).fetchone() is not None
+
+
+def _mark_held_out(db_path: Path, card: sc.StrategyCard, commit: str) -> None:
+    """A durable read-once marker outside the ledger (a ledger restore cannot undo it)."""
+    with sqlite3.connect(db_path) as conn:
+        conn.execute(
+            "INSERT INTO backtests (backtest_id, strategy_id, dataset_id, code_commit, config_json, "
+            "status, started_at) VALUES (?, ?, ?, ?, ?, 'held_out_started', ?)",
+            (HELD_OUT_MARKER.format(card_id=card.card_id), card.card_id, card.data[0].dataset_id,
+             commit, json.dumps({"event": "held_out_started"}), datetime.now(UTC).isoformat()),
+        )
+
+
 def ledger_committed(root: Path, path: Path) -> bool:
     """True when the trial ledger is tracked by git and has no uncommitted change.
 
@@ -263,16 +296,16 @@ def approve_in_sample(root: Path, card_id: str, by: str) -> dict[str, Any]:
 def run_held_out(root: Path, db_path: Path, card_id: str) -> dict[str, Any]:
     card, entry, frames = gated_inputs(root, db_path, card_id)
     commit = code_commit(root)
-    if _events(root, card_id, "held_out_started"):
+    if _events(root, card_id, "held_out_started") or _held_out_marked(db_path, card_id):
         raise RunnerError(f"{card_id}: the held-out period was already read; it is read once")
     ledger, start = _latest_in_sample(root, card_id)
     if start < 0:
         raise RunnerError(f"{card_id}: no in-sample run")
     latest = ledger[start:]
-    if ledger[start].get("code_commit") != commit:
+    if not code_unchanged_since(root, ledger[start]["code_commit"]):
         raise RunnerError(
-            f"{card_id}: current commit {commit} is not the commit of the approved in-sample "
-            f"run ({ledger[start].get('code_commit')}); re-run in-sample and re-approve"
+            f"{card_id}: code changed since the approved in-sample run "
+            f"({ledger[start]['code_commit']}); re-run in-sample and re-approve"
         )
     completed = [i for i, r in enumerate(latest) if r.get("event") == "in_sample_completed"]
     approvals = [i for i, r in enumerate(latest) if r.get("event") == "in_sample_approved"]
@@ -283,7 +316,9 @@ def run_held_out(root: Path, db_path: Path, card_id: str) -> dict[str, Any]:
         raise RunnerError(f"{card_id}: the second implementation has not matched the engine")
     if not ledger_committed(root, ledger_path(root, card_id)):
         raise RunnerError(f"{card_id}: commit the trial ledger before the held-out read")
-    append_ledger(root, card_id, {"event": "held_out_started", "code_commit": commit})
+    _mark_held_out(db_path, card, commit)
+    append_ledger(root, card_id, {"event": "held_out_started", "code_commit": commit,
+                                  "in_sample_commit": ledger[start]["code_commit"]})
     try:
         results = _run_grid(root, db_path, card, entry, frames, "held_out", commit)
         verdict = compute_verdict(card, frames, results)

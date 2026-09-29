@@ -65,6 +65,7 @@ def project(tmp_path, monkeypatch):
     monkeypatch.setattr(rn, "code_commit", lambda root: "test-commit")
     # The synthetic project is not a git repository; the ledger-commit gate has its own test.
     monkeypatch.setattr(rn, "ledger_committed", lambda root, path: True)
+    monkeypatch.setattr(rn, "code_unchanged_since", lambda root, commit: True)
     return tmp_path, db, card_path
 
 
@@ -208,14 +209,6 @@ def approved(project):
     return root, db
 
 
-def test_the_held_out_read_must_use_the_code_that_ran_in_sample(project, monkeypatch):
-    root, db = approved(project)
-    monkeypatch.setattr(rn, "code_commit", lambda root: "a-later-commit")
-
-    with pytest.raises(rn.RunnerError, match="commit"):
-        rn.run_held_out(root, db, "SC-9001")
-
-
 def test_an_approval_older_than_the_latest_in_sample_run_does_not_count(project):
     root, db = approved(project)
     rn.run_in_sample(root, db, "SC-9001")  # re-run after the approval
@@ -271,3 +264,50 @@ def test_the_code_gate_covers_everything_the_run_depends_on(tmp_path):
         with pytest.raises(rn.RunnerError, match="uncommitted"):
             rn.code_commit(tmp_path)
         target.unlink()
+
+
+# --- re-review follow-ups: compare code, not commits; a durable read-once marker ----------
+
+
+def _git(cwd, *args):
+    subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", *args], cwd=cwd,
+                   check=True, capture_output=True)
+
+
+def test_committing_the_ledger_does_not_count_as_a_code_change(tmp_path):
+    _git(tmp_path, "init", "-q")
+    code = tmp_path / "src/quant_brain/backtest/engine.py"
+    code.parent.mkdir(parents=True)
+    code.write_text("x = 1\n", encoding="utf-8")
+    _git(tmp_path, "add", "-A")
+    _git(tmp_path, "commit", "-qm", "code")
+    in_sample = rn.code_commit(tmp_path)
+    ledger = tmp_path / rn.REPORT_DIR / "SC-9001.trials.jsonl"
+    ledger.parent.mkdir(parents=True)
+    ledger.write_text("{}\n", encoding="utf-8")
+    _git(tmp_path, "add", "-A")
+    _git(tmp_path, "commit", "-qm", "ledger")
+
+    assert rn.code_unchanged_since(tmp_path, in_sample) is True
+
+    code.write_text("x = 2\n", encoding="utf-8")
+    _git(tmp_path, "commit", "-qam", "engine change")
+    assert rn.code_unchanged_since(tmp_path, in_sample) is False
+
+
+def test_the_held_out_read_is_refused_when_code_changed_since_in_sample(project, monkeypatch):
+    root, db = approved(project)
+    monkeypatch.setattr(rn, "code_unchanged_since", lambda root, commit: False)
+
+    with pytest.raises(rn.RunnerError, match="code changed"):
+        rn.run_held_out(root, db, "SC-9001")
+
+
+def test_restoring_the_ledger_cannot_reset_the_one_held_out_read(project):
+    root, db = approved(project)
+    before = rn.ledger_path(root, "SC-9001").read_bytes()
+    rn.run_held_out(root, db, "SC-9001")
+    rn.ledger_path(root, "SC-9001").write_bytes(before)  # as if `git restore` of the ledger
+
+    with pytest.raises(rn.RunnerError, match="read once"):
+        rn.run_held_out(root, db, "SC-9001")
