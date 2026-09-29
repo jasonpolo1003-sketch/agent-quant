@@ -1,5 +1,47 @@
 # Quant Agent Brain — Session Handoff
 
+## Strategy card SC-0002 frozen; SC-0001 retired (2026-09-29)
+
+PROP-007 step 4. No backtest has run, and no result has been seen.
+
+- **SC-0001** was frozen *before* its independent review (a process mistake). The review found three problems:
+  - two unsourced choices labelled as sourced: Wilder RSI for rules A and B, and A's close-based exit;
+  - an ambiguous verdict;
+  - open implementation details.
+
+  No backtest had read it. It is kept on record and **superseded**: the ledger and DB mark it, and `verify_frozen_card` refuses it.
+- **SC-0002** (`brain/03_Strategy_Cards/SC-0002-rsi2-connors-spy.md`, spec sha256 `4b838196…`) was reviewed **before** freezing. The review found two blockers (B's unlabelled "moving average"; a DSR not fully pinned) and four optional clarifications. All were fixed, and the re-check found no blockers. Jason approved the freeze.
+  - **Rules:**
+    - **A (primary):** ChartSchool/Connors RSI(2): buy when RSI(2) < 10 above the 200-day SMA; exit on a move above the 5-day SMA; no stops.
+    - **B:** Connors Research "RSI 25".
+    - **D:** NAAIM Cutler RSI(3).
+
+    Every rule quote is verified against its snapshot. Every non-sourced choice is labelled `assumption` with a rationale: Wilder smoothing for A and B, close-based readings, SMA for B's moving average, next-open execution for all rules, adjusted prices, costs, and 0% on cash.
+  - **Implementation fully pinned on the card:**
+    - SMA and RSI definitions, and warm-up;
+    - entry, re-entry and same-bar rules;
+    - B's units and add timing;
+    - compounding sizing;
+    - period boundaries (last-bar signals dropped, forced closes);
+    - multiplicative trade costs and daily-return conventions;
+    - edge cases.
+  - **Verdict:** rule A only, held-out 2016-01-04..2026-09-25 (read once), 5 bps. "Promising" only if **all** hold:
+    1. the average trade is above 0;
+    2. it is at or above the 95th percentile of 1,000 seeded random-entry runs (sampling rules pinned);
+    3. the DSR probability is at least 0.95 with N = 3 trials (formula pinned);
+    4. A's Sharpe is above buy-and-hold's.
+
+    Otherwise the verdict is "no edge shown".
+- **Schema** (`src/quant_brain/strategy/card.py`) now enforces:
+  - an RSI basis (sourced needs a quote; assumption needs a reason);
+  - labelled clause interpretations;
+  - a required `implementation` block;
+  - a structured verdict limited to the primary rule and a tested cost;
+  - supersession through the ledger.
+- **Cards are byte-exact** (`-text`), and the freeze verifies after a fresh checkout.
+- **Checks:** 655 passed, 1 skipped; both Ruff checks clean.
+- **Next:** PROP-007 step 5, the backtest runner. Plan it first. It must implement exactly the card's pinned definitions and refuse any card that isn't frozen, or is superseded or changed.
+
 ## Gate F complete: local market data with provenance (2026-09-28/29)
 
 PROP-007 step 3, built per `brain/_system/plan/gate_f_market_data.md`, including Jason's three pre-build corrections. No strategy, signal or backtest work.
