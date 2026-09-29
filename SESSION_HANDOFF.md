@@ -1,5 +1,50 @@
 # Quant Agent Brain — Session Handoff
 
+## Backtest runner built; SC-0002 phase 1 (in-sample) done; waiting for Jason's review (2026-09-29)
+
+**Runner** (`src/quant_brain/backtest/`, `scripts/run_backtest.py`; plan `brain/_system/plan/phase_08_backtest_runner.md`). It implements SC-0002's pinned definitions exactly:
+- indicators and the bar-by-bar engine;
+- buy-and-hold;
+- seeded random entry;
+- the deflated Sharpe ratio;
+- an independent reference implementation of rule A.
+
+**Gates:**
+- the card must be frozen, unchanged and not superseded;
+- datasets must be accepted and match their pinned hashes;
+- the code must be committed. The code gate covers `src/quant_brain`, the runner script, `pyproject.toml` and `uv.lock`.
+
+**Held-out read** requires:
+- no code change since the approved in-sample commit (compared by `git diff`, not commit ID);
+- an approval after the latest in-sample run;
+- matching cross-checks from that run;
+- a committed, clean trial ledger.
+
+It is read once: a DB marker is written, and a ledger event appended, before any computation. A crash is recorded as `held_out_failed`.
+
+**Ledger:** `brain/04_Backtest_Reports/SC-0002.trials.jsonl`, append-only, byte-exact, and mirrored to the `backtests` and `metrics` tables.
+
+**Checks:** 704 passed, 1 skipped. Most mutations are caught; the three survivors are equivalent or redundant.
+
+**Reviews:** the pre-run independent review found:
+- 1 blocker (the held-out read not tied to the approved in-sample code). Its fix caused 2 more: the held-out gate could never pass, and held-out-once could be reset by a ledger restore.
+
+All three are fixed and re-verified by walking the real workflow. No lookahead was found, and the engine matched the card.
+
+**Phase 1** (in-sample 2000-01-03..2015-12-31, run at `cc0375b`, results committed at `1c52d27`): the reference matched the engine on all 9 symbol/cost combinations (SPY 101, QQQ 117, IWM 116 rule A trades).
+
+| SPY at 5 bps | Trades | Avg trade | Win rate | Total | CAGR | Sharpe | Max DD | Days held |
+|---|---|---|---|---|---|---|---|---|
+| A (primary) | 101 | +0.35% | 71% | +40% | 2.1% | 0.41 | −15% | 9% |
+| B | 80 | +0.72% | 91% | +76% | 3.6% | 0.74 | −14% | 10% |
+| D | 285 | +0.32% | 65% | +135% | 5.5% | 0.51 | −19% | 21% |
+| Buy-and-hold | 1 | — | — | +85% | 3.9% | 0.29 | −55% | 100% |
+
+- The random-entry test and the DSR are computed on the held-out period only, as the card specifies.
+- **B and D look better than A in-sample, but the card cannot switch.** Switching would be selection after seeing results; a different primary would be a new card, with this in-sample result counted.
+
+**Next:** Jason reviews the in-sample report. Then: `run_backtest.py SC-0002 --approve-in-sample --by Jason`, commit the ledger, `--phase held-out` (once, ever), and the adversarial review of the verdict (step 6).
+
 ## Strategy card SC-0002 frozen; SC-0001 retired (2026-09-29)
 
 PROP-007 step 4. No backtest has run, and no result has been seen.
