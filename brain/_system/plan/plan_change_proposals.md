@@ -230,6 +230,53 @@ This exists because the project's core design rule is *move slowly, one verified
 - **Status:** accepted
 - **Jason's decision:** approved the direction, 2026-09-28. The optional Phase 6 rerun was not yet chosen.
 
+> **Numbering note:** PROP-008 (the local Brain Terminal UI, accepted 2026-09-28) lives on branch `ui-terminal` until that branch is merged. This proposal is numbered after it on purpose.
+
+### PROP-009 — FRED macro and rate series, with provenance, for risk-free returns and regime analysis
+- **Date:** 2026-09-29
+- **Proposed by:** Claude session, at Jason's request (he is requesting a free FRED API key)
+- **Affects:** PLAN.md §6/§10 scope after PROP-007; Gate F data rules (`gate_f_market_data.md`), extended to a second source; `.env.example`; the backtest runner's cash and Sharpe definitions **for future cards only**. The evidence rules in AGENTS.md are unchanged.
+- **Current plan says:**
+  - PROP-007 limits data to "daily OHLCV for SPY, QQQ and IWM".
+  - The engine states that "cash earns 0%" (`backtest/engine.py`), and Sharpe uses "risk-free 0" (`backtest/stats.py`).
+- **Problem:** the SC-0002 adversarial review, `brain/05_Reviews/SC-0002-adversarial-review.md`, names two gaps that price data alone cannot close:
+  1. **Risk-free rate.**
+     - Rule A is flat about 85% of the time, but cash earns 0% on the card.
+     - The review's sensitivity check "uses flat rates, not the actual T-bill history" (2% and 5% assumed).
+     - A fair comparison against buy-and-hold needs the real daily T-bill rate for each day.
+  2. **Regimes.**
+     - The held-out edge was concentrated in 2020–2022.
+     - The review could not say whether that is a volatility, rate or recession effect, because the brain holds no regime data.
+- **Proposed change:**
+  1. **Key handling.**
+     - `FRED_API_KEY` goes in the git-ignored project `.env`, with a blank placeholder in `.env.example`.
+     - The key is read from the environment only. It is never logged, and never written to manifests, reports or notes.
+  2. **A second Gate F lane,** `fred`, reusing the same guarantees:
+     - immutable Parquet, a manifest with sha256, an accepted-only loader, and SQLite registration;
+     - a read-only verifier, hermetic tests on a small committed fixture, and no network in pytest.
+     - It calls the FRED REST API directly with the existing `requests`/`pandas`. There is **no OpenBB dependency** in the project.
+  3. **Start with market-priced series only,** which are not revised after publication:
+     - `DTB3` (3-month T-bill), `DGS10` and `DGS2` (Treasury yields), `T10Y2Y` (curve spread);
+     - `USREC` (NBER recession flag, marked `analysis_only` because NBER dates recessions after the fact);
+     - `VIXCLS` (VIX, marked `analysis_only`).
+  4. **Revised series** (CPI, unemployment, GDP and the like) are **out of scope** until a follow-up adds ALFRED point-in-time vintages and release-date lags. Using today's revised values in a backtest is lookahead.
+  5. **Use in backtests.**
+     - Future cards may declare `cash_rate: DTB3` so that flat days earn the real T-bill return, and report Sharpe on excess returns.
+     - Regime splits (recession, curve inversion, VIX terciles) may be reported **as analysis**.
+     - A macro condition may appear as a trading rule only if the card declares it before any result is seen, and every variant tried counts toward the multiple-testing adjustment.
+  6. **SC-0002 stays closed.**
+     - Its result is not re-scored, rescued or re-run under the new definitions.
+     - A regime re-analysis of its existing trades may be written as a clearly labeled **post-hoc note** that feeds only the design of a new card.
+- **Cost of not changing:** every future card inherits the 0% cash assumption, which penalizes low-exposure strategies against buy-and-hold by a varying and unmeasured amount. Regime dependence, the review's main open question, stays unanswerable.
+- **Still forbidden:**
+  - paid data or APIs;
+  - live trading and brokers;
+  - revised macro series without point-in-time vintages;
+  - editing or re-running SC-0002 under new rules;
+  - committing the key.
+- **Status:** proposed
+- **Jason's decision:** _pending_
+
 ---
 
 ## Accepted changes log
