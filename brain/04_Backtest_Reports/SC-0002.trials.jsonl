@@ -45,3 +45,4 @@
 {"at": "2026-09-29T03:55:20.274354+00:00", "cost_bps": 5.0, "engine_trades": 116, "event": "reference_check", "match": true, "phase": "in_sample", "reference_trades": 116, "symbol": "IWM"}
 {"at": "2026-09-29T03:55:20.277353+00:00", "cost_bps": 10.0, "engine_trades": 116, "event": "reference_check", "match": true, "phase": "in_sample", "reference_trades": 116, "symbol": "IWM"}
 {"at": "2026-09-29T03:55:20.278363+00:00", "event": "in_sample_completed", "reference_match": true}
+{"at": "2026-09-30T01:08:27.927617+00:00", "by": "Jason", "event": "in_sample_approved"}
