@@ -6,11 +6,13 @@ immutable dataset: Parquet under data/parquet/ (gitignored), a manifest under
 data/manifests/ (committed) and a price_datasets row, written in that order.
 
     uv run python scripts/fetch_market_data.py --symbols SPY QQQ IWM --start 2000-01-01
+    uv run python scripts/fetch_market_data.py --universe starter --start 2000-01-01 --no-cross-check
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from datetime import date
 
@@ -43,21 +45,30 @@ stooq_close.source = "stooq via pandas-datareader (Close)"  # type: ignore[attr-
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--symbols", nargs="+", required=True)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--symbols", nargs="+")
+    group.add_argument("--universe", help="a list in data/universe/<name>.json (PROP-010)")
     parser.add_argument("--start", required=True)
     parser.add_argument("--end", default=date.today().isoformat())
+    parser.add_argument("--no-cross-check", action="store_true",
+                        help="skip the report-only Stooq comparison (blocked since Gate F)")
     args = parser.parse_args()
+    symbols = args.symbols or [
+        entry["symbol"] for entry in json.loads(
+            (PROJECT_ROOT / "data/universe" / f"{args.universe}.json").read_text(encoding="utf-8")
+        )["symbols"]
+    ]
 
     import yfinance
 
     failed = False
-    for symbol in args.symbols:
+    for symbol in symbols:
         try:
             manifest = ingest(
                 PROJECT_ROOT, DEFAULT_DB_PATH, symbol, yahoo_bars(symbol, args.start, args.end),
                 meta={"provider": "yfinance", "provider_version": yfinance.__version__,
                       "requested_start": args.start, "requested_end": args.end},
-                cross_check_fetcher=stooq_close,
+                cross_check_fetcher=None if args.no_cross_check else stooq_close,
             )
         except Exception as exc:  # one symbol failing does not stop the others
             failed = True

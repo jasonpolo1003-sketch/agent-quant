@@ -1,5 +1,122 @@
 # Quant Agent Brain — Session Handoff
 
+## PROP-010 proposed: Quant Learning Terminal plan (2026-09-29)
+
+- **Plan:** `brain/_system/plan/learning_terminal_plan.md`, with PROP-010 in `plan_change_proposals.md`. Proposed, not accepted; nothing built.
+- **What it is:** a local, beginner-first TradingView + QuantConnect inside the existing Brain Terminal.
+  - Charts, replay, screener, calendars and news.
+  - The universe → signal → sizing → risk → execution → evaluation spine.
+  - An Academy and a Risk Center.
+  - A rule builder with a trial counter.
+  - Free data with provenance badges.
+- **Research:** free sources checked against official docs where possible; paid options priced, with "reported" marked where only third-party figures exist. TradingView Advanced Charts is ruled out (its licence requires public use). Lightweight Charts (Apache 2.0) is already bundled.
+- **Next:** Jason answers D1–D8 (plan §11) and accepts or trims PROP-010. Phase 1 ("See it": chart page and trade replay of SC-0002) is the smallest first build.
+
+## SC-0002 held-out verdict: no edge shown; adversarial review upholds the reject (2026-09-29)
+
+- **Approval:** Jason approved the in-sample report (ledger event committed at `f463db8`).
+- **Held-out run:** 2016-01-04..2026-09-25, read once. Results were committed at `e14c13a`, in `brain/04_Backtest_Reports/SC-0002-held-out.md`.
+- **Verdict for rule A, SPY at 5 bps: no edge shown.**
+  - Average trade: +0.32% (pass).
+  - Random-entry percentile: 94.9 against a threshold of 95 (fail, by 0.0001 pp; other seed blocks give 94.7–96.9).
+  - Deflated Sharpe: 0.896 against 0.95 (fail). Even undeflated, the probabilistic Sharpe is 0.932.
+  - Sharpe against buy-and-hold: 0.46 vs 0.89 (fail). It still fails with cash earning 2% or 5%.
+- **Review:** `brain/05_Reviews/SC-0002-adversarial-review.md`. All four numbers were recomputed independently of the engine, and the held-out code equals the in-sample code (empty diff).
+  - No lookahead was found.
+  - A breaks even at about 21 bps per side.
+  - The edge is concentrated in 2020–2022; 2016–2019 averaged 0.04% a trade.
+  - B and D decayed out of sample, which vindicates not switching.
+  - The review is **not independent**: the same session ran it.
+- **State:** SC-0002 is closed, and PROP-007 step 7 (prop-firm fit) is not reached. A new idea means a new card, with these trials counted.
+- **Next: Jason decides.** Options: an independent second review; a new card; the second door (Phase 9); or the model-backend decision.
+
+## Backtest runner built; SC-0002 phase 1 (in-sample) done; waiting for Jason's review (2026-09-29)
+
+**Runner** (`src/quant_brain/backtest/`, `scripts/run_backtest.py`; plan `brain/_system/plan/phase_08_backtest_runner.md`). It implements SC-0002's pinned definitions exactly:
+- indicators and the bar-by-bar engine;
+- buy-and-hold;
+- seeded random entry;
+- the deflated Sharpe ratio;
+- an independent reference implementation of rule A.
+
+**Gates:**
+- the card must be frozen, unchanged and not superseded;
+- datasets must be accepted and match their pinned hashes;
+- the code must be committed. The code gate covers `src/quant_brain`, the runner script, `pyproject.toml` and `uv.lock`.
+
+**Held-out read** requires:
+- no code change since the approved in-sample commit (compared by `git diff`, not commit ID);
+- an approval after the latest in-sample run;
+- matching cross-checks from that run;
+- a committed, clean trial ledger.
+
+It is read once: a DB marker is written, and a ledger event appended, before any computation. A crash is recorded as `held_out_failed`.
+
+**Ledger:** `brain/04_Backtest_Reports/SC-0002.trials.jsonl`, append-only, byte-exact, and mirrored to the `backtests` and `metrics` tables.
+
+**Checks:** 704 passed, 1 skipped. Most mutations are caught; the three survivors are equivalent or redundant.
+
+**Reviews:** the pre-run independent review found:
+- 1 blocker (the held-out read not tied to the approved in-sample code). Its fix caused 2 more: the held-out gate could never pass, and held-out-once could be reset by a ledger restore.
+
+All three are fixed and re-verified by walking the real workflow. No lookahead was found, and the engine matched the card.
+
+**Phase 1** (in-sample 2000-01-03..2015-12-31, run at `cc0375b`, results committed at `1c52d27`): the reference matched the engine on all 9 symbol/cost combinations (SPY 101, QQQ 117, IWM 116 rule A trades).
+
+| SPY at 5 bps | Trades | Avg trade | Win rate | Total | CAGR | Sharpe | Max DD | Days held |
+|---|---|---|---|---|---|---|---|---|
+| A (primary) | 101 | +0.35% | 71% | +40% | 2.1% | 0.41 | −15% | 9% |
+| B | 80 | +0.72% | 91% | +76% | 3.6% | 0.74 | −14% | 10% |
+| D | 285 | +0.32% | 65% | +135% | 5.5% | 0.51 | −19% | 21% |
+| Buy-and-hold | 1 | — | — | +85% | 3.9% | 0.29 | −55% | 100% |
+
+- The random-entry test and the DSR are computed on the held-out period only, as the card specifies.
+- **B and D look better than A in-sample, but the card cannot switch.** Switching would be selection after seeing results; a different primary would be a new card, with this in-sample result counted.
+
+**Next:** Jason reviews the in-sample report. Then: `run_backtest.py SC-0002 --approve-in-sample --by Jason`, commit the ledger, `--phase held-out` (once, ever), and the adversarial review of the verdict (step 6).
+
+## Strategy card SC-0002 frozen; SC-0001 retired (2026-09-29)
+
+PROP-007 step 4. No backtest has run, and no result has been seen.
+
+- **SC-0001** was frozen *before* its independent review (a process mistake). The review found three problems:
+  - two unsourced choices labelled as sourced: Wilder RSI for rules A and B, and A's close-based exit;
+  - an ambiguous verdict;
+  - open implementation details.
+
+  No backtest had read it. It is kept on record and **superseded**: the ledger and DB mark it, and `verify_frozen_card` refuses it.
+- **SC-0002** (`brain/03_Strategy_Cards/SC-0002-rsi2-connors-spy.md`, spec sha256 `4b838196…`) was reviewed **before** freezing. The review found two blockers (B's unlabelled "moving average"; a DSR not fully pinned) and four optional clarifications. All were fixed, and the re-check found no blockers. Jason approved the freeze.
+  - **Rules:**
+    - **A (primary):** ChartSchool/Connors RSI(2): buy when RSI(2) < 10 above the 200-day SMA; exit on a move above the 5-day SMA; no stops.
+    - **B:** Connors Research "RSI 25".
+    - **D:** NAAIM Cutler RSI(3).
+
+    Every rule quote is verified against its snapshot. Every non-sourced choice is labelled `assumption` with a rationale: Wilder smoothing for A and B, close-based readings, SMA for B's moving average, next-open execution for all rules, adjusted prices, costs, and 0% on cash.
+  - **Implementation fully pinned on the card:**
+    - SMA and RSI definitions, and warm-up;
+    - entry, re-entry and same-bar rules;
+    - B's units and add timing;
+    - compounding sizing;
+    - period boundaries (last-bar signals dropped, forced closes);
+    - multiplicative trade costs and daily-return conventions;
+    - edge cases.
+  - **Verdict:** rule A only, held-out 2016-01-04..2026-09-25 (read once), 5 bps. "Promising" only if **all** hold:
+    1. the average trade is above 0;
+    2. it is at or above the 95th percentile of 1,000 seeded random-entry runs (sampling rules pinned);
+    3. the DSR probability is at least 0.95 with N = 3 trials (formula pinned);
+    4. A's Sharpe is above buy-and-hold's.
+
+    Otherwise the verdict is "no edge shown".
+- **Schema** (`src/quant_brain/strategy/card.py`) now enforces:
+  - an RSI basis (sourced needs a quote; assumption needs a reason);
+  - labelled clause interpretations;
+  - a required `implementation` block;
+  - a structured verdict limited to the primary rule and a tested cost;
+  - supersession through the ledger.
+- **Cards are byte-exact** (`-text`), and the freeze verifies after a fresh checkout.
+- **Checks:** 655 passed, 1 skipped; both Ruff checks clean.
+- **Next:** PROP-007 step 5, the backtest runner. Plan it first. It must implement exactly the card's pinned definitions and refuse any card that isn't frozen, or is superseded or changed.
+
 ## Gate F complete: local market data with provenance (2026-09-28/29)
 
 PROP-007 step 3, built per `brain/_system/plan/gate_f_market_data.md`, including Jason's three pre-build corrections. No strategy, signal or backtest work.

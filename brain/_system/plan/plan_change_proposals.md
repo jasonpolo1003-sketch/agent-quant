@@ -253,6 +253,91 @@ This exists because the project's core design rule is *move slowly, one verified
 - **Status:** accepted
 - **Jason's decision:** accepted as written, 2026-09-28. Claude builds it; the scheduler is always-on (Windows Task Scheduler); Claude CLI is the only backend for now.
 
+### PROP-009 — FRED macro and rate series, with provenance, for risk-free returns and regime analysis
+- **Date:** 2026-09-29
+- **Proposed by:** Claude session, at Jason's request (he is requesting a free FRED API key)
+- **Affects:** PLAN.md §6/§10 scope after PROP-007; Gate F data rules (`gate_f_market_data.md`), extended to a second source; `.env.example`; the backtest runner's cash and Sharpe definitions **for future cards only**. The evidence rules in AGENTS.md are unchanged.
+- **Current plan says:**
+  - PROP-007 limits data to "daily OHLCV for SPY, QQQ and IWM".
+  - The engine states that "cash earns 0%" (`backtest/engine.py`), and Sharpe uses "risk-free 0" (`backtest/stats.py`).
+- **Problem:** the SC-0002 adversarial review, `brain/05_Reviews/SC-0002-adversarial-review.md`, names two gaps that price data alone cannot close:
+  1. **Risk-free rate.**
+     - Rule A is flat about 85% of the time, but cash earns 0% on the card.
+     - The review's sensitivity check "uses flat rates, not the actual T-bill history" (2% and 5% assumed).
+     - A fair comparison against buy-and-hold needs the real daily T-bill rate for each day.
+  2. **Regimes.**
+     - The held-out edge was concentrated in 2020–2022.
+     - The review could not say whether that is a volatility, rate or recession effect, because the brain holds no regime data.
+- **Proposed change:**
+  1. **Key handling.**
+     - `FRED_API_KEY` goes in the git-ignored project `.env`, with a blank placeholder in `.env.example`.
+     - The key is read from the environment only. It is never logged, and never written to manifests, reports or notes.
+  2. **A second Gate F lane,** `fred`, reusing the same guarantees:
+     - immutable Parquet, a manifest with sha256, an accepted-only loader, and SQLite registration;
+     - a read-only verifier, hermetic tests on a small committed fixture, and no network in pytest.
+     - It calls the FRED REST API directly with the existing `requests`/`pandas`. There is **no OpenBB dependency** in the project.
+  3. **Start with market-priced series only,** which are not revised after publication:
+     - `DTB3` (3-month T-bill), `DGS10` and `DGS2` (Treasury yields), `T10Y2Y` (curve spread);
+     - `USREC` (NBER recession flag, marked `analysis_only` because NBER dates recessions after the fact);
+     - `VIXCLS` (VIX, marked `analysis_only`).
+  4. **Revised series** (CPI, unemployment, GDP and the like) are **out of scope** until a follow-up adds ALFRED point-in-time vintages and release-date lags. Using today's revised values in a backtest is lookahead.
+  5. **Use in backtests.**
+     - Future cards may declare `cash_rate: DTB3` so that flat days earn the real T-bill return, and report Sharpe on excess returns.
+     - Regime splits (recession, curve inversion, VIX terciles) may be reported **as analysis**.
+     - A macro condition may appear as a trading rule only if the card declares it before any result is seen, and every variant tried counts toward the multiple-testing adjustment.
+  6. **SC-0002 stays closed.**
+     - Its result is not re-scored, rescued or re-run under the new definitions.
+     - A regime re-analysis of its existing trades may be written as a clearly labeled **post-hoc note** that feeds only the design of a new card.
+- **Cost of not changing:** every future card inherits the 0% cash assumption, which penalizes low-exposure strategies against buy-and-hold by a varying and unmeasured amount. Regime dependence, the review's main open question, stays unanswerable.
+- **Still forbidden:**
+  - paid data or APIs;
+  - live trading and brokers;
+  - revised macro series without point-in-time vintages;
+  - editing or re-running SC-0002 under new rules;
+  - committing the key.
+- **Status:** accepted
+- **Jason's decision:** accepted 2026-09-29. His free FRED key is in the project `.env` and verified live (DTB3, T10Y2Y, USREC, VIXCLS).
+
+---
+
+### PROP-010 — Quant Learning Terminal: a local, beginner-first TradingView + QuantConnect
+- **Date:** 2026-09-29
+- **Proposed by:** Claude session, at Jason's request ("almost 1-1 with TradingView … free resources … for a beginner to understand how quant trading works, risk management and everything").
+- **Affects:**
+  - PROP-008's Brain Terminal (branch `ui-terminal`). Its decision "no market feed, no quotes" would change to "labelled live data for display and practice only".
+  - PROP-007's "no paper or live trading": only if Jason chooses D3 (a local simulated practice account, no broker).
+  - Data scope beyond SPY/QQQ/IWM; it builds on PROP-009 (FRED).
+  - The evidence rules in AGENTS.md are **unchanged**.
+- **Current plan says:**
+  - PROP-007 limits work to one card and one backtest, with no paper or live trading.
+  - PROP-008 is a read-mostly window onto the brain, with no market feed.
+- **Problem:**
+  - Jason wants to learn how quants think (risk first, exact rules, honest testing), and to have a tool a beginner can learn from.
+  - The terminal shows the brain's state, but it does not teach markets, risk or strategy testing.
+  - Neither TradingView (no honest-testing lessons) nor QuantConnect (not beginner-simple, cloud-first) does both.
+- **Proposed change:** the plan in `brain/_system/plan/learning_terminal_plan.md`, summarised:
+  1. **A TradingView-style workspace** in the existing terminal, using the bundled Lightweight Charts: charts, watchlist, replay with a blind mode, trade replay of backtests, screener, heatmap, calendars, symbol pages and news.
+  2. **A QuantConnect-style spine:** universe → signal → sizing → risk → execution → evaluation. It serves as both the Lab's navigation and the Academy's chapters.
+  3. **An Academy** (12 modules, risk before signals, SC-0002 as the case study), a **Risk Center** (sizing, risk of ruin, drawdown, correlation), and Explain-this on every screen.
+  4. **A free data stack with visible provenance:** Yahoo EOD (personal use), FRED, SEC EDGAR, Fed FOMC dates, Nasdaq symbol directory, Coinbase live crypto (no key), Alpaca or Finnhub free live US stocks (IEX, labelled).
+  5. **A rule builder** whose exploratory runs are counted by a live trial counter. Only frozen cards through the gated runner earn verdicts.
+  6. **Seven phases:** see → data → learn → test → live → practice (optional) → paid upgrades (optional). Each phase stops for Jason.
+  7. **Paid options researched but not bought:** the recommendation is $0 through Phase 5. Norgate first if money is spent, for survivorship-free history.
+- **Honest limits:** 1-to-1 with TradingView is **not** achievable for free on data. There are no free global markets, futures, options, Level 2 stocks or deep intraday history. The plan says so on-screen rather than hiding it.
+- **Still forbidden:**
+  - live trading and broker order routing;
+  - paid APIs without Jason's decision;
+  - public hosting or sharing personal-use data;
+  - live data feeding backtests or cards;
+  - TradingView Advanced Charts (its licence requires public use) and TradingView data resellers.
+- **Decisions for Jason:** D1–D8 in the plan's §11 (scope order, live stock feed, practice account, starter universe, engine, who builds, look, audience).
+- **Status:** accepted
+- **Jason's decision (2026-09-29):**
+  - "Let's create the free one first."
+  - The recommended defaults D1–D8 are taken; D2 (live stock feed) and D3 (practice account) come when their phases start.
+  - He relaxed the process for this direction change: "we can step away from the ruling as we are changing directions". This means lighter plan-before-build and no per-step stop gates for the terminal's free build.
+  - **Kept regardless:** no live trading or broker order routing, no paid data or APIs without Jason's decision, provenance labels on data, and SC-0002 stays closed.
+
 ---
 
 ## Accepted changes log
@@ -267,3 +352,5 @@ Once Jason accepts a proposal, apply it to `PLAN.md`, then record the applied ch
 | 2026-09-26 | PROP-004 (E2 scope only) | `discovery/{work_identity,candidate_list}.py`, `live_discovery.py`, `research/executor.py`, `harness/handlers.py` (Scout handler only), `scripts/{dispatch_task,gate_readiness}.py` | Added a pre-registered candidate-list lane through the unchanged live path, and DOI-alias collapse in the source minimum. No list registered, no run executed. PROP-005 remains proposed. |
 | 2026-09-28 | PROP-007 | PLAN.md §10 (direction note) | Freeze research harness; move to Gate F data, one frozen card, one honest backtest |
 | 2026-09-28 | PROP-008 | PLAN.md §6, §10; `ui_terminal_plan.md` | Local Brain Terminal UI: reads by default, allowlisted jobs, tutor with no tools, auth only through subscription CLIs |
+| 2026-09-29 | PROP-009 | `plan_change_proposals.md` (status accepted) | FRED rate and regime series under Gate F rules; key only in the git-ignored `.env` |
+| 2026-09-29 | PROP-010 | `learning_terminal_plan.md` (status accepted); PLAN.md §10 | Beginner-first learning terminal, free tier first; lighter process for this track; safety rules kept |

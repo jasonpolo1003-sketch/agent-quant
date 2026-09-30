@@ -38,20 +38,45 @@ class Quote(BaseModel):
     content_sha256: str = Field(min_length=64, max_length=64)
 
 
+class Assumption(BaseModel):
+    model_config = _STRICT
+    text: str = Field(min_length=1)
+    basis: Literal["assumption"]
+    rationale: str = Field(min_length=1)
+    sources: list[Quote] = Field(default_factory=list)
+
+
 class Clause(BaseModel):
-    """One sourced part of a rule: the plain rule, its parameters, its sources."""
+    """One sourced part of a rule: the plain rule, its parameters, its sources.
+
+    ``interpretation`` labels any reading the source does not state itself
+    (SC-0001 presented "a move above the 5-day SMA" as a close-based exit).
+    """
 
     model_config = _STRICT
     text: str = Field(min_length=1)
     params: dict[str, Any] = Field(default_factory=dict)
     sources: list[Quote] = Field(min_length=1)
+    interpretation: Assumption | None = None
 
 
 class Rsi(BaseModel):
+    """RSI method: quoted from a source, or an explicitly labelled assumption."""
+
     model_config = _STRICT
     period: int = Field(ge=2)
     method: Literal["wilder", "cutler"]
+    basis: Literal["sourced", "assumption"]
     sources: list[Quote] = Field(default_factory=list)
+    rationale: str | None = None
+
+    @model_validator(mode="after")
+    def _basis_is_backed(self) -> Rsi:
+        if self.basis == "sourced" and not self.sources:
+            raise ValueError("a sourced RSI method needs a quote")
+        if self.basis == "assumption" and not (self.rationale or "").strip():
+            raise ValueError("an assumed RSI method needs a rationale")
+        return self
 
 
 class Rule(BaseModel):
@@ -65,14 +90,6 @@ class Rule(BaseModel):
     add: Clause | None = None
     exit: Clause
     stops: Clause | None = None
-
-
-class Assumption(BaseModel):
-    model_config = _STRICT
-    text: str = Field(min_length=1)
-    basis: Literal["assumption"]
-    rationale: str = Field(min_length=1)
-    sources: list[Quote] = Field(default_factory=list)
 
 
 class Costs(BaseModel):
@@ -116,9 +133,55 @@ class Dataset(BaseModel):
     content_sha256: str = Field(min_length=64, max_length=64)
 
 
+class Implementation(BaseModel):
+    """Every choice two honest implementers could make differently, fixed up front."""
+
+    model_config = _STRICT
+    basis: Literal["assumption"]
+    indicator_price: str
+    fill_price: str
+    warmup: str
+    rsi_wilder: str
+    rsi_cutler: str
+    filter_scope: str
+    entry_evaluation: str
+    reentry_and_same_bar: str
+    sizing: str
+    cash_return: str
+    period_boundary: str
+    cost_application: str
+    sma: str
+    trade_return: str
+    daily_returns: str
+    edge_cases: str
+
+
+class Criterion(BaseModel):
+    model_config = _STRICT
+    name: str
+    metric: str
+    comparator: Literal[">", ">="]
+    threshold: float
+    detail: str
+
+
+class Verdict(BaseModel):
+    """Pre-declared pass test: one rule, one period, one cost level."""
+
+    model_config = _STRICT
+    applies_to: str
+    period: Literal["held_out"]
+    cost_bps: float
+    criteria: list[Criterion] = Field(min_length=1)
+    if_all_pass: str
+    otherwise: str
+    other_rules: str
+
+
 class StrategyCard(BaseModel):
     model_config = _STRICT
     card_id: str
+    supersedes: str | None = None
     title: str
     hypothesis: str
     method_family: str
@@ -134,12 +197,18 @@ class StrategyCard(BaseModel):
     periods: Periods
     benchmarks: dict[str, Any]
     multiple_testing: dict[str, Any]
-    verdict_criteria: list[str] = Field(min_length=1)
+    implementation: Implementation
+    verdict: Verdict
 
     @model_validator(mode="after")
     def _one_primary_and_pinned_data(self) -> StrategyCard:
         if [rule.role for rule in self.rules].count("primary") != 1:
             raise ValueError("a card has exactly one primary rule")
+        primary = next(rule.rule_id for rule in self.rules if rule.role == "primary")
+        if self.verdict.applies_to != primary:
+            raise ValueError("the verdict applies to the primary rule only")
+        if self.verdict.cost_bps not in self.costs.bps_per_side:
+            raise ValueError("the verdict's cost level must be one the card tests")
         pinned = {dataset.symbol for dataset in self.data}
         wanted = set(self.universe.get("primary", [])) | set(self.universe.get("robustness", []))
         if wanted - pinned:
@@ -169,6 +238,8 @@ def all_quotes(card: StrategyCard) -> list[Quote]:
         for clause in (rule.filter, rule.entry, rule.add, rule.exit, rule.stops):
             if clause is not None:
                 quotes += clause.sources
+                if clause.interpretation is not None:
+                    quotes += clause.interpretation.sources
     return quotes
 
 
@@ -212,7 +283,9 @@ def verify_datasets_pinned(project_root: str | Path, db_path: str | Path, card: 
 
 def _ledger(root: Path) -> dict[str, Any]:
     path = root / LEDGER_PATH
-    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {"frozen": []}
+    ledger = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {"frozen": []}
+    ledger.setdefault("superseded", [])
+    return ledger
 
 
 def freeze_card(project_root: str | Path, db_path: str | Path, card_path: str | Path) -> dict[str, Any]:
@@ -227,6 +300,11 @@ def freeze_card(project_root: str | Path, db_path: str | Path, card_path: str | 
     ledger = _ledger(root)
     if any(entry["card_id"] == card.card_id for entry in ledger["frozen"]):
         raise CardError(f"{card.card_id} is already frozen; a changed idea is a new card")
+    if card.supersedes is not None:
+        if not any(e["card_id"] == card.supersedes for e in ledger["frozen"]):
+            raise CardError(f"{card.card_id} supersedes {card.supersedes}, which is not frozen")
+        if any(e["card_id"] == card.supersedes for e in ledger["superseded"]):
+            raise CardError(f"{card.supersedes} is already superseded")
     problems = verify_quotes(root, card) + verify_datasets_pinned(root, db_path, card)
     if problems:
         raise CardError(f"{card.card_id} not frozen: " + "; ".join(problems))
@@ -239,6 +317,12 @@ def freeze_card(project_root: str | Path, db_path: str | Path, card_path: str | 
         "frozen_at": datetime.now(UTC).isoformat(),
     }
     ledger["frozen"].append(entry)
+    if card.supersedes is not None:
+        ledger["superseded"].append({
+            "card_id": card.supersedes, "superseded_by": card.card_id,
+            "reason": "superseded before any backtest; see the successor card",
+            "at": entry["frozen_at"],
+        })
     ledger_path = root / LEDGER_PATH
     temporary = ledger_path.with_name(ledger_path.name + ".tmp")
     temporary.write_text(json.dumps(ledger, indent=2) + "\n", encoding="utf-8")
@@ -254,15 +338,25 @@ def freeze_card(project_root: str | Path, db_path: str | Path, card_path: str | 
                 json.dumps(sorted({q.snapshot for q in all_quotes(card)})),
             ),
         )
+        if card.supersedes is not None:
+            conn.execute(
+                "UPDATE strategy_cards SET status = 'superseded', updated_at = CURRENT_TIMESTAMP "
+                "WHERE strategy_id = ?",
+                (card.supersedes,),
+            )
     return entry
 
 
 def verify_frozen_card(project_root: str | Path, card_id: str) -> list[str]:
     """Problems if the card is not frozen or has changed since. Read-only."""
     root = Path(project_root)
-    entries = [e for e in _ledger(root)["frozen"] if e["card_id"] == card_id]
+    ledger = _ledger(root)
+    entries = [e for e in ledger["frozen"] if e["card_id"] == card_id]
     if not entries:
         return [f"{card_id} is not frozen"]
+    retired = [e for e in ledger["superseded"] if e["card_id"] == card_id]
+    if retired:
+        return [f"{card_id} is superseded by {retired[0]['superseded_by']}; it must not be run"]
     entry = entries[0]
     path = root / entry["card_path"]
     if not path.is_file():
