@@ -1,5 +1,17 @@
 # Quant Agent Brain — Session Handoff
 
+## PROP-010 proposed: Quant Learning Terminal plan (2026-09-29)
+
+- **Plan:** `brain/_system/plan/learning_terminal_plan.md`, with PROP-010 in `plan_change_proposals.md`. Proposed, not accepted; nothing built.
+- **What it is:** a local, beginner-first TradingView + QuantConnect inside the existing Brain Terminal.
+  - Charts, replay, screener, calendars and news.
+  - The universe → signal → sizing → risk → execution → evaluation spine.
+  - An Academy and a Risk Center.
+  - A rule builder with a trial counter.
+  - Free data with provenance badges.
+- **Research:** free sources checked against official docs where possible; paid options priced, with "reported" marked where only third-party figures exist. TradingView Advanced Charts is ruled out (its licence requires public use). Lightweight Charts (Apache 2.0) is already bundled.
+- **Next:** Jason answers D1–D8 (plan §11) and accepts or trims PROP-010. Phase 1 ("See it": chart page and trade replay of SC-0002) is the smallest first build.
+
 ## SC-0002 held-out verdict: no edge shown; adversarial review upholds the reject (2026-09-29)
 
 - **Approval:** Jason approved the in-sample report (ledger event committed at `f463db8`).

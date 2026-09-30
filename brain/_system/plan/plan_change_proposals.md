@@ -279,6 +279,42 @@ This exists because the project's core design rule is *move slowly, one verified
 
 ---
 
+### PROP-010 — Quant Learning Terminal: a local, beginner-first TradingView + QuantConnect
+- **Date:** 2026-09-29
+- **Proposed by:** Claude session, at Jason's request ("almost 1-1 with TradingView … free resources … for a beginner to understand how quant trading works, risk management and everything").
+- **Affects:**
+  - PROP-008's Brain Terminal (branch `ui-terminal`). Its decision "no market feed, no quotes" would change to "labelled live data for display and practice only".
+  - PROP-007's "no paper or live trading": only if Jason chooses D3 (a local simulated practice account, no broker).
+  - Data scope beyond SPY/QQQ/IWM; it builds on PROP-009 (FRED).
+  - The evidence rules in AGENTS.md are **unchanged**.
+- **Current plan says:**
+  - PROP-007 limits work to one card and one backtest, with no paper or live trading.
+  - PROP-008 is a read-mostly window onto the brain, with no market feed.
+- **Problem:**
+  - Jason wants to learn how quants think (risk first, exact rules, honest testing), and to have a tool a beginner can learn from.
+  - The terminal shows the brain's state, but it does not teach markets, risk or strategy testing.
+  - Neither TradingView (no honest-testing lessons) nor QuantConnect (not beginner-simple, cloud-first) does both.
+- **Proposed change:** the plan in `brain/_system/plan/learning_terminal_plan.md`, summarised:
+  1. **A TradingView-style workspace** in the existing terminal, using the bundled Lightweight Charts: charts, watchlist, replay with a blind mode, trade replay of backtests, screener, heatmap, calendars, symbol pages and news.
+  2. **A QuantConnect-style spine:** universe → signal → sizing → risk → execution → evaluation. It serves as both the Lab's navigation and the Academy's chapters.
+  3. **An Academy** (12 modules, risk before signals, SC-0002 as the case study), a **Risk Center** (sizing, risk of ruin, drawdown, correlation), and Explain-this on every screen.
+  4. **A free data stack with visible provenance:** Yahoo EOD (personal use), FRED, SEC EDGAR, Fed FOMC dates, Nasdaq symbol directory, Coinbase live crypto (no key), Alpaca or Finnhub free live US stocks (IEX, labelled).
+  5. **A rule builder** whose exploratory runs are counted by a live trial counter. Only frozen cards through the gated runner earn verdicts.
+  6. **Seven phases:** see → data → learn → test → live → practice (optional) → paid upgrades (optional). Each phase stops for Jason.
+  7. **Paid options researched but not bought:** the recommendation is $0 through Phase 5. Norgate first if money is spent, for survivorship-free history.
+- **Honest limits:** 1-to-1 with TradingView is **not** achievable for free on data. There are no free global markets, futures, options, Level 2 stocks or deep intraday history. The plan says so on-screen rather than hiding it.
+- **Still forbidden:**
+  - live trading and broker order routing;
+  - paid APIs without Jason's decision;
+  - public hosting or sharing personal-use data;
+  - live data feeding backtests or cards;
+  - TradingView Advanced Charts (its licence requires public use) and TradingView data resellers.
+- **Decisions for Jason:** D1–D8 in the plan's §11 (scope order, live stock feed, practice account, starter universe, engine, who builds, look, audience).
+- **Status:** proposed
+- **Jason's decision:** _pending_
+
+---
+
 ## Accepted changes log
 
 Once Jason accepts a proposal, apply it to `PLAN.md`, then record the applied change here with the date, so the plan's history stays readable.
