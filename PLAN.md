@@ -221,7 +221,8 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 - **Strategy card: done 2026-09-29.** SC-0002 is frozen (`4b838196…`), reviewed before freezing, and every assumption is labelled. SC-0001 was superseded before any backtest.
 - **Backtest: done 2026-09-29.** The two-phase gated runner is built. In-sample was approved by Jason, and the held-out period was read once (`e14c13a`). Verdict: **no edge shown**. Rule A fails random entry (94.9 vs 95), the deflated Sharpe (0.896 vs 0.95) and buy-and-hold (Sharpe 0.46 vs 0.89).
 - **Adversarial review: done 2026-09-29.** `brain/05_Reviews/SC-0002-adversarial-review.md` **upholds the reject**. Every number was independently recomputed. No lookahead was found, and no relaxed assumption flips the verdict. The review was not independent of the run. SC-0002 is closed, and PROP-007 step 7 (prop-firm fit) is not reached.
-- **Next bounded step: Jason decides.** Options: an independent second review of the verdict; a new card, with SC-0002's trials counted; the second door (Phase 9); or the model-backend decision. Plan before building.
+- **Direction change: PROP-010 accepted (2026-09-29).** A beginner-first learning terminal, free tier first (`brain/_system/plan/learning_terminal_plan.md`). Jason relaxed the process gates for this track. The safety rules (no live trading, no paid data without a decision, provenance) stand.
+- **Superseded by PROP-010. Previous next step: Jason decides.** Options: an independent second review of the verdict; a new card, with SC-0002's trials counted; the second door (Phase 9); or the model-backend decision. Plan before building.
 
 ### Content-only grounding (2026-09-28)
 

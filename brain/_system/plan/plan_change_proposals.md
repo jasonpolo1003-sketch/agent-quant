@@ -310,8 +310,12 @@ This exists because the project's core design rule is *move slowly, one verified
   - live data feeding backtests or cards;
   - TradingView Advanced Charts (its licence requires public use) and TradingView data resellers.
 - **Decisions for Jason:** D1–D8 in the plan's §11 (scope order, live stock feed, practice account, starter universe, engine, who builds, look, audience).
-- **Status:** proposed
-- **Jason's decision:** _pending_
+- **Status:** accepted
+- **Jason's decision (2026-09-29):**
+  - "Let's create the free one first."
+  - The recommended defaults D1–D8 are taken; D2 (live stock feed) and D3 (practice account) come when their phases start.
+  - He relaxed the process for this direction change: "we can step away from the ruling as we are changing directions". This means lighter plan-before-build and no per-step stop gates for the terminal's free build.
+  - **Kept regardless:** no live trading or broker order routing, no paid data or APIs without Jason's decision, provenance labels on data, and SC-0002 stays closed.
 
 ---
 
@@ -326,3 +330,4 @@ Once Jason accepts a proposal, apply it to `PLAN.md`, then record the applied ch
 | 2026-09-19 | PROP-003 | `PLAN.md`, `src/quant_brain/discovery/arxiv_search.py`, `agent_reach.py`, `research/executor.py`, `scripts/{gate_readiness,agent_reach_check}.py` | Added the zero-account arXiv lane; made the ≥3-source bar enforceable over distinct upstream works; quarantined sparse results in Failed_Runs. One of three questions became probe-ready; no child run executed. |
 | 2026-09-26 | PROP-004 (E2 scope only) | `discovery/{work_identity,candidate_list}.py`, `live_discovery.py`, `research/executor.py`, `harness/handlers.py` (Scout handler only), `scripts/{dispatch_task,gate_readiness}.py` | Added a pre-registered candidate-list lane through the unchanged live path, and DOI-alias collapse in the source minimum. No list registered, no run executed. PROP-005 remains proposed. |
 | 2026-09-28 | PROP-007 | PLAN.md §10 (direction note) | Freeze research harness; move to Gate F data, one frozen card, one honest backtest |
+| 2026-09-29 | PROP-010 | `learning_terminal_plan.md` (status accepted); PLAN.md §10 | Beginner-first learning terminal, free tier first; lighter process for this track; safety rules kept |

@@ -1,7 +1,7 @@
 ---
 id: PLAN-LEARNING-TERMINAL
 type: phase_plan
-status: proposed
+status: accepted
 owner: jason
 created: 2026-09-29
 depends_on: PROP-010 (proposed); builds on PROP-008 (Brain Terminal, branch ui-terminal) and PROP-009 (FRED, proposed)
@@ -11,7 +11,7 @@ depends_on: PROP-010 (proposed); builds on PROP-008 (Brain Terminal, branch ui-t
 
 Parent: [../../../PLAN.md](../../../PLAN.md) · Proposal: PROP-010 in [plan_change_proposals.md](plan_change_proposals.md)
 
-> **Status: proposed, not accepted.** Nothing here is built until Jason accepts PROP-010 and answers the decisions in §11.
+> **Status: accepted 2026-09-29, free tier first, recommended defaults (§11).** Jason relaxed the plan-before-build gates for this track. The safety rules in §2 still hold.
 > It is a plan, not a promise. §9 says plainly where "1-to-1 with TradingView" cannot happen for free.
 
 ## 1. What it is
