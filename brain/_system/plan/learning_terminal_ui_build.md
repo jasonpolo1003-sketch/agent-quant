@@ -1,7 +1,7 @@
 ---
 id: PLAN-LEARNING-TERMINAL-UI
 type: build_plan
-status: draft
+status: in progress
 owner: jason
 created: 2026-09-29
 depends_on: PROP-010 (accepted; plan in learning_terminal_plan.md on branch testing)
@@ -164,6 +164,30 @@ backtest, and see the **trial counter**. That is its own slice (§8).
 | W3 | Trade Replay (PROP-010 Phase 1 exit) and Replay with blind mode | SC-0002 held-out trade #41 opens; its fills and indicator values match the report; blind mode never shows a future bar |
 | W4 | Explain-this on every panel; Beginner/Detail switch; the old pages folded in (Markets becomes Chart, Strategies becomes Lab) | A first-time user can say what the screen shows within 10 seconds (Jason's check) |
 | W5 | Rule-builder UI on the backend's exploratory engine, with the trial counter | Rebuilding SC-0002 rule A reproduces its 91 held-out trades, labelled Exploratory |
+
+## 8a. Build status (2026-09-30)
+
+- **W0–W3 are built** on `ui-terminal`, after merging `testing`.
+  - Lightweight Charts is now v5.2.1.
+  - Chart is the first page and the default.
+  - Markets was folded into Chart; Strategies became Lab.
+- **Verified in Chrome (Playwright), with zero console errors.** Working:
+  - symbol search;
+  - D/W/M;
+  - indicators with settings (SMA, EMA, Bollinger, RSI, MACD, ATR);
+  - data window;
+  - compare;
+  - `SPY/TLT` formula;
+  - trend lines and levels;
+  - measure with selection stats (SPY 2020-02-19 → 2020-03-23 = −33.7%);
+  - data table with CSV export;
+  - bar replay with blind mode (hides ticker, dates, prices, source and deep history);
+  - trade replay. SC-0002 held-out trade #41 matches the report: 06-18 signal, RSI(2) 1.77, bought 06-21 at 388.59, sold 06-22 at 392.37, +0.87%.
+- **W1 parity:** chart SMA and RSI are the engine's own functions (tested). Chart RSI(2) on the newest SPY download differs from the frozen replay by about 3e-5. The cause is Yahoo recomputing `adj_close` at the 1e-6 level between the 09-29 and 09-30 downloads, so trade replay always draws the backtest's own frozen bars.
+- **Gaps filled for the backend lane:**
+  - The SC-0002 review exists only as a note (no `reviews` row, card `review_status` still `not_reviewed`). The terminal now reads review notes, and Today and Lab show the real verdict.
+  - Lab turns 73 hash-named runs into a phase/symbol/cost comparison against buy-and-hold, with a plain-label full ledger.
+- **Next:** W4 (Explain-this everywhere, Beginner/Detail switch) and W5 (rule builder with trial counter).
 
 ## 9. Verification (every slice)
 

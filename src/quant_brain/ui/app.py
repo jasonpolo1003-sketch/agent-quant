@@ -17,7 +17,17 @@ from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import iterate_in_threadpool, run_in_threadpool
 
 from quant_brain.data.market_data import MarketDataError
-from quant_brain.ui import jobs, readers, sessions, skills, store, summary, tutor, winsched
+from quant_brain.ui import (
+    chartdata,
+    jobs,
+    readers,
+    sessions,
+    skills,
+    store,
+    summary,
+    tutor,
+    winsched,
+)
 from quant_brain.ui.backends import BACKENDS, BackendError, get_backend
 
 STATIC_DIR = Path(__file__).resolve().parents[3] / "ui" / "static"
@@ -96,13 +106,14 @@ def create_app(config: TerminalConfig) -> FastAPI:
 
     @app.get("/api/today")
     def today() -> dict[str, Any]:
-        counts = readers.brain_counts(config.brain_db)
+        counts = readers.effective_counts(root, config.brain_db)
+        notes = readers.review_notes(root)
         git = readers.git_activity(root, 12)
         job_runs = store.list_runs(config.terminal_db, limit=12)
         last_health = next((r for r in job_runs if r["kind"] == "health_check"
                             and r["status"] in ("completed", "failed")), None)
         return {
-            "headline": summary.headline(counts),
+            "headline": summary.headline(counts, notes[0] if notes else None),
             "steps": summary.steps(counts),
             "next": readers.plan_checkpoint(root)["next"],
             "timeline": summary.timeline(git["commits"], _described_runs(8), job_runs),
@@ -284,6 +295,78 @@ def create_app(config: TerminalConfig) -> FastAPI:
             raise HTTPException(404, "no such backtest")
         return readers.equity_series(root, found[0])
 
+    # --- chart workspace ------------------------------------------------------------
+
+    charts = chartdata.ChartData(root, config.brain_db)
+
+    def _chart(fn, *args):
+        try:
+            return fn(*args)
+        except chartdata.ChartError as exc:
+            raise HTTPException(422, str(exc)) from exc
+
+    @app.get("/api/chart/watchlist")
+    def chart_watchlist(name: str = "starter"):
+        return _chart(charts.watchlist, name)
+
+    @app.get("/api/chart/bars")
+    def chart_bars(symbol: str, tf: str = "D", basis: str = "split"):
+        return _chart(charts.bars, symbol, tf, basis)
+
+    @app.get("/api/chart/indicator-catalog")
+    def chart_indicator_catalog():
+        return {k: {kk: v[kk] for kk in ("label", "pane", "params", "engine", "about")}
+                | {"levels": v.get("levels", [])} for k, v in chartdata.INDICATORS.items()}
+
+    @app.post("/api/chart/indicators")
+    async def chart_indicators(request: Request):
+        body = await request.json()
+        return await run_in_threadpool(
+            _chart, charts.indicators, str(body.get("symbol", "")), str(body.get("tf", "D")),
+            str(body.get("basis", "split")), list(body.get("specs") or []))
+
+    @app.get("/api/chart/formula")
+    def chart_formula(f: str, tf: str = "D", basis: str = "split"):
+        return _chart(charts.formula, f, tf, basis)
+
+    @app.get("/api/chart/compare")
+    def chart_compare(symbols: str, start: str | None = None, tf: str = "D"):
+        return _chart(charts.compare, [s for s in symbols.split(",") if s.strip()], start, tf)
+
+    @app.get("/api/chart/stats")
+    def chart_stats(symbol: str, start: str, end: str, benchmark: str = "SPY"):
+        return _chart(charts.stats, symbol, start, end, benchmark)
+
+    @app.get("/api/replays")
+    def replays():
+        return chartdata.list_replays(root)
+
+    @app.get("/api/replays/{replay_id}")
+    def replay(replay_id: str):
+        try:
+            return chartdata.get_replay(root, replay_id)
+        except chartdata.ChartError as exc:
+            raise HTTPException(404, str(exc)) from exc
+
+    @app.get("/api/drawings")
+    def drawings(symbol: str):
+        return store.list_drawings(config.terminal_db, symbol)
+
+    @app.post("/api/drawings")
+    async def add_drawing(request: Request):
+        body = await request.json()
+        data = {k: body[k] for k in ("points", "price", "color") if k in body}
+        try:
+            new_id = store.add_drawing(config.terminal_db, str(body.get("symbol", "")),
+                                       str(body.get("kind", "")), data)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
+        return {"id": new_id}
+
+    @app.delete("/api/drawings")
+    def delete_drawings(symbol: str, id: int | None = None):
+        return {"deleted": store.delete_drawings(config.terminal_db, symbol, id)}
+
     # --- learn ----------------------------------------------------------------------
 
     @app.get("/api/learn/sources")
@@ -309,6 +392,10 @@ def create_app(config: TerminalConfig) -> FastAPI:
             raise HTTPException(422, "ask a question")
         sources = [str(s) for s in body.get("sources") or []]
         virtual = {}
+        screen = str(body.get("screen_context") or "").strip()
+        if screen:  # what the user is looking at right now, sent by an "Explain this" button
+            virtual["screen:what-you-are-looking-at"] = screen[:20000]
+            sources.insert(0, "screen:what-you-are-looking-at")
         for name in sources:
             if name.startswith("run:"):
                 evs = readers.events(config.brain_db, run_id=name[4:], limit=2000)

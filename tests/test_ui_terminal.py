@@ -539,3 +539,23 @@ def test_today_endpoint_is_plain_and_read_only(client):
 ])
 def test_commit_subjects_become_plain_labels(subject, expected):
     assert summary.describe_commit(subject) == expected
+
+
+def test_review_notes_count_and_drive_the_headline(brain):
+    root, db = brain
+    reviews = root / "brain" / "05_Reviews"
+    reviews.mkdir(parents=True)
+    (reviews / "SC-0002-adversarial-review.md").write_text(
+        "---\ncard: brain/03_Strategy_Cards/SC-0002-rsi2.md\ndate: 2026-09-29\nreviewer: Claude\n---\n\n"
+        "# Review\n\n## Review verdict: **reject — \"no edge shown\" is upheld**\n", encoding="utf-8")
+    notes = readers.review_notes(root)
+    assert notes[0]["strategy_id"] == "SC-0002" and notes[0]["verdict"] == "reject"
+    assert notes[0]["verdict_text"] == 'reject: "no edge shown" is upheld'
+    assert readers.effective_counts(root, db)["reviews"] == 1
+    assert readers.lab(root, db)["reviews"][0]["source"] == "note"
+    counts = dict.fromkeys(("sources", "price_datasets", "strategy_cards", "backtests",
+                            "reviews"), 1)
+    h = summary.headline(counts, notes[0])
+    assert h["title"] == "SC-0002 finished all 5 steps"
+    assert h["detail"].startswith('The review rejected it ("no edge shown" is upheld).')
+    assert "normal, honest result" in h["detail"]

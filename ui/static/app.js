@@ -3,10 +3,10 @@
 "use strict";
 
 const PAGES = [
+  { id: "chart", label: "Chart" },
   { id: "today", label: "Today" },
   { id: "activity", label: "Activity" },
-  { id: "markets", label: "Markets" },
-  { id: "strategies", label: "Strategies" },
+  { id: "strategies", label: "Lab" },
   { id: "learn", label: "Learn" },
   { id: "setup", label: "Setup" },
 ];
@@ -20,7 +20,6 @@ const state = {
   page: "today",
   openRun: null,
   unseen: 0,
-  market: { symbol: "SPY", view: "price", range: "5Y" },
   learn: { selected: new Set(), messages: [], backend: "claude", busy: false, sources: null, side: "notes" },
 };
 const charts = [];
@@ -93,6 +92,7 @@ function go(page, opts = {}) {
   try { localStorage.setItem("qb-page", page); } catch (e) { /* storage blocked */ }
   if (location.hash.slice(1) !== page) history.replaceState(null, "", `#${page}`);
   clearCharts();
+  document.body.classList.toggle("wide", page === "chart");
   const main = $("#page");
   main.innerHTML = `<p class="faint">Loading…</p>`;
   RENDER[page](main, opts).catch((e) => { main.innerHTML = `${head("Something went wrong")}<p class="error">${esc(e.message)}</p><p class="muted">Is the terminal server still running?</p>`; });
@@ -113,7 +113,8 @@ $("#cmd-form").addEventListener("submit", (e) => {
   if (page) return go(page.id);
   if (/^RUN-/i.test(raw)) { state.openRun = "RUN-" + raw.slice(4).toLowerCase(); return go("activity"); }
   if (/^SC-\d+$/i.test(raw)) return go("strategies");
-  if (/^[A-Za-z]{1,5}$/.test(raw) && raw === raw.toUpperCase()) { state.market.symbol = raw; return go("markets"); }
+  if (/^[A-Z][A-Z0-9.-]{0,5}$/.test(raw)) { CH.symbol = raw; CH.formula = ""; CH.compare = []; saveCH(); return go("chart"); }
+  if (/^[A-Z0-9.()+*/ -]+$/.test(raw) && /[A-Z]/.test(raw) && /[+*/()-]/.test(raw)) { CH.formula = raw; CH.compare = []; saveCH(); return go("chart"); }
   go("learn", { question: raw });
 });
 
@@ -262,93 +263,13 @@ async function fillRun(runId) {
   } catch (e) { box.innerHTML = `<p class="error">${esc(e.message)}</p>`; }
 }
 
-// ---------- Markets ----------
+// ---------- shared chart look (backtest equity chart) ----------
 const CHART_OPTS = () => ({
   layout: { background: { color: "#151a18" }, textColor: "#9aa39c", fontFamily: "Segoe UI, system-ui, sans-serif", fontSize: 12 },
   grid: { vertLines: { color: "#1d2420" }, horzLines: { color: "#1d2420" } },
   rightPriceScale: { borderColor: "#27302b" }, timeScale: { borderColor: "#27302b" }, crosshair: { mode: 0 },
 });
-const RANGES = { "1Y": 365, "5Y": 1826, "10Y": 3652, All: null };
 const LINE_COLORS = ["#f0a93b", "#8cc2e6", "#5cc98f", "#c9a0e6"];
-const barsCache = {};
-async function getBars(id) { if (!barsCache[id]) barsCache[id] = await api(`/api/datasets/${encodeURIComponent(id)}/bars`); return barsCache[id]; }
-function cut(bars, key) {
-  if (!RANGES[key]) return bars;
-  const from = new Date(new Date(bars[bars.length - 1].time).getTime() - RANGES[key] * 86400000).toISOString().slice(0, 10);
-  return bars.filter((b) => b.time >= from);
-}
-
-RENDER.markets = async (main) => {
-  const ds = await api("/api/datasets");
-  const latest = {};
-  ds.filter((d) => d.state === "accepted").forEach((d) => { if (!latest[d.symbol] || d.downloaded_at > latest[d.symbol].downloaded_at) latest[d.symbol] = d; });
-  const symbols = Object.keys(latest).sort();
-  const bad = ds.filter((d) => d.state !== "accepted");
-  const quality = `${plural(ds.length, "price file")}, ${bad.length ? `<span class="bad">${bad.length} failed verification</span>` : "all verified"}. Source: Yahoo Finance (a single source, so it can't be cross-checked yet).`;
-  const table = `<div class="table-wrap"><table><tr><th>Symbol</th><th>Dates</th><th class="num">Days</th><th>Result</th><th>Problems</th><th>File id</th></tr>${ds.map((d) => `<tr><td>${esc(d.symbol || "?")}</td><td>${esc(d.first_date)} to ${esc(d.last_date)}</td><td class="num">${fmt(d.rows, 0)}</td><td>${status(d.state)}</td><td class="wrap">${esc(d.problems.join("; ") || "none")}</td><td class="mono faint small">${esc(d.dataset_id)}</td></tr>`).join("")}</table></div>`;
-  if (!symbols.length) {
-    main.innerHTML = `${head("Markets", "Daily price history the backtests will use.")}<div class="empty"><h3>No verified price data yet</h3>Turn on the market data automation in Setup, or run scripts/fetch_market_data.py.</div>${more("Data quality details", table)}`;
-    return;
-  }
-  const M = state.market;
-  if (!symbols.includes(M.symbol)) M.symbol = symbols[0];
-  const seg = (key, opts) => `<div class="seg" role="group">${opts.map(([v, l]) => `<button type="button" data-${key}="${v}" aria-pressed="${M[key] === v}">${l}</button>`).join("")}</div>`;
-  main.innerHTML = `${head("Markets", "Daily price history the backtests use. This page only shows data; nothing here trades.")}
-    <div class="row">${seg("symbol", symbols.map((s) => [s, s]))}${seg("view", [["price", "Price"], ["compare", "Compare all"], ["drawdown", "Drops from peak"]])}${seg("range", Object.keys(RANGES).map((r) => [r, r]))}</div>
-    <div class="stats" id="mk-stats"></div>
-    <div class="legend" id="mk-legend"></div>
-    <div class="box" style="padding:8px"><div id="mk-chart" class="chart"></div></div>
-    <p class="faint small">Candles use split-adjusted prices. "Compare all" and "Drops from peak" include dividends.</p>
-    <section style="margin-top:24px"><h2>Data quality</h2><p class="muted">${quality}</p>${more("Show every price file", table)}</section>`;
-  main.querySelectorAll("[data-symbol],[data-view],[data-range]").forEach((b) => (b.onclick = () => {
-    for (const k of ["symbol", "view", "range"]) if (b.dataset[k]) M[k] = b.dataset[k];
-    go("markets");
-  }));
-  await drawMarket(latest, symbols);
-};
-
-async function drawMarket(latest, symbols) {
-  const M = state.market;
-  const chart = LightweightCharts.createChart($("#mk-chart"), { ...CHART_OPTS(), autoSize: true });
-  charts.push(chart);
-  const all = await getBars(latest[M.symbol].dataset_id);
-  const bars = cut(all, M.range);
-  const first = bars[0], last = bars[bars.length - 1];
-  let peak = -Infinity, worst = 0;
-  bars.forEach((b) => { peak = Math.max(peak, b.adj_close); worst = Math.min(worst, b.adj_close / peak - 1); });
-  const ret = last.adj_close / first.adj_close - 1;
-  const age = Math.round((Date.now() - new Date(last.time).getTime()) / 86400000);
-  $("#mk-stats").innerHTML = [
-    [fmt(last.close), `${M.symbol} close on ${last.time}`],
-    [`<span class="${ret >= 0 ? "good" : "bad"}">${pct(ret)}</span>`, `change over ${M.range === "All" ? "all data" : M.range}, with dividends`],
-    [`<span class="bad">${pct(worst)}</span>`, "biggest drop from a peak"],
-    [`<span class="${age > 7 ? "warn" : ""}">${age} days</span>`, "since the last price"],
-  ].map(([v, l]) => `<div><b>${v}</b><span>${esc(l)}</span></div>`).join("");
-  if (M.view === "price") {
-    const c = chart.addCandlestickSeries({ upColor: "#5cc98f", downColor: "#ef6b6b", borderVisible: false, wickUpColor: "#5cc98f", wickDownColor: "#ef6b6b" });
-    c.setData(bars.map((b) => ({ time: b.time, open: b.open, high: b.high, low: b.low, close: b.close })));
-    const v = chart.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "vol" });
-    chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
-    v.setData(bars.map((b) => ({ time: b.time, value: b.volume, color: b.close >= b.open ? "#23493a" : "#4d2a2a" })));
-    $("#mk-legend").innerHTML = `<span><i style="background:#5cc98f"></i>up day</span><span><i style="background:#ef6b6b"></i>down day</span><span>bars at the bottom show volume</span>`;
-  } else if (M.view === "compare") {
-    const start = bars[0].time;
-    const series = await Promise.all(symbols.map((s) => getBars(latest[s].dataset_id)));
-    $("#mk-legend").innerHTML = series.map((sb, i) => {
-      const part = sb.filter((b) => b.time >= start);
-      if (!part.length) return "";
-      const base = part[0].adj_close;
-      chart.addLineSeries({ color: LINE_COLORS[i % 4], lineWidth: 2 }).setData(part.map((b) => ({ time: b.time, value: (b.adj_close / base) * 100 })));
-      return `<span><i style="background:${LINE_COLORS[i % 4]}"></i>${esc(symbols[i])} ${pct(part[part.length - 1].adj_close / base - 1)}</span>`;
-    }).join("") + `<span>each line starts at 100 on ${esc(start)}</span>`;
-  } else {
-    let pk = -Infinity;
-    chart.addAreaSeries({ lineColor: "#ef6b6b", topColor: "rgba(239,107,107,0.04)", bottomColor: "rgba(239,107,107,0.3)", lineWidth: 1 })
-      .setData(bars.map((b) => { pk = Math.max(pk, b.adj_close); return { time: b.time, value: (b.adj_close / pk - 1) * 100 }; }));
-    $("#mk-legend").innerHTML = `<span><i style="background:#ef6b6b"></i>how far below its previous high ${esc(M.symbol)} was, in percent</span>`;
-  }
-  chart.timeScale().fitContent();
-}
 
 // ---------- Strategies ----------
 RENDER.strategies = async (main) => {
@@ -356,27 +277,29 @@ RENDER.strategies = async (main) => {
   const current = d.cards.filter((c) => !["superseded", "retired", "rejected"].includes(String(c.status).toLowerCase()));
   const older = d.cards.filter((c) => !current.includes(c));
   const markets = (m) => Array.isArray(m) ? m.join(", ") : Object.entries(m || {}).map(([k, v]) => `${[].concat(v).join(", ")} (${k})`).join("; ");
+  const reviewOf = (c) => d.reviews.find((r) => r.strategy_id === c.strategy_id);
+  const reviewed = (c) => { const r = reviewOf(c); return r ? `${esc(r.verdict_text || r.verdict)} ${r.note_path ? fileLink(r.note_path, "(read the review)") : ""}` : c.review_status === "not_reviewed" ? "Not yet" : esc(c.review_status); };
   const cardHtml = (c) => `<article class="box" style="margin-bottom:14px">
       <div class="row"><span class="mono faint">${esc(c.strategy_id)}</span><span class="status ${c.status === "frozen" ? "done" : ""}">${c.status === "frozen" ? "Frozen: rules locked" : esc(c.status)}</span></div>
       <p class="card-title">${esc(c.title)}</p>
       <dl class="facts"><dt>The idea</dt><dd>${esc(c.hypothesis || "Not written")}</dd>
         <dt>Tested on</dt><dd>${esc(markets(c.markets))}</dd>
         <dt>Based on</dt><dd>${(c.source_ids || []).map((s, i) => fileLink(s, `source ${i + 1}`)).join(", ") || "no sources listed"}</dd>
-        <dt>Reviewed</dt><dd>${c.review_status === "not_reviewed" ? "Not yet" : esc(c.review_status)}</dd></dl>
+        <dt>Reviewed</dt><dd>${reviewed(c)}</dd></dl>
       <div class="row" style="margin-top:14px"><button class="btn primary" data-explain="${esc(c.note_path)}">Explain it to me</button><button class="btn" data-file="${esc(c.note_path)}">Read the full card</button></div></article>`;
-  const tests = d.backtests.map((b) => `<tr data-bt="${esc(b.backtest_id)}" style="cursor:pointer"><td class="mono">${esc(b.backtest_id)}</td><td>${status(b.status)}</td><td class="num">${pct(b.total_return)}</td><td class="num">${pct(b.benchmark_return)}</td><td class="num">${fmt(b.sharpe)}</td><td class="num bad">${pct(b.max_drawdown)}</td><td class="num">${fmt(b.number_of_trades, 0)}</td></tr>`).join("");
-  main.innerHTML = `${head("Strategies", "A strategy is a written set of trading rules. Its rules are frozen before any test, so results can't be tuned after the fact.")}
+  main.innerHTML = `${head("Lab", "A strategy is a written set of trading rules. Its rules are frozen before any test, so results can't be tuned after the fact.")}
     <section>${current.map(cardHtml).join("") || `<div class="empty"><h3>No strategy written yet</h3>Strategies are written by the builder and appear here once saved.</div>`}
       ${older.length ? more(`Show older versions (${older.length})`, older.map(cardHtml).join("")) : ""}</section>
     <section><h2>Backtest results</h2>
-      ${d.backtests.length ? `<p class="muted">Every test is listed, not just the best one. A good past result is not proof of future profit.</p><div class="box"><div class="table-wrap"><table><tr><th>Test</th><th>Result</th><th class="num">Return</th><th class="num">Buy and hold</th><th class="num">Sharpe</th><th class="num">Worst drop</th><th class="num">Trades</th></tr>${tests}</table></div><div id="bt-chart"></div></div>`
+      ${d.backtests.length ? `<div id="bt-lab"></div>`
         : `<div class="empty"><h3>No backtests yet</h3>This is the current step. When the builder runs one, you'll see every version it tried, how it compares with simply buying and holding, and how it did on data it never saw while being built.</div>`}
     </section>
     <section><h2>Reviews</h2>
-      ${d.reviews.length ? d.reviews.map((r) => `<div class="box" style="margin-bottom:10px"><div class="row"><h3 style="margin:0">${esc(r.review_id)}</h3>${status(r.verdict)}</div><ul>${(r.reasons || []).map((x) => `<li>${esc(typeof x === "string" ? x : JSON.stringify(x))}</li>`).join("")}</ul></div>`).join("")
+      ${d.reviews.length ? d.reviews.map((r) => `<div class="box" style="margin-bottom:10px"><div class="row"><h3 style="margin:0">${esc(r.strategy_id || r.review_id)}</h3><span class="status ${String(r.verdict).startsWith("reject") ? "failed" : "completed"}">${esc(r.verdict)}</span><span class="grow"></span>${r.note_path ? fileLink(r.note_path, "Read the review") : ""}</div>${r.verdict_text ? `<p class="muted" style="margin:8px 0 0">${esc(r.verdict_text)}</p>` : ""}${r.reviewer ? `<p class="faint small" style="margin:4px 0 0">Reviewer: ${esc(r.reviewer)}</p>` : ""}<ul>${(r.reasons || []).map((x) => `<li>${esc(typeof x === "string" ? x : JSON.stringify(x))}</li>`).join("")}</ul></div>`).join("")
         : `<p class="muted">After a backtest, a reviewer tries to prove the result wrong. Their verdict, which can be "reject", appears here.</p>`}
     </section>`;
   main.querySelectorAll("[data-explain]").forEach((b) => (b.onclick = () => { state.learn.selected.add(b.dataset.explain); go("learn", { question: "Explain this strategy to me in plain words: the rules, why each rule is there, which parts are assumptions, and what could make it fail." }); }));
+  if (d.backtests.length) renderBacktests(d);
   main.querySelectorAll("[data-bt]").forEach((tr) => (tr.onclick = async () => {
     const series = await api(`/api/lab/${encodeURIComponent(tr.dataset.bt)}/equity`);
     const names = Object.keys(series);
@@ -386,10 +309,69 @@ RENDER.strategies = async (main) => {
     box.innerHTML = `<div class="legend" style="margin-top:14px">${names.map((n, i) => `<span><i style="background:${LINE_COLORS[i % 4]}"></i>${esc(n)}</span>`).join("")}</div><div class="chart small" id="bt-canvas"></div>`;
     const chart = LightweightCharts.createChart($("#bt-canvas"), { ...CHART_OPTS(), autoSize: true });
     charts.push(chart);
-    names.forEach((n, i) => chart.addLineSeries({ color: LINE_COLORS[i % 4], lineWidth: 2 }).setData(series[n]));
+    names.forEach((n, i) => chart.addSeries(LightweightCharts.LineSeries, { color: LINE_COLORS[i % 4], lineWidth: 2 }).setData(series[n]));
     chart.timeScale().fitContent();
   }));
 };
+
+// ---------- Lab: backtest comparison ----------
+const PHASE_WORD = { held_out: "Held-out test", in_sample: "In-sample test" };
+const share = (n) => (n == null ? "-" : `${Math.round(n * 100)}%`);
+const RULE_NOTE = { A: "the card's main rule", B: "comparison rule", D: "comparison rule" };
+async function renderBacktests(d) {
+  const box = $("#bt-lab");
+  if (!box) return;
+  const runs = d.backtests.filter((b) => b.config && b.config.phase);
+  const markers = d.backtests.filter((b) => !(b.config && b.config.phase));
+  const L = (state.labView = state.labView || { phase: "held_out", symbol: "SPY", cost: 5 });
+  const opts = (key) => [...new Set(runs.map((b) => b.config[key]))].sort((a, b) => (a > b ? 1 : a < b ? -1 : 0));
+  const phases = opts("phase"), symbols = opts("symbol"), costs = opts("cost_bps").map(Number).sort((a, b) => a - b);
+  if (!phases.includes(L.phase)) L.phase = phases[0];
+  if (!symbols.includes(L.symbol)) L.symbol = symbols[0];
+  if (!costs.includes(L.cost)) L.cost = costs[0];
+  let replays = [];
+  try { replays = await api("/api/replays"); } catch (e) { /* no replays */ }
+  const pick = runs.filter((b) => b.config.phase === L.phase && b.config.symbol === L.symbol && Number(b.config.cost_bps) === L.cost);
+  const bh = pick.find((b) => b.config.kind === "buy_and_hold");
+  const rules = pick.filter((b) => b.config.kind === "rule").sort((a, b) => String(a.config.rule).localeCompare(String(b.config.rule)));
+  const label = (key, v) => (key === "phase" ? PHASE_WORD[v] || v : key === "cost" ? `${v} bps` : v);
+  const seg = (key, values, aria) => `<div class="seg" role="group" aria-label="${aria}">${values.map((v) => `<button type="button" data-lab-${key}="${esc(v)}" aria-pressed="${L[key] === v}">${esc(label(key, v))}</button>`).join("")}</div>`;
+  const better = (x, y) => (x == null || y == null ? "" : x > y ? "good" : "bad");
+  const row = (b, name, note) => {
+    const isBh = b.config.kind === "buy_and_hold";
+    const replayId = isBh ? null : `${b.strategy_id}-${L.phase.replace("_", "-")}-${b.config.rule}-${L.symbol}-${Number(L.cost)}bps`;
+    const has = replayId && replays.some((r) => r.id === replayId);
+    return `<tr class="${isBh ? "bench" : ""}"><td><b>${esc(name)}</b><br><span class="faint small">${esc(note)}</span></td>
+      <td class="num">${fmt(b.number_of_trades, 0)}</td>
+      <td class="num ${isBh ? "" : better(b.total_return, bh?.total_return)}">${pct(b.total_return)}</td>
+      <td class="num ${isBh ? "" : better(b.cagr, bh?.cagr)}">${pct(b.cagr)}</td>
+      <td class="num ${isBh ? "" : better(b.sharpe, bh?.sharpe)}">${fmt(b.sharpe)}</td>
+      <td class="num ${isBh ? "" : better(b.max_drawdown, bh?.max_drawdown)}">${pct(b.max_drawdown)}</td>
+      <td class="num">${share(b.exposure)}</td>
+      <td class="num">${isBh ? "-" : share(b.win_rate)}</td>
+      <td>${has ? `<button class="link small" data-show-replay="${esc(replayId)}">Show on chart</button>` : ""}</td></tr>`;
+  };
+  const key = (b) => `${b.config.phase}|${b.config.symbol}|${String(b.config.cost_bps).padStart(5, "0")}|${b.config.rule || "~"}`;
+  const ledger = runs.slice().sort((a, b) => key(a).localeCompare(key(b)))
+    .map((b) => `<tr><td>${esc(PHASE_WORD[b.config.phase] || b.config.phase)}</td><td>${esc(b.config.symbol)}</td><td class="num">${esc(b.config.cost_bps)} bps</td><td>${b.config.kind === "buy_and_hold" ? "Buy and hold" : `Rule ${esc(b.config.rule)}`}</td><td class="num">${fmt(b.number_of_trades, 0)}</td><td class="num">${pct(b.total_return)}</td><td class="num">${fmt(b.sharpe)}</td><td class="num bad">${pct(b.max_drawdown)}</td><td class="mono faint small" title="${esc(b.backtest_id)}">${esc(b.backtest_id.slice(0, 8))}</td></tr>`).join("");
+  const period = (bh || rules[0])?.config.period;
+  box.innerHTML = `<p class="muted">Pick which test to look at. Each rule sits next to simply buying and holding the same ETF over the same years. Green means it beat buy-and-hold on that number (for "worst drop", a smaller drop); red means it did not. A good past result is not proof of future profit.</p>
+    <div class="row" style="margin:12px 0">${seg("phase", phases, "Test phase")}${seg("symbol", symbols, "Symbol")}${seg("cost", costs, "Trading cost per side")}</div>
+    <p class="small faint">${esc(PHASE_WORD[L.phase] || L.phase)}${period ? `, ${esc(period.join(" to "))}` : ""}. ${L.phase === "held_out" ? "Data the strategy never saw while it was being designed. It was opened once." : "The years used while designing the strategy."} Cost is charged on every buy and every sell.</p>
+    <div class="box"><div class="table-wrap"><table>
+      <tr><th>Strategy</th><th class="num">Trades</th><th class="num">Total return</th><th class="num">Per year</th><th class="num">Sharpe</th><th class="num">Worst drop</th><th class="num">Time in market</th><th class="num">Winning trades</th><th></th></tr>
+      ${rules.map((b) => row(b, `Rule ${b.config.rule}`, RULE_NOTE[b.config.rule] || "rule")).join("")}
+      ${bh ? row(bh, "Buy and hold", "the benchmark: buy on day one, never sell") : ""}
+    </table></div></div>
+    ${more(`Show every run (${runs.length}), in plain labels`, `<p class="small muted">All of these count as trials. The more versions you try, the more likely the best one looks good by luck, which is why the review adjusts for them.</p>${markers.length ? `<p class="small faint">${markers.length} bookkeeping row${markers.length > 1 ? "s" : ""}, such as "held-out data opened", are not runs and are left out.</p>` : ""}<div class="table-wrap"><table><tr><th>Phase</th><th>Symbol</th><th class="num">Cost</th><th>Strategy</th><th class="num">Trades</th><th class="num">Return</th><th class="num">Sharpe</th><th class="num">Worst drop</th><th>Run id</th></tr>${ledger}</table></div>`)}`;
+  box.querySelectorAll("[data-lab-phase],[data-lab-symbol],[data-lab-cost]").forEach((b) => (b.onclick = () => {
+    if (b.dataset.labPhase) L.phase = b.dataset.labPhase;
+    if (b.dataset.labSymbol) L.symbol = b.dataset.labSymbol;
+    if (b.dataset.labCost) L.cost = Number(b.dataset.labCost);
+    renderBacktests(d);
+  }));
+  box.querySelectorAll("[data-show-replay]").forEach((b) => (b.onclick = () => { window.pendingReplay = b.dataset.showReplay; go("chart"); }));
+}
 
 // ---------- Learn ----------
 function renderMarkdown(src) {
@@ -460,14 +442,14 @@ RENDER.learn = async (main, opts = {}) => {
   const count = () => {
     const total = sources.flatMap((g) => g.items).filter((i) => L.selected.has(i.path)).reduce((a, i) => a + i.size, 0);
     const runs = [...L.selected].filter((p) => p.startsWith("run:")).length;
-    $("#src-count").textContent = `${plural(L.selected.size, "file")} ticked${runs ? ` (including ${plural(runs, "run log")})` : ""}, about ${Math.max(1, Math.round(total / 4000))}k words.`;
+    $("#src-count").textContent = `${plural(L.selected.size, "file")} ticked${runs ? ` (including ${plural(runs, "run log")})` : ""}, about ${Math.max(1, Math.round(total / 4000))}k words.${L.screen ? " Plus what you were looking at on the chart." : ""}`;
   };
   count();
   $("#src-panel").addEventListener("change", (e) => { const p = e.target.dataset.src; if (!p) return; if (e.target.checked) L.selected.add(p); else L.selected.delete(p); count(); });
   $("#src-clear").onclick = () => { L.selected.clear(); document.querySelectorAll("[data-src]").forEach((c) => (c.checked = false)); count(); };
   $("#src-filter").oninput = (e) => { const q = e.target.value.toLowerCase(); document.querySelectorAll(".src-item").forEach((l) => (l.hidden = !l.querySelector("[data-src]").dataset.src.toLowerCase().includes(q))); if (q) document.querySelectorAll(".src-group").forEach((d) => (d.open = true)); };
   $("#backend").onchange = (e) => (L.backend = e.target.value);
-  $("#new-chat").onclick = () => { L.messages = []; drawChat(); };
+  $("#new-chat").onclick = () => { L.messages = []; L.screen = null; drawChat(); };
   $("#send").onclick = ask;
   $("#question").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(); } });
   main.querySelectorAll("[data-side]").forEach((b) => (b.onclick = () => { L.side = b.dataset.side; go("learn"); }));
@@ -505,7 +487,7 @@ async function ask() {
   const L = state.learn;
   const q = $("#question").value.trim();
   if (!q || L.busy) return;
-  if (!L.selected.size) { toast("Tick at least one file on the left for the tutor to read.", "bad"); return; }
+  if (!L.selected.size && !L.screen) { toast("Tick at least one file on the left for the tutor to read.", "bad"); return; }
   L.busy = true;
   $("#send").disabled = true;
   $("#question").value = "";
@@ -515,7 +497,7 @@ async function ask() {
   L.messages.push(reply);
   drawChat();
   try {
-    const res = await fetch("/api/learn/ask", { method: "POST", headers: { "Content-Type": "application/json", "X-Brain-Terminal": "1" }, body: JSON.stringify({ question: q, sources: [...L.selected], backend: L.backend, history }) });
+    const res = await fetch("/api/learn/ask", { method: "POST", headers: { "Content-Type": "application/json", "X-Brain-Terminal": "1" }, body: JSON.stringify({ question: q, sources: [...L.selected], backend: L.backend, history, screen_context: L.screen || undefined }) });
     if (!res.ok) { let d = res.statusText; try { d = (await res.json()).detail; } catch (e) { /* not json */ } throw new Error(d); }
     const reader = res.body.getReader();
     const dec = new TextDecoder();
@@ -627,11 +609,14 @@ function scheduleForm(d, s = null) {
 }
 
 // ---------- boot ----------
-buildTabs();
-let first = "today";
-try { const s = localStorage.getItem("qb-page"); if (PAGES.some((p) => p.id === s)) first = s; } catch (e) { /* storage blocked */ }
-const hash = location.hash.slice(1);
-if (PAGES.some((p) => p.id === hash)) first = hash;
-go(first);
-connectStream();
-footer();
+function boot() {
+  buildTabs();
+  let first = "chart";
+  try { const s = localStorage.getItem("qb-page"); if (PAGES.some((p) => p.id === s)) first = s; } catch (e) { /* storage blocked */ }
+  const hash = location.hash.slice(1);
+  if (PAGES.some((p) => p.id === hash)) first = hash;
+  go(first);
+  connectStream();
+  footer();
+}
+document.addEventListener("DOMContentLoaded", boot);

@@ -53,7 +53,7 @@ def steps(counts: dict[str, int]) -> list[dict[str, Any]]:
     return out
 
 
-def headline(counts: dict[str, int]) -> dict[str, str]:
+def headline(counts: dict[str, int], latest_review: dict[str, Any] | None = None) -> dict[str, str]:
     st = steps(counts)
     now = next(s for s in st if s["state"] == "now")
     position = st.index(now) + 1
@@ -73,6 +73,20 @@ def headline(counts: dict[str, int]) -> dict[str, str]:
                   "Nobody has tried to prove the result wrong yet.")
     else:
         detail = f"{reviews} review{' is' if reviews == 1 else 's are'} recorded."
+    if reviews and latest_review:
+        card = latest_review.get("strategy_id") or "the strategy"
+        word = str(latest_review.get("verdict") or "recorded")
+        text = str(latest_review.get("verdict_text") or word)
+        rest = text[len(word):].lstrip(" :") if text.lower().startswith(word) else text
+        rejected = word.startswith("reject")
+        said = (f"The review rejected it ({rest})." if rejected and rest else
+                "The review rejected it." if rejected else f"The review's verdict: {text}.")
+        return {"title": f"{card} finished all 5 steps",
+                "detail": f"{said} "
+                          + ("A rejected strategy is a normal, honest result. A new idea starts again "
+                             "at step 3 with a new strategy card." if rejected else
+                             "Read the review before relying on the result."),
+                "now": "review"}
     return {"title": f"Step {position} of {len(st)}: {now['title'].lower()}",
             "detail": detail, "now": now["key"]}
 

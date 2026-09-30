@@ -248,6 +248,9 @@ def lab(project_root: Path, db_path: str | Path) -> dict[str, Any]:
     reviews = _rows(db_path, "SELECT * FROM reviews ORDER BY created_at DESC")
     for review in reviews:
         review["reasons"] = _json(review.pop("reasons_json", None), [])
+        review["source"] = "database"
+    known = {r.get("note_path") for r in reviews}
+    reviews += [r for r in review_notes(project_root) if r["note_path"] not in known]
     for card in cards:
         for key in ("markets_json", "source_ids_json", "backtest_ids_json"):
             card[key.removesuffix("_json")] = _json(card.pop(key, None), [])
@@ -297,6 +300,44 @@ def equity_series(project_root: Path, backtest: dict[str, Any]) -> dict[str, lis
         out[str(col)] = [{"time": str(t)[:10], "value": float(v)}
                          for t, v in zip(frame[date_col], frame[col], strict=True) if pd.notna(v)]
     return out
+
+
+# --- reviews written as notes ------------------------------------------------------------
+
+_VERDICT_RE = re.compile(r"^##\s*Review verdict:\s*\*\*(.+?)\*\*", re.M)
+
+
+def review_notes(project_root: Path) -> list[dict[str, Any]]:
+    """Adversarial reviews saved as Markdown in brain/05_Reviews/.
+
+    The review step can finish with a note and no ``reviews`` row, so the terminal
+    reads both. Newest first.
+    """
+    out = []
+    for path in sorted((project_root / "brain/05_Reviews").glob("*.md")):
+        try:
+            post = frontmatter.load(path)
+        except Exception:  # an unreadable note is skipped, not fatal
+            continue
+        m = _VERDICT_RE.search(post.content)
+        verdict_text = m.group(1).strip().replace(" — ", ": ").replace("—", ": ") if m else None
+        word = re.match(r"[A-Za-z_-]+", verdict_text or "")
+        card = re.search(r"SC-\d+", str(post.get("card") or post.get("review_of") or path.stem))
+        out.append({
+            "review_id": path.stem, "strategy_id": card.group(0) if card else None,
+            "verdict": word.group(0).lower() if word else "unknown", "verdict_text": verdict_text,
+            "reviewer": post.get("reviewer"), "date": str(post.get("date") or ""),
+            "note_path": path.relative_to(project_root).as_posix(), "source": "note",
+            "reasons": [],
+        })
+    return sorted(out, key=lambda r: r["date"], reverse=True)
+
+
+def effective_counts(project_root: Path, db_path: str | Path) -> dict[str, int]:
+    """Database counts, with reviews that exist only as notes included."""
+    counts = brain_counts(db_path)
+    counts["reviews"] = max(counts.get("reviews", 0), len(review_notes(project_root)))
+    return counts
 
 
 # --- decisions, proposals, journal ----------------------------------------------------

@@ -39,6 +39,14 @@ CREATE TABLE IF NOT EXISTS job_runs (
     log_tail TEXT
 );
 CREATE INDEX IF NOT EXISTS job_runs_job ON job_runs(job_id, started_at);
+CREATE TABLE IF NOT EXISTS drawings (
+    drawing_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    symbol TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    data_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS drawings_symbol ON drawings(symbol);
 """
 
 
@@ -171,3 +179,31 @@ def mark_stale(db_path: str | Path, run_id: str, reason: str) -> None:
             " WHERE run_id = ? AND status = 'running'",
             (utc_now(), reason, run_id),
         )
+
+
+DRAWING_KINDS = {"trend", "hline"}
+
+
+def list_drawings(db_path: str | Path, symbol: str) -> list[dict[str, Any]]:
+    with connect(db_path) as conn:
+        rows = conn.execute("SELECT * FROM drawings WHERE symbol = ? ORDER BY drawing_id",
+                            (symbol.upper(),)).fetchall()
+    return [{"id": r["drawing_id"], "symbol": r["symbol"], "kind": r["kind"],
+             **json.loads(r["data_json"])} for r in rows]
+
+
+def add_drawing(db_path: str | Path, symbol: str, kind: str, data: dict[str, Any]) -> int:
+    if kind not in DRAWING_KINDS:
+        raise ValueError(f"unknown drawing kind {kind!r}")
+    with connect(db_path) as conn:
+        return int(conn.execute(
+            "INSERT INTO drawings (symbol, kind, data_json, created_at) VALUES (?, ?, ?, ?)",
+            (symbol.upper(), kind, json.dumps(data), utc_now())).lastrowid)
+
+
+def delete_drawings(db_path: str | Path, symbol: str, drawing_id: int | None = None) -> int:
+    with connect(db_path) as conn:
+        if drawing_id is None:
+            return conn.execute("DELETE FROM drawings WHERE symbol = ?", (symbol.upper(),)).rowcount
+        return conn.execute("DELETE FROM drawings WHERE symbol = ? AND drawing_id = ?",
+                            (symbol.upper(), drawing_id)).rowcount
