@@ -2521,6 +2521,8 @@ dependencies = [
     { name = "pypdf" },
     { name = "python-frontmatter" },
     { name = "quantstats" },
+    { name = "requests" },
+    { name = "websockets" },
     { name = "yfinance" },
 ]
 
@@ -2552,9 +2554,11 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "python-frontmatter", specifier = ">=1.1.0" },
     { name = "quantstats", specifier = ">=0.0.62" },
+    { name = "requests", specifier = ">=2.31" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6.0" },
     { name = "sentence-transformers", marker = "extra == 'rag'", specifier = ">=3.0.0" },
     { name = "vectorbt", marker = "extra == 'fast'", specifier = ">=0.26.0" },
+    { name = "websockets", specifier = ">=13" },
     { name = "yfinance", specifier = ">=0.2.50" },
 ]
 provides-extras = ["dev", "rag", "fast"]

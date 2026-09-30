@@ -21,6 +21,8 @@ dependencies = [
     "python-frontmatter>=1.1.0",
     "pypdf>=6.0,<7",
     "matplotlib>=3.8.0",
+    "requests>=2.31",
+    "websockets>=13",
 ]
 
 [project.optional-dependencies]
