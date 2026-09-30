@@ -79,15 +79,28 @@ def main() -> int:
             failed = True
             print(f"FAIL  {symbol}: {type(exc).__name__}: {exc}")
             continue
+        predecessors, pred_sources = [], []
+        for old_cik in edgar.PREDECESSORS.get(symbol.upper(), []):
+            try:
+                old_facts, old_sha = client.get(edgar.FACTS_URL.format(cik=old_cik))
+            except Exception as exc:
+                print(f"WARN  {symbol}: predecessor CIK {old_cik}: {type(exc).__name__}: {exc}")
+                continue
+            predecessors.append(old_facts)
+            pred_sources.append({"cik": old_cik, "url": edgar.FACTS_URL.format(cik=old_cik),
+                                 "sha256": old_sha, "entity": old_facts.get("entityName")})
+            (RAW / f"{symbol}.predecessor-{old_cik}.companyfacts.json").write_text(
+                json.dumps(old_facts), encoding="utf-8")
         (RAW / f"{symbol}.submissions.json").write_text(json.dumps(subs), encoding="utf-8")
         (RAW / f"{symbol}.companyfacts.json").write_text(json.dumps(facts), encoding="utf-8")
         record = {
             "symbol": symbol, "fetched_at": now,
             "source": {"name": "SEC EDGAR", "tier": "official",
                        "urls": [edgar.SUBMISSIONS_URL.format(cik=cik), edgar.FACTS_URL.format(cik=cik)],
-                       "sha256": {"submissions": subs_sha, "companyfacts": facts_sha}},
+                       "sha256": {"submissions": subs_sha, "companyfacts": facts_sha},
+                       "predecessors": pred_sources},
             "profile": edgar.profile(subs, cik=cik),
-            "fundamentals": edgar.fundamentals(facts),
+            "fundamentals": edgar.fundamentals(facts, predecessors=predecessors),
         }
         (OUT / f"{symbol}.json").write_text(json.dumps(record, indent=1), encoding="utf-8")
         series = record["fundamentals"]["series"]

@@ -92,26 +92,48 @@ def _annual(points: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
     return by_year
 
 
-def fundamentals(facts: dict[str, Any], *, years: int = 10) -> dict[str, Any]:
-    """Annual series for each plain-language metric, plus the latest share count."""
-    gaap = facts.get("facts", {}).get("us-gaap", {})
+# Tickers whose current SEC filer is new, with the older filer holding the annual history.
+# Observed 2026-09-29: "XOM" maps to ExxonMobil Holdings Corp (CIK 2115436, 10-Qs only so far);
+# the 10-K history is under Exxon Mobil Corp (CIK 34088), whose CIK prefixes the new filings.
+PREDECESSORS: dict[str, list[int]] = {"XOM": [34088]}
+
+
+def fundamentals(facts: dict[str, Any], *, years: int = 10,
+                 predecessors: list[dict[str, Any]] = ()) -> dict[str, Any]:
+    """Annual series for each plain-language metric, plus the latest share count.
+
+    Companies switch XBRL tags over time (Apple moved from ``Revenues`` to
+    ``RevenueFromContract...`` after 2018), so each fiscal year takes the
+    highest-priority tag that has it, across the filer and any predecessor
+    filers; within a tag the latest filing wins (restatements).
+    """
+    payloads = [facts, *predecessors]
     series = {}
     for key, spec in METRICS.items():
-        for concept in spec["concepts"]:
-            units = gaap.get(concept, {}).get("units", {}).get(spec["unit"])
-            annual = _annual(units or [])
-            if annual:
-                recent = sorted(annual.items())[-years:]
-                series[key] = {"label": spec["label"], "why": spec["why"], "concept": concept,
-                               "unit": spec["unit"],
-                               "points": [{"fiscal_year_end": v["end"], "value": v["value"],
-                                           "filed": v["filed"]} for _, v in recent]}
-                break
+        merged: dict[int, dict[str, Any]] = {}
+        for payload in payloads:
+            gaap = payload.get("facts", {}).get("us-gaap", {})
+            for rank, concept in enumerate(spec["concepts"]):
+                units = gaap.get(concept, {}).get("units", {}).get(spec["unit"]) or []
+                for year, v in _annual(units).items():
+                    kept = merged.get(year)
+                    if kept is None or (rank, kept["filed"]) < (kept["rank"], v["filed"]):
+                        merged[year] = {**v, "rank": rank, "concept": concept}
+        if merged:
+            recent = sorted(merged.items())[-years:]
+            series[key] = {"label": spec["label"], "why": spec["why"], "unit": spec["unit"],
+                           "concepts": sorted({v["concept"] for _, v in recent}),
+                           "points": [{"fiscal_year_end": v["end"], "value": v["value"],
+                                       "filed": v["filed"], "concept": v["concept"]}
+                                      for _, v in recent]}
     shares = None
-    points = facts.get("facts", {}).get(SHARES_CONCEPT[0], {}).get(SHARES_CONCEPT[1], {}) \
-        .get("units", {}).get("shares", [])
-    if points:
-        last = max(points, key=lambda p: (p["end"], p["filed"]))
-        shares = {"value": last["val"], "as_of": last["end"], "filed": last["filed"]}
+    for payload in payloads:
+        points = payload.get("facts", {}).get(SHARES_CONCEPT[0], {}).get(SHARES_CONCEPT[1], {}) \
+            .get("units", {}).get("shares", [])
+        if points:
+            last = max(points, key=lambda p: (p["end"], p["filed"]))
+            shares = {"value": last["val"], "as_of": last["end"], "filed": last["filed"]}
+            break
     return {"entity": facts.get("entityName"), "series": series, "shares_outstanding": shares,
+            "predecessor_entities": [p.get("entityName") for p in predecessors],
             "note": "As reported in 10-K filings (annual). Figures can be restated later."}
