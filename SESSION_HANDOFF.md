@@ -1,5 +1,23 @@
 # Quant Agent Brain — Session Handoff
 
+## SC-0002 held-out verdict: no edge shown; adversarial review upholds the reject (2026-09-29)
+
+- **Approval:** Jason approved the in-sample report (ledger event committed at `f463db8`).
+- **Held-out run:** 2016-01-04..2026-09-25, read once. Results were committed at `e14c13a`, in `brain/04_Backtest_Reports/SC-0002-held-out.md`.
+- **Verdict for rule A, SPY at 5 bps: no edge shown.**
+  - Average trade: +0.32% (pass).
+  - Random-entry percentile: 94.9 against a threshold of 95 (fail, by 0.0001 pp; other seed blocks give 94.7–96.9).
+  - Deflated Sharpe: 0.896 against 0.95 (fail). Even undeflated, the probabilistic Sharpe is 0.932.
+  - Sharpe against buy-and-hold: 0.46 vs 0.89 (fail). It still fails with cash earning 2% or 5%.
+- **Review:** `brain/05_Reviews/SC-0002-adversarial-review.md`. All four numbers were recomputed independently of the engine, and the held-out code equals the in-sample code (empty diff).
+  - No lookahead was found.
+  - A breaks even at about 21 bps per side.
+  - The edge is concentrated in 2020–2022; 2016–2019 averaged 0.04% a trade.
+  - B and D decayed out of sample, which vindicates not switching.
+  - The review is **not independent**: the same session ran it.
+- **State:** SC-0002 is closed, and PROP-007 step 7 (prop-firm fit) is not reached. A new idea means a new card, with these trials counted.
+- **Next: Jason decides.** Options: an independent second review; a new card; the second door (Phase 9); or the model-backend decision.
+
 ## Backtest runner built; SC-0002 phase 1 (in-sample) done; waiting for Jason's review (2026-09-29)
 
 **Runner** (`src/quant_brain/backtest/`, `scripts/run_backtest.py`; plan `brain/_system/plan/phase_08_backtest_runner.md`). It implements SC-0002's pinned definitions exactly:
