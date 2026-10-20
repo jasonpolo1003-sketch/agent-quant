@@ -88,6 +88,27 @@ def run_discovery(task: Task, agent: AgentSpec, context: WorkPacketContext) -> H
     backend_name = _discovery_backend_name(task)
     allow_network = backend_name == "live" and task.payload.get("allow_network", True)
     backend_kwargs: dict[str, Any] = {}
+
+    # A pre-registered candidate list (PROP-004) is opt-in and bound to one
+    # question. It is checked here, before any fetch, so a list registered for
+    # one question can never drive another question's run.
+    list_path = task.payload.get("candidate_list")
+    if list_path:
+        from quant_brain.discovery.candidate_list import load_candidate_list
+
+        if backend_name not in {"live", "agent-reach", "jina"}:
+            raise ValueError("a pre-registered candidate list requires the live backend")
+        requested_id = task.payload.get("research_id")
+        if not requested_id:
+            raise ValueError("a pre-registered candidate list requires an explicit research_id")
+        candidate_list = load_candidate_list(context.project_root, list_path)
+        if candidate_list.research_id != requested_id:
+            raise ValueError(
+                f"candidate list {candidate_list.path} is registered for "
+                f"{candidate_list.research_id}, not {requested_id}"
+            )
+        backend_kwargs["candidate_list"] = candidate_list
+
     if backend_name in {"live", "agent-reach", "jina"}:
         backend_kwargs["allow_network"] = bool(allow_network)
         if task.payload.get("search_fn") is not None:
@@ -126,6 +147,7 @@ def run_discovery(task: Task, agent: AgentSpec, context: WorkPacketContext) -> H
             "model_used": result.get("model_used"),
             "repaired": result.get("repaired", False),
             "escalated": result.get("escalated", False),
+            "discovery_lane": result.get("discovery_lane"),
         },
     )
 

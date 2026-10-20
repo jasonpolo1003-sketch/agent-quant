@@ -1,0 +1,26 @@
+{
+  "frozen": [
+    {
+      "card_id": "SC-0001",
+      "card_path": "brain/03_Strategy_Cards/SC-0001-rsi2-connors-spy.md",
+      "spec_sha256": "fd8a6f08c8c9abf37f505b512e9ed6e1953e6042340efdc05ad90a7db8a7cec8",
+      "file_sha256": "4f8496ef0efda256a57d7168e8f77dc3eb00a4ab67f7de6d0195cd37d7d48215",
+      "frozen_at": "2026-09-29T03:03:17.885249+00:00"
+    },
+    {
+      "card_id": "SC-0002",
+      "card_path": "brain/03_Strategy_Cards/SC-0002-rsi2-connors-spy.md",
+      "spec_sha256": "4b838196776934cd6e2643e67da25811ad3cc33696d9fa6d800cdbfb109ef106",
+      "file_sha256": "dbfe0fa259faad357b3f7ae13ad42fbb7e9b03e3a724808aa983c956815b35c0",
+      "frozen_at": "2026-09-29T03:25:01.284787+00:00"
+    }
+  ],
+  "superseded": [
+    {
+      "card_id": "SC-0001",
+      "superseded_by": "SC-0002",
+      "reason": "superseded before any backtest; see the successor card",
+      "at": "2026-09-29T03:25:01.284787+00:00"
+    }
+  ]
+}

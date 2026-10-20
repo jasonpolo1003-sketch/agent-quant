@@ -1,0 +1,30 @@
+{
+  "purpose": "Where snapshot bytes recorded by a Failed_Runs receipt now live, when they are not at the recorded path. Receipts are never edited; quant_brain.research.receipts follows these entries and re-checks each file_sha256.",
+  "incident": "E5 (RUN-871299ea31, 2026-09-28 04:11 UTC) re-fetched two unchanged pages on the same UTC day as E4 (RUN-d67b1d121b, 02:16 UTC) and, before snapshots were made immutable, rewrote E4's files in place (only captured_at differed). Reconciled 2026-09-28: the first writer keeps the recorded path, so E4's bytes were restored there from commit c6d13d1, and E5's bytes moved to the .2.md name the immutable writer now assigns. E5's bytes remain in git at 8265dca.",
+  "entries": [
+    {
+      "run_id": "RUN-871299ea31",
+      "recorded_path": "brain/00_Inbox/Source_Snapshots/2026-09-28/c5f9673f32a4-97d0dbd7.md",
+      "actual_path": "brain/00_Inbox/Source_Snapshots/2026-09-28/c5f9673f32a4-97d0dbd7.2.md",
+      "file_sha256": "2af380213f89ec06266e6dda3ff5c0039658a86162ad3bb7fe1e40cb4d4b663b",
+      "original_owner": {
+        "run_id": "RUN-d67b1d121b",
+        "path": "brain/00_Inbox/Source_Snapshots/2026-09-28/c5f9673f32a4-97d0dbd7.md",
+        "file_sha256": "cdc7a0e5976ccfee51a8fb3455565d3455500c0862a53af28f9dbbaeb1cbd051",
+        "restored_from": "git blob c6d13d1:brain/00_Inbox/Source_Snapshots/2026-09-28/c5f9673f32a4-97d0dbd7.md"
+      }
+    },
+    {
+      "run_id": "RUN-871299ea31",
+      "recorded_path": "brain/00_Inbox/Source_Snapshots/2026-09-28/f57de4fc3101-1bb9664e.md",
+      "actual_path": "brain/00_Inbox/Source_Snapshots/2026-09-28/f57de4fc3101-1bb9664e.2.md",
+      "file_sha256": "a8d295cbcec71da0158532495d1414592045198dc29cfe682b8ca3a9531731f4",
+      "original_owner": {
+        "run_id": "RUN-d67b1d121b",
+        "path": "brain/00_Inbox/Source_Snapshots/2026-09-28/f57de4fc3101-1bb9664e.md",
+        "file_sha256": "23410dfdffcfba15988453413e4da71c621aaa0d49b32a1fc6a0a4bf4e675909",
+        "restored_from": "git blob c6d13d1:brain/00_Inbox/Source_Snapshots/2026-09-28/f57de4fc3101-1bb9664e.md"
+      }
+    }
+  ]
+}

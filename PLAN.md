@@ -205,7 +205,220 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 
 **Picking this up cold? Read this section, then start.**
 
-### Where we are
+### Direction change accepted: PROP-007 (2026-09-28)
+
+**Jason approved scaling down.**
+- The research harness is frozen: no new features, no Qwen tuning, no 24/7 scraping.
+- Phase 6 closes as "pipeline verified, research partial". At most one optional RQ-6d9c12f4 rerun remains.
+- **Work now moves to:**
+  1. Gate F: local SPY/QQQ/IWM daily data with full provenance.
+  2. One frozen, hashed strategy card: sourced RSI exit rules, with holding period and costs as labelled assumptions over a pre-declared grid.
+  3. One honest backtest: next-bar execution, costs, buy-and-hold and random-entry comparisons, a held-out period, and a trial ledger.
+  4. An adversarial review whose verdict can be "reject".
+- Prop-firm fit comes only if the strategy survives.
+- The full text is in `brain/_system/plan/plan_change_proposals.md`. Where older §7/§10 text conflicts with PROP-007, PROP-007 wins.
+- **Gate F: done 2026-09-29.** SPY, QQQ and IWM daily data from 2000 are accepted and verified, with a committed manifest per dataset. The Yahoo split-adjusted price basis is recorded. There is no second source (Stooq is now blocked). See the handoff.
+- **Strategy card: done 2026-09-29.** SC-0002 is frozen (`4b838196…`), reviewed before freezing, and every assumption is labelled. SC-0001 was superseded before any backtest.
+- **Backtest: done 2026-09-29.** The two-phase gated runner is built. In-sample was approved by Jason, and the held-out period was read once (`e14c13a`). Verdict: **no edge shown**. Rule A fails random entry (94.9 vs 95), the deflated Sharpe (0.896 vs 0.95) and buy-and-hold (Sharpe 0.46 vs 0.89).
+- **Adversarial review: done 2026-09-29.** `brain/05_Reviews/SC-0002-adversarial-review.md` **upholds the reject**. Every number was independently recomputed. No lookahead was found, and no relaxed assumption flips the verdict. The review was not independent of the run. SC-0002 is closed, and PROP-007 step 7 (prop-firm fit) is not reached.
+- **Direction change: PROP-010 accepted (2026-09-29).** A beginner-first learning terminal, free tier first (`brain/_system/plan/learning_terminal_plan.md`). Jason relaxed the process gates for this track. The safety rules (no live trading, no paid data without a decision, provenance) stand.
+- **Superseded by PROP-010. Previous next step: Jason decides.** Options: an independent second review of the verdict; a new card, with SC-0002's trials counted; the second door (Phase 9); or the model-backend decision. Plan before building.
+
+### Content-only grounding (2026-09-28)
+
+- **Change:** extraction models and evidence validators now see only a snapshot's fetched content, never the harness front matter. This closes metadata quotes and timestamp or hash digits making invented numbers look grounded.
+- **Snapshot bodies:** stored verbatim after one line-ending canonicalisation; front-matter values are single-line.
+- **Receipts:** old ones still verify, because the verifier follows each manifest's recorded derivation.
+- **Checks:** 601 passed; focused independent review, with both findings fixed. No live Qwen runs by Jason's direction, since the change is model-agnostic.
+- **Model backend:** Jason may move extraction to a Claude or Codex CLI on his subscription. That is a §9 policy change needing a proposal and approval.
+- **Next (needs authorization):** one more RQ-6d9c12f4 rerun, or first the backend decision.
+
+### After E5 (2026-09-28): note writing and snapshot immutability fixed; historical receipts verify again
+
+- **Notes:** the JSON block is now exactly the whole-bundle validator's normalized payload: sources, questions and recommendation.
+- **Snapshots:** immutable. Created exclusively, with a same-day refetch getting `<name>.<n>.md`. A failed run can no longer overwrite or delete earlier evidence.
+- **Collided snapshots:** E4's bytes are restored at their recorded paths and E5's are at `.2.md`, both kept. The move is recorded in `Source_Snapshots/reconciliation.json`.
+- **Verifier:** `scripts/verify_receipts.py` checks E3 (5), E4 (15) and E5 (34) recorded hashes plus 2 ledger owner hashes: all OK.
+- **Checks:** 590 passed, 1 skipped; both Ruff checks clean; 31/31 mutations caught; independent review, with two findings fixed and re-verified.
+- **Open, material and pre-existing:** snapshot front-matter digits (timestamps, hashes) can make invented numbers look grounded. The next step, pending approval, is to validate against fetched content only.
+- **Status:** no rerun; Phase 6 / Gate D incomplete.
+
+### Gate D checkpoint E5 (2026-09-28): all extractions validated; note write failed closed on a latent bug
+
+- **Run:** `RUN-871299ea31` on the unchanged list, 652s.
+  - All 5 sources validated, including two windowed sources (Hill 7 windows, NAAIM 8), and the merged payload passed the whole-bundle validator.
+  - It **failed at `write_note`** with `KeyError: 'possible_strategy_rule'`.
+- **Cause:** the executor writes the raw model output instead of the validator's normalized payload, and the model may omit that optional field. This has been latent since `0b37d65` and was never reached before.
+- **Recovery and diagnostics:** recovery was complete, and 10 failed responses were kept as untrusted diagnostics.
+- **Also found:** same-day re-fetches overwrite existing snapshot paths. Two E4 snapshots were rewritten (only `captured_at` changed; the E4 blobs remain in `c6d13d1`).
+- **Baseline is red:** 1 test fails, correctly. Per §11, fix it before anything else.
+- **Evidence:** preserved in `8265dca`.
+- **Status:** no curator run; Phase 6 / Gate D incomplete.
+- **Next (needs approval):** write notes from normalized output, make snapshots immutable, pin the E4 test to `c6d13d1`; then ask before another rerun.
+
+### PROP-006 amendment A (2026-09-28): window-contract fix verified; no rerun yet
+
+- **Changes:**
+  - Windows no longer carry a model-chosen recommendation; windowed sources are fixed at `needs_more_work`.
+  - The window source's `source_id` is required in the model-facing schema.
+  - Failed runs keep their failed model responses as untrusted JSON diagnostics in `Failed_Runs/diagnostics/`, never indexed or promoted.
+  - Evidence validators are unchanged.
+- **Verified:**
+  - 567 passed, 1 skipped; both Ruff checks clean; 21/21 mutations caught.
+  - Independent review found no material defect.
+  - Saved-response tests against the preserved E4 evidence pass.
+  - One fresh live replay of all 8 NAAIM windows validated, with W03 quoting the RSI(3) exit rule.
+  - The synthetic smoke passed 12/12.
+- **Uncertain:**
+  - Model output is not byte-stable, so the replay is one sample.
+  - A failed evidence attempt can end as an unverifiable `no_relevant_evidence`; this happened on W02 and W07.
+- **Next (needs authorization):** one more RQ-6d9c12f4 rerun on the unchanged list.
+
+### Gate D checkpoint E4 (2026-09-28): windowed rerun failed closed at NAAIM window 2
+
+- **Run:** `RUN-d67b1d121b` on the unchanged list `88ba2d3c…`, 301s. One authorized run, no retry, no code change.
+  - S1–S3 validated.
+  - S4 (NAAIM) was windowed into 8 windows. W01 returned a validated `no_relevant_evidence`.
+  - **W02 failed all 3 attempts**, so the run failed closed with full recovery and a complete window manifest in the receipt. S5 was never reached.
+  - No truncation warning.
+  - Evidence preserved in `c6d13d1`.
+- **Cause: a window-contract trap, not the data or the validators.**
+  - The model chose `evidence` but left `curator_recommendation` null. The contract requires it, but the schema allows null.
+  - The repairs then produced a source without the optional `source_id`, and one attempt quoted text absent from the snapshot. The validators caught everything.
+  - The NAAIM exit rule ("Maintain the position while RSI(3) ≤ 40") lies in both W02 and W03. A diagnostic replay of W03 quoted it verbatim, and every quote passed the window and full-snapshot checks; that replay was rejected for the same null recommendation.
+  - A stricter either/or schema pushed the model to false negatives.
+  - Ollama output is not byte-stable at temperature 0.
+- **State:** protected tables 0; all three questions `queued` with no raw note; no curator run. Phase 6 / Gate D remain incomplete.
+- **Next (needs Jason's approval):** amend the PROP-006 window contract. Drop the window-level `curator_recommendation` (the merge uses `needs_more_work`), and require the nested `source_id` in the model-facing schema. Optionally keep the raw text of failed responses. Then TDD, review and a diagnostic replay of the saved windows, before asking for one more rerun.
+
+### Oversize-source windowing implemented (PROP-006, 2026-09-27)
+
+- **Why:** the current schema cannot say "this window has no relevant evidence" honestly. Evidence must be non-empty, a claim is required, and an omitted source is rejected. Jason approved the smallest fix: a **window-only** outcome contract, used inside extraction and never written to a note or read by the curator. `schema.py` and `validators.py` are unchanged.
+- **What:**
+  - A source that the existing pre-flight refuses is read in deterministic, ordered, overlapping windows, of at most 9,000 UTF-8 bytes with a 1,200-byte overlap. Every window has a stable ID, offsets and a sha256.
+  - Every window runs the unchanged ladder and must return a validated `evidence` or `no_relevant_evidence`.
+  - Quotes are checked against both the window shown and the full snapshot.
+  - Any failed window, deadline expiry, unaccounted window, source with no evidence anywhere, or `source_type` disagreement fails the run.
+  - A non-generative merge produces one source record, which must pass the unchanged whole-bundle validator.
+  - More than 10 windows is refused before any model call.
+  - Provenance is recorded in `extraction_window` events, `window_id` on `qwen_attempt`, the `Failed_Runs` receipt, and a note section outside the JSON block.
+  - Sources that fit take exactly the old path.
+- **Real snapshots, measured without the model:** only NAAIM is windowed, into 8 windows of at most about 5.7k tokens each at the worst measured ratio. The other four are unchanged.
+- **Verification:**
+  - 548 passed, 1 skipped (37 new hermetic tests). Both Ruff checks and `git diff --check` are clean.
+  - All 15 mutations were caught.
+  - An independent review found no material defect. Its two low-severity findings (whitespace ID consistency, and recording the newline derivation of the offsets) are fixed.
+  - The live synthetic smoke (`scripts/window_smoke.py`) passed 12/12. The needle window only validated after the ladder escalated to the 27B.
+  - The DB, the list blob, the E3 receipt and snapshots, and `RUN-4e9d910742.md` are sha256-identical.
+- **Not done:** no RQ-6d9c12f4 rerun, curator run, push or merge. Phase 6 / Gate D remain incomplete.
+- **Next:** re-running RQ-6d9c12f4 on the unchanged list (`88ba2d3c…`) needs Jason's explicit authorization.
+
+### Independent review closeout and Phase 6 budget completion (2026-09-27)
+
+- All six incoming commits from `94b82be` through `1088084` were reviewed. The context-safe extraction change passed independent review without a material finding.
+- Two material omissions were fixed in independently re-reviewed commit `c6ab150`:
+  - Failed-run retry commands for a candidate-list run now retain `--candidate-list`, including failures during note preparation before discovery starts.
+  - The required 15-minute whole-run cap is now real: one monotonic deadline spans discovery and every per-source Qwen ladder; Agent Reach subprocess/HTTP calls and Ollama generation receive only the remaining shared time and fail closed on expiry.
+- PROP-004's list freeze remains procedural by design. No Git-runtime enforcement was added; the list's committed hash is still recorded and verified.
+- `e064955` preserves the E3 receipt and five snapshots byte-for-byte with exact-path `-text` rules.
+- Verification: 511 passed, 1 skipped; both Ruff checks, `git diff --check`, the 7/7 live context smoke and independent final review are clean. Production DB and protected-state invariants are unchanged.
+- **Next:** design deterministic, evidence-preserving windowing for the single oversize NAAIM snapshot. Do not re-run the unchanged list until that design is approved and implemented; it is already known to fail before the first model call under the correct context guard.
+- **Status:** Phase 6 / Gate D remain incomplete. Nothing was pushed or merged.
+
+### Context-safe extraction fix (2026-09-26): prompts can no longer be silently truncated
+
+- **Commit:** `9f963f1` (local `testing`, not pushed). No Scout or curator run, and no research.
+- **Calibrated on this machine** (Ollama 0.34.3, RTX 5070 12 GB), on synthetic probes plus read-only token counts of the E3 snapshots:
+  - The silent prompt limit is `num_ctx // 2 + 2`, whatever `num_predict` is: 1,026 at 2,048 and 2,050 at 4,096.
+  - `truncate:false` is honoured: an oversize prompt gets HTTP 400 `exceed_context_size_error`.
+  - At 16k, qwen3:14b runs 84% on GPU at about 18 tok/s. At 40k it drops to about 2 tok/s. qwen3.8:27b runs about 6 tok/s at 16k.
+- **The fix:**
+  - One source per extraction call, per the Phase 6 design. Snapshots go in as raw text, not JSON-escaped.
+  - `generate()` requires `num_ctx` and `num_predict` and sends `truncate:false` and `shift:false`. The response must report `prompt_eval_count`.
+  - The truncation signature, an over-budget count and `done_reason=length` are all refused.
+  - An optimistic bytes-per-4 estimate screens every prompt before the first model call.
+  - A context failure stops the ladder at once with `ContextBudgetError`, a subclass of `QwenValidationError`.
+  - The merged payload must still pass the old whole-bundle validation.
+  - Extraction stays all-or-nothing.
+- **Constants:** `num_ctx` 16384, `num_predict` 1536, prompt budget 11,571 tokens (80% of the window minus the output reserve), and extraction timeout 600s (raised because the 27B measured near 300s).
+- **Unchanged:** the ladder (per call), the validators, the source minimum, tiers, extractive support, the curator gate, snapshot-before-model, and the dispatcher, registry and paths.
+- **Verification:**
+  - 505 passed, 1 skipped (17 new tests). Both Ruff checks and `git diff --check` are clean.
+  - All **13 mutations** were caught.
+  - The live smoke check (`scripts/context_smoke.py`, fixed synthetic fixture, no writes) passed 7/7:
+    - `prompt_eval_count` was 5,914.
+    - The model quoted the head needle.
+    - The ladder validated.
+    - The pre-flight and the server both refused an oversize prompt.
+    - There was no new truncation warning.
+  - The DB, the list blob, and the E3 and historical evidence are sha256-identical.
+- **What it means for E3's list:** four of the five sources fit (about 2.1k–9.7k tokens each). **The NAAIM PDF snapshot is 31,330 tokens** (mojibake, 1.8 bytes per token), so a re-run on the committed list would fail closed before any model call. This is the designed bounded outcome, not a defect.
+- **Status:** Phase 6 / Gate D remain incomplete.
+
+### Gate D checkpoint E3 (2026-09-26 local / 2026-09-27 UTC): first candidate-list run failed closed; prompt truncation found
+
+- **Commits (local `testing`, not pushed):**
+  - `94b82be`: E2 code and tests.
+  - `eb91355`: E1/E2 docs as they stood.
+  - `7093f92`: the RQ-6d9c12f4 list, committed before the run and not edited since.
+- **The list:** `brain/00_Inbox/Scout_Candidates/RQ-6d9c12f4.md`, sha256 `88ba2d3ce98b69623d050197c15c8e5d7adf82e107b3a6bb8ea5e045022faeae`. The working file, the committed blob and the `discovery_started` event all match. It holds the dossier's declared rule only (5 URLs). The Malaysian DOI chapter is excluded.
+- **Run `RUN-9b0d5a6e12`, the only one, with no retry.**
+  - Exit 1 after 188s: `QwenValidationError` at `qwen_extract`, and the question failed closed.
+  - All 5 listed URLs were fetched and snapshotted, with 0 rejected. There were 5 distinct works against the required 3. Tiers: 2 `practitioner` (StockCharts ×2), 3 `discovery-only`.
+  - All three model attempts failed validation:
+    - `qwen3:14b` invented `research_id: Double7sSetup` and omitted S1–S5.
+    - The repair mislabelled S1/S2 as the Double 7s page.
+    - `qwen3.8:27b` left S4/S5 evidence empty.
+- **Decisive cause: a runtime defect, not the sources.**
+  - The Ollama server log shows `truncating input prompt limit=2050` on all three attempts: 53,917 / 54,985 / 55,586 prompt tokens were cut to 2,050.
+  - `ollama_client` sends no `num_ctx`, and nothing detects the truncation. **Correction (2026-09-26):** the server ran with `-c 4096`, but the effective prompt limit was **2,050** tokens (`num_ctx // 2 + 2`, measured), not 4,096.
+  - The models saw only the tail of the evidence bundle (the end of the Double 7s snapshot), without the instructions or the question. Every dossier exit-rule span is present in the snapshots.
+  - **RUN-4e9d910742 (2026-09-20) was also truncated** (11,962–12,847 → 2,050). **Correction (2026-09-26):** that run's source-relevance finding **stands**, because its snapshots were checked directly and have zero RSI or ETF mentions. The truncation confounds only the account of *why the models misbehaved*.
+  - Not fixed, because this task allowed no code changes.
+- **Curator:** not dispatched, because no raw note was written.
+- **State:**
+  - Protected tables are 0. The DB changed only in `agent_tasks` (4→5) and `agent_events` (58→67). The DB sha256 is now `a6ab24f8…fb6b255f`.
+  - All three questions are `queued`/NULL. Historical evidence, `.gitattributes` and the intake catalog are sha256-identical. 488 passed, 1 skipped.
+  - The receipt and the five `2026-09-27` snapshots are left **unstaged**.
+- **Status:** Phase 6 / Gate D remain incomplete. PROP-005 remains undecided and is not applied.
+
+### Gate D checkpoint E2 (2026-09-26): PROP-004 implemented; committed in E3 as `94b82be`
+
+- **Built:** a pre-registered candidate-list lane (`brain/00_Inbox/Scout_Candidates/<RQ>.md`, lane `preregistered_candidate_list`) that feeds the **unchanged** live path: classify → rank → fetch → content floor → snapshot → Qwen → validators.
+  - It replaces search for that run; it is not merged with search results.
+  - Entries carry only a URL and its discovery provenance. At most 10 entries per list.
+- **DOI-alias collapse:** the source minimum now counts DOI and publisher aliases once, for a host-anchored table of recognized forms.
+- **Budget:** ≤5 **accepted** sources. Fetch attempts can reach the list length through backfill.
+- **Provenance:** the list's sha256 is recorded in the start and completion events, the raw note, and any Failed_Runs receipt, including failures inside discovery.
+- **Unchanged:** the dispatcher, registry and path enforcement. `tests/test_dispatcher.py` passes with no changes.
+- **Verification:**
+  - **488 passed, 1 skipped** (63 new tests). Both Ruff checks and `git diff --check` are clean.
+  - Seven mutation checks were all caught.
+  - The DB, intake catalog, `.gitattributes` and historical evidence are sha256-identical.
+  - All three questions are still `queued`.
+- **Not done:** no list registered, no Scout or curator run. PROP-005 remains **proposed**.
+- **Status:** Phase 6 / Gate D remain incomplete.
+
+### Gate D checkpoint E1 (2026-09-26): stopped for Jason's decisions
+
+- **Outputs:** a pre-run seed dossier (`brain/00_Inbox/Gate_D_Seed_Dossier_2026-09-26.md`, leads only) and **proposed** PROP-004 (seed lane plus DOI-alias collapse) and PROP-005 ("source-insufficient" pipeline-acceptance clarification; Phase 8 entry unchanged).
+- **Unchanged state:** no code, Scout, curator or DB change. 425 passed, 1 skipped. The DB and intake-catalog hashes are unchanged, and all three questions are `queued`.
+- **New finding:** the arXiv lane returns HTTP 406 from Python, so all three probes now exit 4 with 0 URLs.
+- **Pre-run findings:**
+  - RQ-6d9c12f4 can reach the ≥3 distinct-URL bar only through a seed lane. Its promotable ceiling is 2 sources from 2 originators, or 3 if Jason admits a Malaysian-equity DOI chapter.
+  - RQ-c920baeb and RQ-80be8cf7 are **source-insufficient** at 2 relevant, accessible candidates each.
+- **Status:** Phase 6 / Gate D remain incomplete.
+
+### Current resume verification (2026-09-26)
+
+**Completed after Jason selected the original catalog:** appended five exact-quotation claims using the existing Intake API and verified all five offline against pinned snapshots. All five have `quote_match=true`, `full_rule_match=true`, and state `partially_supported` / `review_required`; this is exact passage matching, not validation of a complete strategy. No attributed human scope review was performed. Handoff remains empty. Added 5 claims, 5 evaluations and 10 history rows; no new targets, reports or fetches. All pre-existing catalog rows and non-database intake files (including acceptance.json) were preserved; production DB unchanged. Backup and machine-readable verification are in `C:/Users/jason/quant-agent-brain-intake/exit-rules-review/` as `external-before-remap-2026-09-26.sqlite` and `remap-recorded-verification.json`. The workspace decision is resolved; the next boundary is human scope review and acquiring additional relevant independent evidence through an approved route. Gate D remains incomplete.
+
+
+Local `testing` and the live remote `testing` both resolve to `7277a76`: the reliability checkpoint is pushed, superseding historical not-pushed statements below. Fresh full suite: **425 passed, 1 skipped**; `ruff check .` clean; production database SHA-256 unchanged before/after. All three Gate D child questions remain queued with no raw-note path; strategy cards/backtests/price datasets/reviews remain zero. Phase 6 / Gate D remain incomplete.
+
+Next recommended bounded step: append exact-quotation claims and offline verification in the original isolated `exit-rules-final` catalog, subject to Jason's workspace choice. Do not bypass the copied-workspace path guard or attribute human review without actual review. Existing packet has only two promotable targets; recording claims alone does not unlock Gate D. Additional relevant independent evidence and an approved ingestion route remain necessary. Existing documentation edits are preserved; no code change, Scout/curator dispatch, commit or push performed during this resume review. See the latest SESSION_HANDOFF.md entry.
+
+### Where we are (historical checkpoints)
 - Plan **revision 4** updated 2026-09-16. Revision 3 reconciled the merged Agent Reach/Scout implementation and gated roadmap; revision 4 preserves that architecture while making immutable trial accounting, multiple-testing adjustment, and same-engine challenge baselines hard requirements.
 - **Phase 0 complete (2026-08-28).** Baseline is green: **51 passed**. `quant_brain/ops/events.py` implements `record_event` / `list_events` / `summarize_run`; `agent_events` table + `idx_agent_events_run` / `idx_agent_events_task` added to `schema.sql`. Existing data verified intact (21 notes / 233 chunks / 233 embeddings). CLI: `python -m quant_brain.ops.events tail --run-id X` and `summary --run-id X`.
 - **Phase 1 complete (2026-08-28).** **71 passed.** `harness/registry.py` loads validated `AgentSpec`s from frontmatter in `agents/*.md`. Both shipped agents migrated: `research_scout` (handles `discovery`, `qwen3:14b`) and `knowledge_curator` (handles `curation`, deterministic). Permissions now flow the right direction — `build_work_packet` takes paths from the agent's declaration; a caller may **narrow** but never **widen** (raises `RegistryError`). Malformed declarations fail loudly at load. CLI: `python -m quant_brain.harness.registry [--task-type X] [--json]`.
@@ -226,7 +439,7 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
   - Rejections are recorded twice: a `## Rejected Candidates` table in the raw note for the curator, and a `discovery_candidates_rejected` event for audit. The ledger stays outside the validated JSON block because `RawResearchPayload` is `extra="forbid"`.
   - Fixed a live bug: the forbidden-subcommand guard scanned every argv token, so any research question containing the word "install" was refused. It now guards the subcommand position, only for agent-reach itself.
   - Acceptance demonstration: `uv run python scripts/acquisition_report.py` runs the real pipeline over recorded fixtures with zero network and finds **3 primary + 1 practitioner** sources, rejecting promotional material pre-fetch, a cookie banner post-fetch/pre-model, and collapsing a cross-channel duplicate. Exits non-zero if any Gate C check fails.
-  - **Lane status:** operational = Exa (mcporter) — **but reporting `status: off` on this machine since at least 2026-09-17, see the Gate D entry** — and GitHub (`gh`). Fixture-only = arXiv `/abs/` (a `/pdf/` → `/abs/` rewrite promoting hits already found; no new dependency, no PDF parser). Deferred = YouTube, RSS. Never = all login-backed social channels.
+  - **Lane status:** operational = Exa (mcporter) — **but reporting `status: off` on this machine since at least 2026-09-17, see the Gate D entry** — and GitHub (`gh`). arXiv is **operational since 2026-09-19 (PROP-003)** — a real search lane over the free public Atom API, zero account, own hardened transport, not routed through Agent Reach, academic preprints only, still no PDF parser. Deferred = YouTube, RSS. Never = all login-backed social channels.
   - Gate C did **not** run any child research question. `RQ-6d9c12f4`, `RQ-c920baeb`, `RQ-80be8cf7` remain `queued`; `strategy_cards`/`backtests`/`price_datasets`/`reviews` all remain 0.
 - **Gate D attempted and blocked (2026-09-17).** Authorized and attempted; prerequisites were checked **before** any child question ran, and **none was run**. `RQ-6d9c12f4`, `RQ-c920baeb`, `RQ-80be8cf7` remain `queued` with no raw note; `strategy_cards`/`backtests`/`price_datasets`/`reviews` all remain 0. **284 passed, 1 skipped**; Ruff clean. Work is on `testing`, not merged to `main`.
   - **Three code defects found and fixed.** (1) `default_runner` decoded subprocess output with the locale codec (`cp1252` here) while `agent-reach doctor --json` emits UTF-8 channel names; the `UnicodeDecodeError` fired on subprocess's *reader thread*, nulled `stdout`, and surfaced as a misleading `TypeError` from `json.loads`. **Every live discovery call was broken on this machine.** (2) `SEARCH_CHANNELS`/`ENABLED_CHANNELS`/`SEARCH_LANES` named channels `"search"` and `"exa"`, which do not exist — the real doctor key is `exa_search` — so the Exa lane could never be selected even when configured. The recorded fixture repeated the same invented names, so code and fixture agreed with each other and disagreed with reality; that is why a green suite carried this through an entire gate. (3) `plan_queries` sends the full research question (440 chars) to `gh search`, which rejects long queries as *malformed* — misreporting a query error as though it were an empty result.
@@ -240,6 +453,31 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
   - **Repeated citation is not corroboration.** Claims are per (report, citation); source targets are deduplicated on the normalized URL. Over the three real reports: 18 claims across **17 distinct targets**, because StockCharts ChartSchool is cited by two different reports and counted once. `independent_corroboration` is reported as `not_assessed` rather than inferred from a count.
   - **Honest verification result.** 13 fetched, 1 access-blocked, 3 content-rejected, 1 with no public URL. **4 quotations located; 0 full-rule matches; the handoff is therefore empty.** Two DOI/SSRN primaries sit behind access walls and are parked with reasons and follow-up actions — not circumvented, and explicitly not treated as disproven. Reports that yield no native text are retained as blocked leads carrying a concrete recovery action.
   - Re-importing the same PDFs is a no-op (identity is the content hash); re-verifying without `--allow-network` replays cached snapshots with integrity checks and zero network.
+- **Gate D partially unblocked (2026-09-19).** **391 passed, 1 skipped**; Ruff clean on `.` and on `src tests scripts`. `RQ-6d9c12f4` is probe-ready with 3 distinct primary-tier arXiv works under one fixed query rule; `RQ-c920baeb` and `RQ-80be8cf7` each have 1 candidate and still exit 4. The ≥3-source bar is now enforced in the pipeline over distinct upstream works; sparse results are quarantined to `Failed_Runs` with no raw note and no curator recommendation. **No child run was executed.** Production is unchanged: `strategy_cards`/`backtests`/`price_datasets`/`reviews` all remain 0, no `external_*` tables exist, all three RQs remain `queued` with `raw_note_path NULL`, and `db/brain.sqlite` remains byte-identical.
+- **First Scout child run executed — research acceptance failed, fail-closed safeguards verified (2026-09-20).** One bounded run for `RQ-6d9c12f4` only (`RUN-4e9d910742`, branch `testing` at `3c02397`, 168s, exit 1 by design). The other two questions were not run and no curator was dispatched. **391 passed, 1 skipped** both before and after; Ruff clean on both invocations.
+  - **The ≥3-source bar was cleared, and the run still failed — later, at extraction.** The live path retrieved **5 distinct arXiv works** (more than the probe's 3: the probe passes `limit=min_sources=3` while the live run uses the agent's `max_sources: 5`), all classified `primary` by the unmodified structural `arxiv-abs` signal, all fetched and snapshotted before any model call. `distinct_upstream_keys` re-derived independently: 5 ≥ 3.
+  - **All three bounded Qwen attempts failed deterministic validation.** `qwen3:14b` (51.8s) invented `research_id: R1`, omitted all 5 supplied sources and cited `<missing>` sources; the one repair (14.3s) repeated the omissions; `qwen3.8:27b` (69.4s) used S5 but its evidence quote was absent from the snapshot and its main_claim was an ungrounded strategy/performance assertion.
+  - **Verified a true positive, not validator over-strictness.** The five snapshots contain **zero** standalone `RSI` and **zero** `ETF` occurrences. The question asks for ETF RSI-oversold exit rules; arXiv returned continuous-time optimal-stopping theory on OU processes. The 27B's ungrounded claim was bridging that gap, and the Gate B extractive-support rule blocked it.
+  - **Attribution, stated precisely** (an earlier draft said "not a model defect, not a lane fault" — too generous on both counts): the **decisive research blocker was unsuitable source relevance**, since no extraction could yield ETF RSI exit rules from these papers; the **models also produced genuinely invalid outputs** (invented `research_id`, all five sources omitted, `<missing>` citations, an evidence quotation absent from the snapshot); the **validators and fail-closed runtime handled those outputs correctly**; and the **arXiv lane operated as designed** — it searched, returned real `primary`-tier works and fetched them, but its *topical coverage* was unsuitable for this particular question.
+  - **What was and was not written.** Nothing was promoted; no validated raw research note and no curator recommendation were produced. The run did write durable audit rows (`agent_tasks` +1, `agent_events` +9), a failed-run receipt and five snapshots — so "nothing durable was written" (an earlier phrasing) was wrong.
+  - **Date skew, not an inconsistency:** the run executed 2026-09-20 **local** (19:57–20:00); the snapshot directory is `2026-09-21` because snapshot paths and event timestamps use **UTC**.
+  - **Fail-closed behavior verified against evidence:** complete 9-event trail for the model-validation path (`dispatch_started → discovery_started → qwen_attempt ×3 → discovery_failed → failed_run_written → handler_failed → dispatch_failed`); per-attempt model/duration/prompt-hash/response-hash/verdict recorded; `agent_tasks` finalized `failed` with `output_path` NULL; raw-note scaffold removed; `RQ-6d9c12f4` reset to `queued`/NULL; other two questions untouched. All protected tables unchanged — `strategy_cards`/`backtests`/`price_datasets`/`reviews` still 0, `research_findings` 7, `notes` 23, `sources` 7, no `external_*` tables. Only `agent_tasks` 3→4 and `agent_events` 49→58.
+  - **Defect found, since fixed (see the next entry):** the `Failed_Runs` receipt was thin on this path. `_fail_closed_discovery` filled its `Detail` block from `getattr(error, "detail", {})`, and `QwenValidationError` carries no `detail` (only `InsufficientUpstreamSources` does), so the receipt recorded **no source URLs, tiers, snapshot paths or hashes**. **Correction to an earlier claim in this file:** the evidence does **not** survive in `agent_events` — all nine payloads were re-inspected and carry only `S1`–`S5` opaque labels, model/prompt/response hashes and validator reasons, with no URL, no snapshot path and no content hash. The snapshots carry no `run_id` either, so the original failure path preserved **no explicit run-to-snapshot lineage**.
+  - Artifacts left **unstaged** for review: `brain/00_Inbox/Failed_Runs/RUN-4e9d910742.md` and `brain/00_Inbox/Source_Snapshots/2026-09-21/` — 5 files whose **content** remains on disk, but whose association with this run is **probable, not established** by any artifact. Nothing committed or pushed.
+- **Failure-receipt provenance defect fixed (2026-09-20, later).** **396 passed, 1 skipped**; Ruff clean on both invocations; `db/brain.sqlite` byte-identical at `6db65981…f530f9e29` (the post-run hash; `43fa24b0…` is the pre-run baseline, now historical). Everything unstaged. **No Scout run, no curator, no other question executed. Phase 6 remains incomplete.**
+  - **Two defects, one gap.** (1) Candidate evidence rode on `error.detail`, which only `InsufficientUpstreamSources` defines — so a receipt written for any post-fetch failure named no source and no snapshot. (2) `snapshot_path`/`snapshot_sha256` were read by the receipt but **never set** by `_source_from_fetch`, so **even the sparse path** recorded `null` for both; the existing test asserted only key presence, which `None` satisfies.
+  - **Fix:** `live_discovery._source_from_fetch` now sets both keys (hash computed from the same `content` `save_source_snapshot` hashes, so identical by construction); `executor` gained a shared `candidate_evidence()` helper plus a `run_provenance` carrier captured **once at the discover stage** and merged **beneath** `error.detail`. Capturing early matters because a successful model call rebinds `sources` to model output. `QwenValidationError` was deliberately left untouched — giving it a `detail` would push snapshot knowledge into the LLM layer.
+  - **Nothing weakened:** no change to prompts, ladder, validators, tiers, `MIN_UPSTREAM_SOURCES`, the 5-source cap, curator controls, snapshot-before-model ordering or cleanup. The sparse receipt's *contract* is preserved; its *contents* change, because two always-`null` fields now hold real values.
+  - **Receipt NOT backfilled, deliberately.** Attribution is strong but circumstantial (sole discovery task, timestamps inside the run window, self-verifying content hashes) and **does not prove authorship** — hashes prove integrity, not which process wrote a file. The brief permits backfill only when deterministically proven, so the receipt is unchanged and the association is recorded in `SESSION_HANDOFF.md` as *probable*, with tiers labeled **re-derived**.
+  - Regression coverage: `tests/test_failed_run_provenance.py` (6 tests after the review follow-up) plus a strengthened `test_upstream_minimum.py`. **Mutation-checked** — reverting the two keys fails 4 tests.
+  - **Scope of the fix: receipt contents, not receipt creation.** Provenance improves *when a receipt is successfully written*. Creation is still not guaranteed (pre-existing, unchanged): `_fail_closed_discovery` catches only `OSError` around the write, so an `OSError` leaves no receipt, and a `PathViolation` (or other non-`OSError`) from the write escapes the handler — skipping cleanup and the `queued` reset and replacing the original exception; failures before the task loads write no receipt by design.
+  - **Review follow-up (2026-09-22).** Two review findings resolved without production-code changes: the early-failure test now uses a valid task with discovery raising before a `DiscoverResult`, spies on the real `_fail_closed_discovery`, and asserts the original exception, run/task/research/stage/error in the receipt, and no fabricated candidate or snapshot fields (the old unknown-id test is kept, renamed to the pre-task path it actually pins); and the receipt-coverage overclaim above was corrected. Verified: **397 passed, 1 skipped**; Ruff clean on `.` and on `src tests scripts`; `git diff --check` clean; `db/brain.sqlite` still byte-identical at `6db65981…f530f9e29`; `RUN-4e9d910742.md` and the five `2026-09-21` snapshots hash-identical before and after. Still unstaged. **Phase 6 / Gate D remain incomplete.**
+  - **Finalization verification (2026-09-22) — commit-ready, not committed; no blocker to committing.** **397 passed, 1 skipped**; both Ruff invocations and `git diff --check` clean. The DB, all 12 `Failed_Runs`/`2026-09-21` evidence files, the tracked diff and every change-set file were sha256-identical before and after verification. All 5 snapshots' `content_hash` values recompute exactly from the LF-normalised body (integrity only; the link to `RUN-4e9d910742` stays **probable**). **Required before the next production Scout run** (separate build task, needs approval): make the receipt handler catch non-`OSError` failures, always clean up and reset to `queued`, and re-raise the original exception. Proposed commits, for later approval: A = fix, tests and docs; B = historical evidence verbatim. At commit time check the stored blobs' sha256 (`autocrlf=true`, no `.gitattributes`) and never whitespace-fix the snapshots. See `SESSION_HANDOFF.md`.
+  - **Checkpoint committed (2026-09-22), not pushed.** `54df8cf` preserves `RUN-4e9d910742.md` and the five `2026-09-21` snapshots unchanged, with a new `.gitattributes` marking exactly those six paths `-text`; original, staged and committed sha256 were verified identical. The provenance repair, its tests and these docs follow in the next commit, and the code and test bytes are identical to the verified state. Lineage stays **probable**. **Phase 6 / Gate D remain incomplete.**
+  - **Fail-closed recovery hardened (2026-09-22, later), UNSTAGED.** **413 passed, 1 skipped** (16 new in `tests/test_fail_closed_recovery.py`, mutation-checked); both Ruff checks and `git diff --check` clean; the DB, `.gitattributes` and the historical evidence are sha256-identical. In `_fail_closed_discovery` the `discovery_failed` event, raw-note recovery, the reset, the receipt and the `failed_run_written` event are now independent attempts. A failure in one (`PathViolation`, `OSError`, a DB error) is secondary: it never skips the others or replaces the original exception, which propagates as the same object with its traceback and carries `add_note` summaries. The receipt is written after recovery and states the outcome (`recovery` block; `retryable: false` / "Recovery incomplete" if the reset failed). **Ownership corrected:** an untouched pre-existing raw note is no longer deleted, a restored one keeps its `raw_note_path`, and recovery mutations go through `resolve_write`, so they are refused, never bypassed. `KeyboardInterrupt`/`SystemExit` propagate. **Limitations:** recovery is attempted, not guaranteed; the dispatcher's own failure events and task finalization are still unguarded (recommended follow-up); the manual `prepare_next_research_run` still overwrites the deterministic note path. See `SESSION_HANDOFF.md`.
+  - **Reliability closeout (2026-09-22), historical: pre-commit.** **425 passed, 1 skipped** (12 new, mutation-checked); both Ruff checks and `git diff --check` clean; the DB, `.gitattributes` and the historical evidence are sha256-identical. (1) A failed raw-note recovery now **holds** the question at a new `needs_review` status, with its pointer kept at the leftover file. No selector picks it up and explicit Scout dispatch refuses it, because a receipt's `retryable:` line is read by nothing and `status` is the real retry signal. The receipt says `retryable: false` / "Manual inspection required" and gives a release one-liner. A preserved or restored pre-existing note counts as successful recovery. (2) The dispatcher's failure branches independently attempt their events and task finalization, attach secondary failures as notes stating the task row's real state, and re-raise the handler's original exception object with its traceback. **Limitations:** the hold does not stop direct DB edits or a manual `prepare` after release; release is a manual one-liner; the success-path and pre-handler dispatcher writes are still unguarded, though there is no original error to mask there. See `SESSION_HANDOFF.md`.
+  - **Reliability checkpoint committed (2026-09-22), local on `testing`, not pushed.** The recovery hardening and closeout are one commit after `df63698`. There were two wording fixes at commit time: literal release commands, and "unconfirmed" for a failed finalization. Verified: 76 related tests passed; **425 passed, 1 skipped**; both Ruff checks and `git diff --check` clean; the DB and historical evidence unchanged. **Research blocker re-diagnosed:** for `RQ-6d9c12f4` the constraint is **claim-to-source mapping, not discovery**. The intake verifier sets `full_rule_match` only when a claim equals its verbatim quote; the reports paraphrased, so the 4 located quotations (and 2 more exit rules found verbatim in pinned snapshots: Connors Research "4-period RSI closes above 55", NAAIM/Pagonidis "RSI(3) ≤ 40") never reached review. The tier policy (unchanged) makes only the 2 StockCharts targets promotable, and one relays Connors, so even a full review yields fewer than 3 promotable independent sources. **Next (approved, bounded):** offline verbatim re-mapping in a copy of the intake workspace, producing a review packet for Jason's attributed scope review. It creates no raw note, no Gate D progress and no promotion. A possible later governance proposal: a "reviewed-leads" Scout lane that re-fetches human-reviewed URLs through the normal Scout validators.
+  - **Checkpoint hash `7277a76`. Verbatim re-mapping pre-check (2026-09-22): stopped at a guard, awaiting Jason's decision.** It was read-only and offline: the verifier's own span matching was run on integrity-checked pinned snapshots, and **5 of 5** exact exit-rule spans were located across 5 targets. **Only 2 are promotable (StockCharts), and only 1 is independent of Connors**, which is below the ≥3 bar under the unchanged tier policy. The claims were not recorded: the review copy's catalog holds absolute snapshot paths that the workspace guard refuses, and the guard was not bypassed. `exit-rules-final` is verified unchanged. Packet: `C:\Users\jason\quant-agent-brain-intake\exit-rules-review\REVIEW-PACKET.md`. See `SESSION_HANDOFF.md`.
 - Note for whoever runs the indexer: `scripts/index_markdown.py index` re-chunks and resets all chunks to `embedding_status='pending'`, dropping embeddings. Follow it with `scripts/embed_chunks.py embed`. Pre-existing behavior, not introduced by Phase 0.
 
 ### What Jason decided (2026-08-28)
@@ -251,7 +489,25 @@ Every LLM call records model, temperature, prompt hash, response hash, validator
 6. The plan must be saved and portable enough for Claude Desktop to resume cold.
 
 ### What to do next
-Gate C is complete and verified (2026-09-16). **Gate D was attempted on 2026-09-17 and is blocked on an unconfigured search lane, not on authorization** — see the Gate D entry above; no child question was executed. Re-attempting it requires a usable search lane, which is Jason's decision. Originally: **Gate D requires Jason's explicit authorization** — it runs the three queued child research questions one at a time (`RQ-6d9c12f4` exit rules, then `RQ-c920baeb` maximum holding periods, then `RQ-80be8cf7` commission/slippage), each with its own dispatch, snapshots, validated raw note, events and separately dispatched curator verdict. Zero promotions is an acceptable Gate D outcome. Do **not** claim Phase 6 or research acceptance until those runs are performed and reviewed.
+What remains after the context fix. Each item needs its own approval.
+1. ~~**Fix prompt truncation.**~~ **Done in `9f963f1`**; see the context-safe extraction entry above.
+2. ~~**Design deterministic, evidence-preserving windowing for an oversize single source.**~~ **Implemented under PROP-006 (2026-09-27); see the windowing entry above.** Original scope:
+   - The NAAIM snapshot is 31,330 tokens against an 11,571-token per-call budget. Re-running first would only duplicate a known fail-closed outcome before any model call.
+   - Windowing must keep exact quotations verifiable against the immutable full snapshot, remain all-or-nothing, and stay inside the shared 15-minute run deadline. It must not silently select only favorable passages.
+   - Do not edit the committed list, and do not raise the context beyond what the 14B can run at usable speed.
+3. ~~**Re-run RQ-6d9c12f4 on the same committed list** (`88ba2d3c…`).~~ **Done 2026-09-28 as E4 (`RUN-d67b1d121b`); it failed closed at NAAIM W02.** The window-contract amendment is implemented and verified (PROP-006 amendment A above). **Next, needing authorization: one more rerun on the unchanged list.**
+   - Dispatch the curator separately only if a raw note results. The honest ceiling remains about 2 promotable sources from 2 originators.
+4. ~~**Add the Phase 6 whole-run wall-clock cap and same-lane retry.**~~ **Done in `c6ab150`.**
+5. ~~**Re-read the RUN-4e9d910742 attribution.**~~ **Settled:** its relevance finding stands; the truncation explains only the models' behaviour.
+6. **PROP-005:** Jason's decision. It is still undecided and not applied.
+7. **RQ-c920baeb and RQ-80be8cf7** are source-insufficient per the E1 dossier. They have no list and no run.
+8. **Diagnose the arXiv HTTP 406** as its own task.
+9. ~~**Review and preserve the E3 run artifacts.**~~ **Done in `e064955`, byte-for-byte with `-text`.**
+10. **Push or merge `testing`:** only when Jason asks.
+
+Do **not** lower `MIN_UPSTREAM_SOURCES`, relax extractive support, change tiers or edit a committed candidate list.
+
+Historical context below. Gate C is complete and verified (2026-09-16). **Gate D was attempted on 2026-09-17 and was blocked on an unconfigured search lane, not on authorization** — see the Gate D entry above; no child question was executed *at that time*. Originally: **Gate D requires Jason's explicit authorization** — it runs the three queued child research questions one at a time (`RQ-6d9c12f4` exit rules, then `RQ-c920baeb` maximum holding periods, then `RQ-80be8cf7` commission/slippage), each with its own dispatch, snapshots, validated raw note, events and separately dispatched curator verdict. Zero promotions is an acceptable Gate D outcome. Do **not** claim Phase 6 or research acceptance until those runs are performed and reviewed.
 
 | Phase | Status | Done on | Notes |
 |---|---|---|---|
@@ -262,7 +518,7 @@ Gate C is complete and verified (2026-09-16). **Gate D was attempted on 2026-09-
 | 4 — Agent Reach adapter | **done** | 2026-09-07 | Merged adapter + production discovery handler; fixture tests use zero network |
 | 5 — Qwen runtime + validators | **done** | 2026-09-07 | Gate B: hermetic ladder tests + bounded 14B live smoke; per-attempt hashes/timing recorded |
 | 5b — Gate C bounded acquisition | **done** | 2026-09-16 | 269 passed. Tier classifier, ranking, dedupe, pre-Qwen content floor, rejection ledger. Live sources can finally be promotable |
-| 6 — Research Scout agent | pending | — | **Gate D attempted 2026-09-17 and blocked**: no search lane can answer these questions (`exa_search` off; `gh` returns 0 results). Three defects fixed on `testing`. Re-attempt when a search lane is operational |
+| 6 — Research Scout agent | pending | — | **First child run executed 2026-09-20** (`RQ-6d9c12f4` only, `RUN-4e9d910742`): 5 distinct primary arXiv works cleared the ≥3 bar, then all three Qwen attempts failed validation on ungrounded/absent quotations. **Scout research acceptance failed; fail-closed safeguards verified.** Decisive blocker: unsuitable source relevance (zero RSI/ETF mentions in the retrieved papers); the models also produced invalid outputs, which the validators correctly caught. The failure-receipt provenance defect it exposed was **fixed the same day** (396 passed; 397 after the 2026-09-22 review follow-up, which also scoped the fix to receipt contents, not guaranteed receipt creation). Exit gate needs all three child runs — 2 of 3 still blocked at 1 candidate each. **E3 (2026-09-26/27):** `RUN-9b0d5a6e12` on the committed candidate list fetched 5/5 and failed closed at extraction; both Scout runs had prompts truncated to 2,050 tokens by Ollama (no `num_ctx`). **Context fix `9f963f1` (2026-09-26):** one source per call, explicit 16k context, overflow fails closed; NAAIM (31k tokens) exceeds the per-call budget. **Incomplete** |
 | 7 — Re-verify 5 source notes | pending | — | See §4 |
 | 8 — Strategy card + backtest | pending | — | Needs Jason's explicit approval |
 | 9 — Second market door | pending | — | Do not scope until 8 done |

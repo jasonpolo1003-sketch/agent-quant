@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -19,6 +21,7 @@ from urllib.parse import urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 from quant_brain.config import PROJECT_ROOT
+from quant_brain.discovery.candidate_list import CandidateList
 
 SNAPSHOT_DIR = "brain/00_Inbox/Source_Snapshots"
 JINA_READER_PREFIX = "https://r.jina.ai/"
@@ -32,6 +35,17 @@ ResolveWriteFn = Callable[[str | Path], Path]
 
 class LiveDiscoveryError(RuntimeError):
     """Raised when live discovery cannot proceed without inventing a scraper."""
+
+
+class DiscoveryDeadlineExceeded(LiveDiscoveryError):
+    """The Scout's shared whole-run wall-clock deadline was exhausted."""
+
+
+def _check_run_deadline(deadline: float | None) -> None:
+    if deadline is not None and time.monotonic() >= deadline:
+        raise DiscoveryDeadlineExceeded(
+            "budget: Scout run exceeded its whole-run wall-clock deadline"
+        )
 
 
 @dataclass(frozen=True)
@@ -56,6 +70,7 @@ class DiscoveryBackend(Protocol):
         limit: int = 5,
         project_root: str | Path = PROJECT_ROOT,
         resolve_write: ResolveWriteFn | None = None,
+        deadline: float | None = None,
     ) -> DiscoverResult: ...
 
 
@@ -78,6 +93,66 @@ def snapshot_relative_path(
     return f"{SNAPSHOT_DIR}/{day}/{content_hash[:12]}-{url_hash[:8]}.md"
 
 
+def canonical_content(content: str) -> str:
+    """Fetched content with line endings canonicalised to ``\\n``.
+
+    The only change ever made to fetched text. Snapshots are written in text
+    mode and read with universal newlines, so a raw ``\\r`` cannot round-trip;
+    canonicalising once, before hashing and writing, keeps the recorded
+    content hash re-verifiable from the file.
+    """
+    return content.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _one_line(value: str) -> str:
+    """A front-matter value that cannot end the front matter early."""
+    return re.sub(r"[\r\n]+", " ", str(value))
+
+
+def snapshot_content(snapshot_text: str) -> str:
+    """The fetched content of a snapshot: everything after its front matter.
+
+    The front matter (url, title, channel, backend, captured_at, hashes) is the
+    harness's own metadata, not the source's text. Models are shown, and
+    quotes and numbers are checked against, this content only -- otherwise a
+    quote of ``backend: jina`` counts as evidence and timestamp or hash digits
+    make invented numbers look grounded.
+    """
+    if not snapshot_text.startswith("---\n") or "\n---\n" not in snapshot_text:
+        raise ValueError("snapshot text has no front matter to separate from its content")
+    return snapshot_text.split("\n---\n", 1)[1].removeprefix("\n")
+
+
+MAX_SNAPSHOT_VERSIONS = 1000
+
+
+def _create_snapshot_file(
+    project_root: str | Path,
+    relative: str,
+    text: str,
+    resolve_write: ResolveWriteFn | None,
+) -> Path:
+    """Create ``relative`` (or the next free ``.<n>.md`` sibling) exclusively.
+
+    Mode ``"x"`` makes the existence check and the creation one atomic step, so
+    no existing file is ever opened for writing, even by a concurrent writer.
+    """
+    stem = relative.removesuffix(".md")
+    for version in range(1, MAX_SNAPSHOT_VERSIONS + 1):
+        candidate = relative if version == 1 else f"{stem}.{version}.md"
+        dest = resolve_write(candidate) if resolve_write else Path(project_root) / candidate
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with dest.open("x", encoding="utf-8") as handle:
+                handle.write(text)
+        except FileExistsError:
+            continue
+        return dest
+    raise LiveDiscoveryError(
+        f"{MAX_SNAPSHOT_VERSIONS} snapshots already exist for {relative}; refusing to overwrite"
+    )
+
+
 def save_source_snapshot(
     project_root: str | Path,
     *,
@@ -94,6 +169,13 @@ def save_source_snapshot(
     Filenames include both a content hash and a URL hash so two different
     upstreams that happen to return identical body text cannot overwrite each
     other's identity metadata.
+
+    A snapshot is immutable once written. The same page fetched again on the
+    same UTC day maps to the same name, so the new snapshot is created
+    exclusively at the next free ``<name>.<n>.md`` instead. Never reused, even
+    when byte-identical: a failed discovery deletes the snapshots it wrote, so
+    sharing a file would let one run delete another run's evidence. (E5,
+    RUN-871299ea31, rewrote two E4 snapshots in place before this.)
     """
     if not url.strip():
         raise ValueError("snapshot url cannot be empty")
@@ -101,25 +183,26 @@ def save_source_snapshot(
         raise ValueError("snapshot content cannot be empty")
 
     captured = captured_at or datetime.now(UTC)
+    content = canonical_content(content)
     relative = snapshot_relative_path(content, url, captured)
-    dest = resolve_write(relative) if resolve_write else Path(project_root) / relative
-    dest.parent.mkdir(parents=True, exist_ok=True)
 
     content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
     url_hash = hashlib.sha256(normalize_snapshot_url(url).encode("utf-8")).hexdigest()
     text = (
         "---\n"
-        f"url: {url}\n"
-        f"title: {title or ''}\n"
-        f"channel: {channel}\n"
-        f"backend: {backend}\n"
+        f"url: {_one_line(url)}\n"
+        f"title: {_one_line(title or '')}\n"
+        f"channel: {_one_line(channel)}\n"
+        f"backend: {_one_line(backend)}\n"
         f"captured_at: {captured.isoformat()}\n"
         f"content_hash: {content_hash}\n"
         f"url_hash: {url_hash}\n"
         "---\n\n"
-        f"{content.rstrip()}\n"
+        # Verbatim after line-ending canonicalisation, so snapshot_content()
+        # returns exactly the hashed content (``rstrip() + "\n"`` did not).
+        f"{content}"
     )
-    dest.write_text(text, encoding="utf-8")
+    dest = _create_snapshot_file(project_root, relative, text, resolve_write)
     root = Path(project_root).resolve()
     try:
         return dest.resolve().relative_to(root).as_posix()
@@ -154,6 +237,7 @@ def _source_from_fetch(
     fetched: dict[str, Any],
     snapshot_path: str,
     tier: str = "discovery-only",
+    snapshot_sha256: str | None = None,
 ) -> dict[str, Any]:
     """Map a fetched page onto the raw-research source contract.
 
@@ -183,6 +267,11 @@ def _source_from_fetch(
     # ``source_quality`` is NOT read from the candidate. Upstream search results
     # are untrusted input, and letting a hit carry its own tier would let any
     # result claim `primary` and bypass the classifier entirely.
+    # ``snapshot_path``/``snapshot_sha256`` are carried as real keys, not merely
+    # interpolated into ``evidence``. A failure after this point has to be able
+    # to say *which file* holds the bytes the model was shown, and the failure
+    # path reads exactly these keys. They were previously read but never set, so
+    # every receipt recorded ``null`` for both.
     return {
         "title": candidate.get("title") or fetched.get("title") or candidate["url"],
         "source_type": candidate.get("source_type") or "web",
@@ -197,6 +286,8 @@ def _source_from_fetch(
         "data_required": list(candidate.get("data_required") or []),
         "data_access": candidate.get("data_access") or "available-now",
         "mvp_testable": bool(candidate.get("mvp_testable", False)),
+        "snapshot_path": snapshot_path,
+        "snapshot_sha256": snapshot_sha256,
     }
 
 
@@ -213,10 +304,12 @@ class SeededDiscoveryBackend:
         limit: int = 5,
         project_root: str | Path = PROJECT_ROOT,
         resolve_write: ResolveWriteFn | None = None,
+        deadline: float | None = None,
     ) -> DiscoverResult:
         from quant_brain.research.executor import select_candidate_sources
 
         del project_root, resolve_write
+        _check_run_deadline(deadline)
         sources = select_candidate_sources(method_family, question, limit=limit)
         return DiscoverResult(sources=sources, snapshots=(), backend=self.name)
 
@@ -238,11 +331,17 @@ class LiveDiscoveryBackend:
         fetch_fn: FetchFn | None = None,
         allow_network: bool = False,
         adapter: Any | None = None,
+        candidate_list: CandidateList | None = None,
     ) -> None:
         self.search_fn = search_fn
         self.fetch_fn = fetch_fn
         self.allow_network = allow_network
         self.adapter = adapter
+        # A pre-registered list (PROP-004) replaces search for this run; it
+        # does not change anything after the candidate pool is formed.
+        self.candidate_list = candidate_list
+        self._last_question: str | None = None
+        self._last_method_family: str | None = None
 
     def _adapter(self) -> Any:
         if self.adapter is None:
@@ -250,6 +349,38 @@ class LiveDiscoveryBackend:
 
             self.adapter = AgentReachAdapter()
         return self.adapter
+
+    @property
+    def discovery_provenance(self) -> dict[str, Any] | None:
+        """Identity of a pre-registered candidate list, or ``None`` for search."""
+        if self.candidate_list is None:
+            return None
+        return self.candidate_list.as_provenance()
+
+    @property
+    def last_query_expression(self) -> str | None:
+        """The generated search expression, when a lane recorded one.
+
+        Surfaced so a sparse-result receipt can state exactly what was asked --
+        without it a reader cannot tell a thin literature from a bad query. An
+        adapter records the real expression; when a caller injects its own
+        ``search_fn`` there is no adapter, so the deterministic expression the
+        arXiv lane *would* have generated is reported instead, marked as such.
+        Reads the adapter only if one already exists: asking for the query must
+        never construct an adapter or touch the network. A run driven by a
+        pre-registered candidate list asked no query, so it reports none.
+        """
+        if self.candidate_list is not None:
+            return None
+        recorded = getattr(self.adapter, "last_arxiv_query", None)
+        if recorded:
+            return recorded
+        if self._last_question is None:
+            return None
+        from quant_brain.discovery.arxiv_search import build_arxiv_query
+
+        generated = build_arxiv_query(self._last_question, self._last_method_family)
+        return f"{generated} (derived; discovery used an injected search function)"
 
     def _resolve_search_fn(self) -> SearchFn:
         if self.search_fn is not None:
@@ -279,12 +410,19 @@ class LiveDiscoveryBackend:
         limit: int = 5,
         project_root: str | Path = PROJECT_ROOT,
         resolve_write: ResolveWriteFn | None = None,
+        deadline: float | None = None,
     ) -> DiscoverResult:
         """Acquire at most ``limit`` credible sources, with snapshots.
 
         Pipeline order: search, normalize, dedupe, classify, rank, budget,
         fetch, assess, snapshot. Everything cheap happens before anything
         expensive, so promotional and duplicate URLs never cost a fetch.
+
+        On the budget: ``limit`` caps *accepted sources*, not fetch attempts. A
+        page rejected after fetch is replaced by the next non-rejected
+        over-budget candidate, which costs another fetch, so attempts are
+        bounded by the size of the deduplicated, non-rejected pool (at most the
+        list length, when a pre-registered list drives the run).
 
         On snapshot ordering: the invariant is that nothing reaches the model
         unpersisted -- not that everything fetched is persisted. A page rejected
@@ -298,10 +436,30 @@ class LiveDiscoveryBackend:
             rank_candidates,
         )
 
-        search_fn = self._resolve_search_fn()
+        _check_run_deadline(deadline)
+        # Production search and fetch both use the adapter. Give every one of
+        # its subprocess/HTTP calls the same absolute deadline, not a fresh
+        # timeout budget. Injected test functions are checked before and after.
+        if deadline is not None and (self.search_fn is None or self.fetch_fn is None):
+            setattr(self._adapter(), "deadline", deadline)
+
+        # Remembered so a sparse-result receipt can report what was searched
+        # even when the caller injected its own search function.
+        self._last_question = question
+        self._last_method_family = method_family
         fetch_fn = self._resolve_fetch_fn()
-        raw_candidates = search_fn(question, method_family, limit=limit)
-        hits = [dict(hit) for hit in raw_candidates]
+        if self.candidate_list is not None:
+            # The pool is exactly the pre-registered, relevance-screened list:
+            # search is not consulted, so an off-topic hit cannot displace a
+            # listed source. Each hit is the URL alone -- nothing an entry says
+            # may reach the source record, and the tier comes from the
+            # classifier like any other candidate.
+            hits = [{"url": url, "source_type": "web"} for url in self.candidate_list.urls]
+        else:
+            search_fn = self._resolve_search_fn()
+            raw_candidates = search_fn(question, method_family, limit=limit)
+            _check_run_deadline(deadline)
+            hits = [dict(hit) for hit in raw_candidates]
         if not hits:
             raise LiveDiscoveryError("live discovery search returned no candidates")
 
@@ -323,9 +481,7 @@ class LiveDiscoveryBackend:
         # Key on the same fields the candidate builder reads, so a hit using
         # ``url_or_citation`` still finds its own record instead of collapsing
         # onto the empty-string key and losing its claim/evidence fields.
-        by_url = {
-            str(hit.get("url") or hit.get("url_or_citation") or ""): hit for hit in hits
-        }
+        by_url = {str(hit.get("url") or hit.get("url_or_citation") or ""): hit for hit in hits}
         # Candidates that lost the budget but were not rejected on quality, kept
         # in rank order so a post-fetch rejection can be backfilled rather than
         # silently shrinking the yield.
@@ -333,9 +489,11 @@ class LiveDiscoveryBackend:
         queue = list(accepted)
         try:
             while queue and len(sources) < limit:
+                _check_run_deadline(deadline)
                 candidate = queue.pop(0)
                 url = candidate.url
                 fetched = fetch_fn(url)
+                _check_run_deadline(deadline)
                 content = str(fetched.get("content") or "")
                 title = str(fetched.get("title") or candidate.title or "")
 
@@ -353,9 +511,7 @@ class LiveDiscoveryBackend:
                     # letting a thin page quietly cost a slot.
                     if backfill:
                         promoted = backfill.pop(0)
-                        rejected_records = [
-                            r for r in rejected_records if r["url"] != promoted.url
-                        ]
+                        rejected_records = [r for r in rejected_records if r["url"] != promoted.url]
                         queue.append(promoted)
                     continue
 
@@ -373,8 +529,19 @@ class LiveDiscoveryBackend:
                 mapped["url"] = url
                 mapped.setdefault("title", candidate.title)
                 mapped.setdefault("source_type", candidate.source_type)
+                # Same input ``save_source_snapshot`` hashes for the frontmatter
+                # and the filename prefix, so this value is identical by
+                # construction and the 12-char prefix stays a cross-check.
                 sources.append(
-                    _source_from_fetch(mapped, fetched, snapshot_path, tier=candidate.tier)
+                    _source_from_fetch(
+                        mapped,
+                        fetched,
+                        snapshot_path,
+                        tier=candidate.tier,
+                        snapshot_sha256=hashlib.sha256(
+                            canonical_content(content).encode("utf-8")
+                        ).hexdigest(),
+                    )
                 )
         except Exception:
             # This attempt owns exactly these files, and resolve_write may have
@@ -423,6 +590,10 @@ def get_discovery_backend(
     """Return the named discovery backend. Default is live; seeded is the stub."""
     key = (name or os.environ.get("QUANT_BRAIN_DISCOVERY") or "live").strip().lower()
     if key in {"seeded", "stub", "starter"}:
+        if kwargs.get("candidate_list") is not None:
+            # The stub never fetches or runs the model, so a pre-registered list
+            # handed to it would look like a run that validated nothing.
+            raise ValueError("a pre-registered candidate list requires the live backend")
         return SeededDiscoveryBackend()
     if key in {"live", "agent-reach", "jina"}:
         return LiveDiscoveryBackend(**kwargs)

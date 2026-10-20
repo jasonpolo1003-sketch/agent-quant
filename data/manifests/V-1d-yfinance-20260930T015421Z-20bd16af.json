@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "dataset_id": "V-1d-yfinance-20260930T015421Z-20bd16af",
+  "symbol": "V",
+  "timeframe": "1d",
+  "provider": "yfinance",
+  "provider_version": "1.7.0",
+  "requested_start": "2000-01-01",
+  "requested_end": "2026-09-29",
+  "downloaded_at": "2026-09-30T01:54:21.370133+00:00",
+  "path": "data/parquet/V/V-1d-yfinance-20260930T015421Z-20bd16af.parquet",
+  "rows": 4661,
+  "first_date": "2008-03-19",
+  "last_date": "2026-09-28",
+  "columns": [
+    "date",
+    "open",
+    "high",
+    "low",
+    "close",
+    "adj_close",
+    "volume",
+    "dividends",
+    "stock_splits"
+  ],
+  "price_basis": "yahoo_split_adjusted",
+  "price_basis_note": "open/high/low/close are Yahoo's split-adjusted prices (auto_adjust=False), not the as-traded historical tape, and volume is split-adjusted too; a backtest must state which basis it executes on",
+  "adjustment_note": "adj_close is Yahoo's split-and-dividend-adjusted close; adj_close / close is Yahoo's dividend adjustment factor, applied to open/high/low to derive adjusted OHLC",
+  "date_note": "dates are the exchange's trading dates (US/Eastern), not UTC",
+  "warnings": [],
+  "content_sha256": "2d8f0e95046ec2879a3b50902c3ab37504118efdd507b763cc131815b0dd8a2f",
+  "file_sha256": "04063f76ffbe2345aff68647a19d1999a29a8b09658ae973128addc98b2ccf74",
+  "cross_check": {
+    "status": "not_run"
+  }
+}

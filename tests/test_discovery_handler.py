@@ -113,21 +113,37 @@ def stub_validated_qwen(monkeypatch):
     from types import SimpleNamespace
 
     def runner(_prompt, evidence, *, expected_research_id, **_kwargs):
-        sources = [{
-            "source_id": source["source_id"], "title": source["title"],
-            "source_type": "docs", "url_or_citation": source["url_or_citation"],
-            "main_claim": "The snapshot provides source material.",
-            "evidence": source["snapshot_text"], "possible_strategy_rule": "",
-            "risks": ["Requires curator review."], "confidence": "medium",
-            "source_quality": source["source_quality"], "asset_classes": ["equity"],
-            "data_required": ["daily close"], "data_access": "available-now",
-            "mvp_testable": False,
-        } for source in evidence]
+        sources = [
+            {
+                "source_id": source["source_id"],
+                "title": source["title"],
+                "source_type": "docs",
+                "url_or_citation": source["url_or_citation"],
+                "main_claim": "The snapshot provides source material.",
+                "evidence": source["snapshot_text"],
+                "possible_strategy_rule": "",
+                "risks": ["Requires curator review."],
+                "confidence": "medium",
+                "source_quality": source["source_quality"],
+                "asset_classes": ["equity"],
+                "data_required": ["daily close"],
+                "data_access": "available-now",
+                "mvp_testable": False,
+            }
+            for source in evidence
+        ]
         return SimpleNamespace(
-            output={"research_id": expected_research_id, "status": "raw_saved",
-                    "sources": sources, "open_questions": [],
-                    "curator_recommendation": "needs_more_work"},
-            model_used="qwen3:14b", repaired=False, escalated=False, durations=(0.1,),
+            output={
+                "research_id": expected_research_id,
+                "status": "raw_saved",
+                "sources": sources,
+                "open_questions": [],
+                "curator_recommendation": "needs_more_work",
+            },
+            model_used="qwen3:14b",
+            repaired=False,
+            escalated=False,
+            durations=(0.1,),
         )
 
     monkeypatch.setattr("quant_brain.llm.qwen_call.qwen_call", runner)
@@ -255,7 +271,13 @@ def test_dispatched_live_path_writes_snapshots_without_curation(project, monkeyp
     stub_validated_qwen(monkeypatch)
 
     def search_fn(question, method_family, *, limit):
-        return [{"title": "RSI docs", "url": "https://example.com/rsi", "source_type": "docs"}]
+        # Three distinct works: this test is about snapshot writing, so it must
+        # clear the Phase 6 upstream minimum rather than trip it.
+        return [
+            {"title": "RSI docs", "url": "https://example.com/rsi", "source_type": "docs"},
+            {"title": "RSI two", "url": "https://example.com/rsi-two", "source_type": "docs"},
+            {"title": "RSI three", "url": "https://example.com/rsi-three", "source_type": "docs"},
+        ]
 
     def fetch_fn(url):
         return {
@@ -302,8 +324,21 @@ def test_rejected_candidates_are_recorded_in_the_note_and_the_event_ledger(proje
     stub_validated_qwen(monkeypatch)
 
     def search_fn(question, method_family, *, limit):
+        # Three acceptable works plus the promotional one, so the run reaches
+        # note writing and the rejection is visible there rather than the run
+        # stopping earlier on the upstream minimum.
         return [
             {"title": "Paper", "url": "https://arxiv.org/abs/2301.04567", "source_type": "paper"},
+            {
+                "title": "Paper two",
+                "url": "https://arxiv.org/abs/2301.04568",
+                "source_type": "paper",
+            },
+            {
+                "title": "Paper three",
+                "url": "https://arxiv.org/abs/2301.04569",
+                "source_type": "paper",
+            },
             {"title": "Guaranteed returns", "url": "https://scam.example/go/x?ref=1"},
         ]
 
@@ -329,9 +364,9 @@ def test_rejected_candidates_are_recorded_in_the_note_and_the_event_ledger(proje
 
     assert result.detail["rejected_count"] == 1
 
-    note = (root / "brain" / "00_Inbox" / "Raw_Research" / f"{task_row['research_id']}.md").read_text(
-        encoding="utf-8"
-    )
+    note = (
+        root / "brain" / "00_Inbox" / "Raw_Research" / f"{task_row['research_id']}.md"
+    ).read_text(encoding="utf-8")
     assert "## Rejected Candidates" in note
     assert "scam.example" in note
     # The ledger is prose, deliberately outside the validated JSON contract:
@@ -345,7 +380,7 @@ def test_rejected_candidates_are_recorded_in_the_note_and_the_event_ledger(proje
     assert len(rejected_events) == 1
     payload = rejected_events[0]["payload"]
     assert payload["rejected_count"] == 1
-    assert payload["accepted_count"] == 1
+    assert payload["accepted_count"] == 3
     assert payload["rejected"][0]["signals"]
     assert "scam.example" in payload["rejected"][0]["url"]
 
@@ -373,7 +408,27 @@ def test_dispatched_live_uses_adapter_without_search_fn(project, monkeypatch):
             return 0, "[]", ""
         return 1, "", f"unexpected argv: {argv}"
 
-    adapter = AgentReachAdapter(runner=runner, fetch_impl=lambda _url: page, skip_exe_check=True)
+    # The recorded Exa fixture holds two real URLs. Rather than edit a recorded
+    # artifact to suit a later gate, the third upstream work is injected here
+    # as an explicitly synthetic arXiv stand-in, so observed and constructed
+    # data stay distinguishable.
+    def arxiv_impl(expression, *, limit, timeout):
+        del expression, limit, timeout
+        return [
+            {
+                "url": "https://arxiv.org/abs/1909.04327",
+                "title": "SYNTHETIC test stand-in for a third upstream work",
+                "snippet": "",
+                "source_type": "paper",
+            }
+        ]
+
+    adapter = AgentReachAdapter(
+        runner=runner,
+        fetch_impl=lambda _url: page,
+        skip_exe_check=True,
+        arxiv_search_impl=arxiv_impl,
+    )
     result = dispatch(
         Task(
             task_id="T-adapter",
@@ -428,11 +483,20 @@ def test_post_write_db_failure_leaves_no_orphan_completed_note(project, monkeypa
                     "backend": "live",
                     "allow_network": False,
                     "search_fn": lambda *_a, **_k: [
-                        {"title": "RSI docs", "url": "https://example.com/rsi",
-                         "source_type": "docs", "source_quality": "primary"}
+                        {
+                            "title": f"RSI docs {i}",
+                            "url": f"https://example.com/rsi-{i}",
+                            "source_type": "docs",
+                            "source_quality": "primary",
+                        }
+                        for i in range(3)
                     ],
-                    "fetch_fn": lambda url: {"url": url, "content": PAGE_BODY,
-                                             "channel": "web", "backend": "fixture"},
+                    "fetch_fn": lambda url: {
+                        "url": url,
+                        "content": PAGE_BODY,
+                        "channel": "web",
+                        "backend": "fixture",
+                    },
                 },
                 run_id="RUN-postwrite",
             ),
@@ -487,11 +551,20 @@ def test_post_write_failure_restores_preexisting_note_bytes(project, monkeypatch
                     "backend": "live",
                     "allow_network": False,
                     "search_fn": lambda *_a, **_k: [
-                        {"title": "RSI docs", "url": "https://example.com/rsi",
-                         "source_type": "docs", "source_quality": "primary"}
+                        {
+                            "title": f"RSI docs {i}",
+                            "url": f"https://example.com/rsi-{i}",
+                            "source_type": "docs",
+                            "source_quality": "primary",
+                        }
+                        for i in range(3)
                     ],
-                    "fetch_fn": lambda url: {"url": url, "content": PAGE_BODY,
-                                             "channel": "web", "backend": "fixture"},
+                    "fetch_fn": lambda url: {
+                        "url": url,
+                        "content": PAGE_BODY,
+                        "channel": "web",
+                        "backend": "fixture",
+                    },
                 },
                 run_id="RUN-restore",
             ),
@@ -571,7 +644,17 @@ def test_task_max_sources_narrows_but_never_widens(project, monkeypatch):
     def fetch_fn(url):
         return {"url": url, "content": PAGE_BODY, "channel": "web", "backend": "fixture"}
 
-    dispatch(
+    # A capped run may stop on the Phase 6 upstream minimum; this test is about
+    # the limit that reached discovery, which `seen` records either way.
+    def dispatch_ignoring_sparse(task):
+        from quant_brain.research.executor import InsufficientUpstreamSources
+
+        try:
+            dispatch(task, project_root=root, db_path=db_path)
+        except InsufficientUpstreamSources:
+            pass
+
+    dispatch_ignoring_sparse(
         Task(
             task_id="T-narrow",
             task_type="discovery",
@@ -583,14 +666,15 @@ def test_task_max_sources_narrows_but_never_widens(project, monkeypatch):
                 "fetch_fn": fetch_fn,
                 "max_sources": 2,
             },
-        ),
-        project_root=root,
-        db_path=db_path,
+        )
     )
+    # The narrowed cap reached discovery. The run then stops on the Phase 6
+    # upstream minimum, because a cap of 2 cannot satisfy a floor of 3 -- the
+    # cap narrows what may be fetched, it never lowers the evidence bar.
     assert seen == [2]
 
     task_row_wide = add_research_question(db_path, "Research look-ahead bias", "mean_reversion")
-    dispatch(
+    dispatch_ignoring_sparse(
         Task(
             task_id="T-wide",
             task_type="discovery",
@@ -602,9 +686,7 @@ def test_task_max_sources_narrows_but_never_widens(project, monkeypatch):
                 "fetch_fn": fetch_fn,
                 "max_sources": 9,
             },
-        ),
-        project_root=root,
-        db_path=db_path,
+        )
     )
     assert seen == [2, 5]
 
@@ -617,48 +699,91 @@ def test_production_live_scout_uses_validated_qwen_and_only_recommends_curation(
     root, db_path = project
     task_row = add_research_question(db_path, "Research RSI evidence", "mean_reversion")
     register_default_handlers()
-    seen = {}
+    seen = {"calls": []}
 
     def runner(prompt, evidence, **kwargs):
-        seen.update(prompt=prompt, evidence=evidence, kwargs=kwargs)
+        # One extraction call per source; keep every call.
+        seen["calls"].append({"prompt": prompt, "evidence": evidence, "kwargs": kwargs})
         source = evidence[0]
         output = {
-            "research_id": task_row["research_id"], "status": "raw_saved",
-            "sources": [{
-                "source_id": source["source_id"], "title": source["title"],
-                "source_type": "docs", "url_or_citation": source["url_or_citation"],
-                "main_claim": "RSI documentation.", "evidence": "Exact evidence passage.",
-                "possible_strategy_rule": "", "risks": ["No performance evidence."],
-                "confidence": "medium", "source_quality": source["source_quality"],
-                "asset_classes": ["equity"], "data_required": ["daily close"],
-                "data_access": "available-now", "mvp_testable": False,
-            }], "open_questions": ["What rule is supported?"],
+            "research_id": task_row["research_id"],
+            "status": "raw_saved",
+            "sources": [
+                {
+                    "source_id": source["source_id"],
+                    "title": source["title"],
+                    "source_type": "docs",
+                    "url_or_citation": source["url_or_citation"],
+                    "main_claim": "RSI documentation.",
+                    "evidence": "Exact evidence passage.",
+                    "possible_strategy_rule": "",
+                    "risks": ["No performance evidence."],
+                    "confidence": "medium",
+                    "source_quality": source["source_quality"],
+                    "asset_classes": ["equity"],
+                    "data_required": ["daily close"],
+                    "data_access": "available-now",
+                    "mvp_testable": False,
+                }
+            ],
+            "open_questions": ["What rule is supported?"],
             "curator_recommendation": "needs_more_work",
         }
-        return SimpleNamespace(output=output, model_used="qwen3:14b", repaired=False,
-                               escalated=False, durations=(0.1,))
+        return SimpleNamespace(
+            output=output, model_used="qwen3:14b", repaired=False, escalated=False, durations=(0.1,)
+        )
 
     # Injected below the production task-payload boundary: the handler refuses
     # Qwen controls in a payload, so the seam is the module attribute itself.
     monkeypatch.setattr("quant_brain.llm.qwen_call.qwen_call", runner)
 
     result = dispatch(
-        Task(task_id="T-qwen", task_type="discovery", run_id="RUN-qwen",
-             payload={
-                 "research_id": task_row["research_id"], "backend": "live",
-                 "allow_network": False,
-                 "search_fn": lambda *_args, **_kwargs: [{
-                     "title": "RSI docs", "url": "https://example.com/rsi",
-                     "source_type": "docs", "source_quality": "primary",
-                 }],
-                 "fetch_fn": lambda url: {"url": url, "content": PAGE_BODY,
-                                          "channel": "web", "backend": "fixture"},
-             }),
-        project_root=root, db_path=db_path,
+        Task(
+            task_id="T-qwen",
+            task_type="discovery",
+            run_id="RUN-qwen",
+            payload={
+                "research_id": task_row["research_id"],
+                "backend": "live",
+                "allow_network": False,
+                # Three distinct works so the run reaches Qwen; the first stays
+                # first, which is what the S1 assertion below pins.
+                "search_fn": lambda *_args, **_kwargs: [
+                    {
+                        "title": "RSI docs",
+                        "url": "https://example.com/rsi",
+                        "source_type": "docs",
+                        "source_quality": "primary",
+                    },
+                    {
+                        "title": "RSI docs two",
+                        "url": "https://example.com/rsi-two",
+                        "source_type": "docs",
+                        "source_quality": "primary",
+                    },
+                    {
+                        "title": "RSI docs three",
+                        "url": "https://example.com/rsi-three",
+                        "source_type": "docs",
+                        "source_quality": "primary",
+                    },
+                ],
+                "fetch_fn": lambda url: {
+                    "url": url,
+                    "content": PAGE_BODY,
+                    "channel": "web",
+                    "backend": "fixture",
+                },
+            },
+        ),
+        project_root=root,
+        db_path=db_path,
     )
 
-    assert seen["evidence"][0]["source_id"] == "S1"
-    assert "Exact evidence passage." in seen["evidence"][0]["snapshot_text"]
+    assert [[item["source_id"] for item in call["evidence"]] for call in seen["calls"]] == [
+        ["S1"], ["S2"], ["S3"]
+    ]
+    assert "Exact evidence passage." in seen["calls"][0]["evidence"][0]["snapshot_text"]
     assert result.recommendation == "curation"
     assert result.detail["model_used"] == "qwen3:14b"
     assert not (root / "brain" / "01_Sources").exists()

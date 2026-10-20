@@ -43,6 +43,20 @@ def lane_verdicts(health: dict[str, ChannelHealth]) -> list[dict[str, Any]]:
     """Per-lane readiness right now, with the doctor's own reason when not."""
     rows: list[dict[str, Any]] = []
     for lane in SEARCH_LANES:
+        if lane.channel is None:
+            # Not routed through Agent Reach, so the doctor has no opinion on
+            # it. Saying "absent from doctor output" would read as a fault when
+            # the lane simply needs no router or account.
+            rows.append(
+                {
+                    "lane": lane.name,
+                    "channel": None,
+                    "declared": lane.status,
+                    "usable_now": True,
+                    "reason": "zero-account lane; not routed through Agent Reach",
+                }
+            )
+            continue
         info = health.get(lane.channel)
         usable = is_channel_usable(health, lane.channel)
         if info is None:
@@ -89,9 +103,7 @@ def main() -> int:
         print(f"  {mark} {row['lane']:<10} ({row['channel']}, declared {row['declared']})")
         print(f"             {_console_safe(row['reason'])}")
 
-    search_ready = any(
-        row["usable_now"] for row in verdicts if row["channel"] in SEARCH_CHANNELS
-    )
+    search_ready = any(row["usable_now"] for row in verdicts if row["channel"] in SEARCH_CHANNELS)
     github_ready = is_channel_usable(health, "github")
     if not (search_ready or github_ready):
         print(
@@ -105,9 +117,10 @@ def main() -> int:
         # Worth saying plainly: a usable lane is not the same as a lane that can
         # answer a given question. See scripts/gate_readiness.py.
         print(
-            "  Note: the semantic search lane is not usable; only GitHub is. "
-            "GitHub returns code repositories, which may not suit a "
-            "documentation or academic question.",
+            "  Note: the semantic search lane is not usable. GitHub returns code "
+            "repositories and arXiv returns academic preprints, so a "
+            "documentation or practitioner question may still find nothing. "
+            "Run scripts/gate_readiness.py to ask about a specific question.",
         )
     return 0
 

@@ -46,7 +46,17 @@ def main() -> None:
         default=None,
         help="Discovery backend for --type discovery: live (default) or seeded.",
     )
+    parser.add_argument(
+        "--candidate-list",
+        default=None,
+        help=(
+            "Pre-registered candidate list under brain/00_Inbox/Scout_Candidates/ "
+            "(PROP-004). Replaces search for a live discovery run; requires --research-id."
+        ),
+    )
     args = parser.parse_args()
+    if args.candidate_list and (args.stub or (args.backend or "live") != "live"):
+        parser.error("--candidate-list requires the live backend")
 
     register_default_handlers()
 
@@ -58,6 +68,8 @@ def main() -> None:
             payload["backend"] = "seeded"
         elif args.backend:
             payload["backend"] = args.backend
+        if args.candidate_list:
+            payload["candidate_list"] = args.candidate_list
 
     task = Task(
         task_id=args.task_id or f"TASK-{uuid4().hex[:10]}",

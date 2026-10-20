@@ -1,0 +1,45 @@
+# Historical run evidence is preserved byte-for-byte (CRLF and trailing whitespace
+# included). Exact paths only: no other file changes line-ending handling.
+brain/00_Inbox/Failed_Runs/RUN-4e9d910742.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-21/1842896f8741-d70cb867.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-21/1c66eb06a512-c1dfb32c.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-21/2e16e3760701-523eb9a9.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-21/f84d3ae24d6a-364014f6.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-21/ff600a704fdf-115e168f.md -text
+
+# E3 candidate-list failure evidence (2026-09-27), preserved byte-for-byte.
+brain/00_Inbox/Failed_Runs/RUN-9b0d5a6e12.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-27/061e9f293b7f-e90b0420.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-27/13a68c8fe9c5-f90199dd.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-27/576c861a0c7f-a5e96da3.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-27/c5f9673f32a4-97d0dbd7.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-27/f57de4fc3101-1bb9664e.md -text
+
+# Windowed rerun RUN-d67b1d121b failure evidence (2026-09-28), preserved byte-for-byte.
+brain/00_Inbox/Failed_Runs/RUN-d67b1d121b.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-28/13a68c8fe9c5-f90199dd.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-28/182d927c9c90-a5e96da3.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-28/a1fd76ffb87f-e90b0420.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-28/c5f9673f32a4-97d0dbd7.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-28/f57de4fc3101-1bb9664e.md -text
+
+# RQ-6d9c12f4 rerun RUN-871299ea31 (E5, 2026-09-28) evidence, preserved byte-for-byte.
+# c5f9673f32a4-97d0dbd7.md and f57de4fc3101-1bb9664e.md were rewritten in place by this run
+# (same path, new captured_at); their E4 versions remain at commit c6d13d1.
+brain/00_Inbox/Failed_Runs/RUN-871299ea31.md -text
+brain/00_Inbox/Failed_Runs/diagnostics/RUN-871299ea31.responses.json -text
+brain/00_Inbox/Source_Snapshots/2026-09-28/061e9f293b7f-e90b0420.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-28/682e772645c3-a5e96da3.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-28/b047e0cb9183-f90199dd.md -text
+
+# E5 bytes of two collided snapshots, moved here by the 2026-09-28 reconciliation
+# (see brain/00_Inbox/Source_Snapshots/reconciliation.json).
+brain/00_Inbox/Source_Snapshots/2026-09-28/c5f9673f32a4-97d0dbd7.2.md -text
+brain/00_Inbox/Source_Snapshots/2026-09-28/f57de4fc3101-1bb9664e.2.md -text
+
+# Frozen strategy cards and their freeze ledger: byte-exact, because the ledger records file sha256.
+brain/03_Strategy_Cards/*.md -text
+brain/03_Strategy_Cards/freeze_ledger.json -text
+
+# Backtest trial ledgers and reports: byte-exact (the ledger is append-only and gates the held-out read).
+brain/04_Backtest_Reports/** -text

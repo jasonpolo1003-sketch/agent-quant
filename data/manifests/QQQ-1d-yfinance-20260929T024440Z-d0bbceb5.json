@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "dataset_id": "QQQ-1d-yfinance-20260929T024440Z-d0bbceb5",
+  "symbol": "QQQ",
+  "timeframe": "1d",
+  "provider": "yfinance",
+  "provider_version": "1.7.0",
+  "requested_start": "2000-01-01",
+  "requested_end": "2026-09-28",
+  "downloaded_at": "2026-09-29T02:44:40.925170+00:00",
+  "path": "data/parquet/QQQ/QQQ-1d-yfinance-20260929T024440Z-d0bbceb5.parquet",
+  "rows": 6723,
+  "first_date": "2000-01-03",
+  "last_date": "2026-09-25",
+  "columns": [
+    "date",
+    "open",
+    "high",
+    "low",
+    "close",
+    "adj_close",
+    "volume",
+    "dividends",
+    "stock_splits"
+  ],
+  "price_basis": "yahoo_split_adjusted",
+  "price_basis_note": "open/high/low/close are Yahoo's split-adjusted prices (auto_adjust=False), not the as-traded historical tape; a backtest must state which basis it executes on",
+  "adjustment_note": "adj_close is Yahoo's split-and-dividend-adjusted close; adj_close / close is Yahoo's dividend adjustment factor, applied to open/high/low to derive adjusted OHLC",
+  "date_note": "dates are the exchange's trading dates (US/Eastern), not UTC",
+  "warnings": [],
+  "content_sha256": "c71ff5ead6cc477863ae5c2fe87beaadef6f2044aa5fd911b56a43a0afae1fa0",
+  "file_sha256": "dff5f290a5c75e83da1e3ffd3e61b96830ac1fd1aaa432ad00e5741234378ef1",
+  "cross_check": {
+    "status": "unavailable",
+    "reason": "NotImplementedError: data_source='stooq' is not implemented"
+  }
+}

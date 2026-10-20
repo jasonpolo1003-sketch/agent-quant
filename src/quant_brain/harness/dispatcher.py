@@ -197,6 +197,61 @@ def _finish_task_row(
         conn.commit()
 
 
+def _secondary(
+    failures: list[dict[str, str]], step: str, fn: Callable[..., Any], *args: Any, **kwargs: Any
+) -> tuple[bool, Any]:
+    """Run one failure-recording step; absorb and record an ordinary failure.
+
+    Same contract as the research executor's ``_attempt``, kept local so the
+    harness does not import from a research module. ``Exception`` only:
+    KeyboardInterrupt and SystemExit must propagate.
+    """
+    try:
+        return True, fn(*args, **kwargs)
+    except Exception as exc:
+        failures.append({"step": step, "error_type": type(exc).__name__, "error": str(exc)})
+        return False, None
+
+
+def _record_dispatch_failure(
+    exc: BaseException,
+    db_path: str | Path,
+    task_id: str,
+    emit: Callable[..., None],
+    *,
+    first_event: tuple[str, str, str, dict[str, Any], str],
+    duration: float,
+) -> None:
+    """Record a handler failure without ever replacing it.
+
+    Each write is attempted independently, so a failing event cannot stop the
+    task row from being finalized. What could not be recorded is attached to
+    ``exc`` itself -- the one channel that survives a broken database -- and the
+    note states the task row's real state rather than assuming it.
+    """
+    failures: list[dict[str, str]] = []
+    _secondary(failures, f"{first_event[0]}_event", emit, *first_event)
+    _secondary(
+        failures,
+        "dispatch_failed_event",
+        emit,
+        "dispatch_failed",
+        "failed",
+        str(exc),
+        {"error": type(exc).__name__, "duration_seconds": duration},
+        "dispatch",
+    )
+    finalized, _ = _secondary(
+        failures, "finalize_task", _finish_task_row, db_path, task_id, "failed", None, str(exc)
+    )
+    row = "failed" if finalized else "unconfirmed (finalization update failed; state not verified)"
+    for failure in failures:
+        exc.add_note(
+            f"dispatch {failure['step']} failed "
+            f"({failure['error_type']}: {failure['error']}); task_row={row}"
+        )
+
+
 def dispatch(
     task: Task,
     *,
@@ -283,39 +338,37 @@ def dispatch(
                 resolve_write_target(root, output, agent.allowed_write_paths)
     except PathViolation as exc:
         duration = time.monotonic() - started
-        emit(
-            "path_violation",
-            "failed",
-            "Handler attempted a write outside its declared paths",
-            {"target": exc.target, "allowed": list(exc.allowed)},
-            "dispatch",
+        _record_dispatch_failure(
+            exc,
+            db_path,
+            task.task_id,
+            emit,
+            first_event=(
+                "path_violation",
+                "failed",
+                "Handler attempted a write outside its declared paths",
+                {"target": exc.target, "allowed": list(exc.allowed)},
+                "dispatch",
+            ),
+            duration=duration,
         )
-        emit(
-            "dispatch_failed",
-            "failed",
-            str(exc),
-            {"error": type(exc).__name__, "duration_seconds": duration},
-            "dispatch",
-        )
-        _finish_task_row(db_path, task.task_id, "failed", None, str(exc))
         raise
     except Exception as exc:
         duration = time.monotonic() - started
-        emit(
-            "handler_failed",
-            "failed",
-            str(exc),
-            {"error": type(exc).__name__},
-            task.task_type,
+        _record_dispatch_failure(
+            exc,
+            db_path,
+            task.task_id,
+            emit,
+            first_event=(
+                "handler_failed",
+                "failed",
+                str(exc),
+                {"error": type(exc).__name__},
+                task.task_type,
+            ),
+            duration=duration,
         )
-        emit(
-            "dispatch_failed",
-            "failed",
-            str(exc),
-            {"error": type(exc).__name__, "duration_seconds": duration},
-            "dispatch",
-        )
-        _finish_task_row(db_path, task.task_id, "failed", None, str(exc))
         raise
 
     duration = time.monotonic() - started

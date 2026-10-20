@@ -1,0 +1,134 @@
+{
+  "kind": "untrusted_model_responses",
+  "trust": "Diagnostic only: raw model output from failed validation attempts. It is not evidence, was rejected by the validators, and must never be promoted, indexed or cited.",
+  "run_id": "RUN-871299ea31",
+  "research_id": "RQ-6d9c12f4",
+  "responses": [
+    {
+      "source_id": "S1",
+      "window_id": null,
+      "model": "qwen3:14b",
+      "prompt_hash": "b1646d81cd796160e83b02a18ce4ae26d3a93af2fba9038864d5541379022212",
+      "response_hash": "78d297e279e7902638058186484c0861bb36558a2292e57d8107e9b25d9f95a9",
+      "validator_reasons": [
+        "ungrounded-promotion:S1: main_claim asserts a strategy/performance claim that is not an exact passage of the snapshot, so it cannot carry mvp_testable or promote_source"
+      ],
+      "response_text": "{\n  \"research_id\": \"RQ-6d9c12f4\",\n  \"status\": \"raw_saved\",\n  \"sources\": [\n    {\n      \"title\": \"https://chartschool.stockcharts.com/table-of-contents/trading-strategies-and-models/trading-strategies/rsi-2\",\n      \"source_type\": \"web\",\n      \"url_or_citation\": \"https://chartschool.stockcharts.com/table-of-contents/trading-strategies-and-models/trading-strategies/rsi-2\",\n      \"main_claim\": \"The RSI(2) strategy allows traders to partake in an ongoing trend. Connors states that traders should buy pullbacks, not breakouts. Conversely, traders should sell oversold bounces, not support breaks.\",\n      \"evidence\": [\n        \"The fourth step is to set the exit point. In his example using the S&P 500, Connors advocates exiting long positions on a move above the 5-day SMA and short positions on a move below the 5-day SMA.\",\n        \"Chartists should also consider setting a trailing stop or employing the Parabolic SAR.\"\n      ],\n      \"risks\": [\n        \"Connors does not advocate using stops. Yes, you read right. In his quantitative testing, which involved hundreds of thousands of trades, Connors found that stops actually 'hurt' performance when it comes to stocks and stock indices.\"\n      ],\n      \"confidence\": \"high\",\n      \"source_quality\": \"practitioner\",\n      \"asset_classes\": [\"equity\", \"index\"],\n      \"data_required\": [\"RSI(2)\", \"200-day SMA\", \"5-day SMA\"],\n      \"data_access\": \"available-now\",\n      \"mvp_testable\": true,\n      \"source_id\": \"S1\"\n    }\n  ],\n  \"open_questions\": [\n    \"How does the 2-period RSI strategy perform on SPY/QQQ/IWM specifically?\",\n    \"Are there any additional filters or conditions that should be applied to the exit rules for these instruments?\"\n  ],\n  \"curator_recommendation\": \"needs_more_work\"\n}"
+    },
+    {
+      "source_id": "S2",
+      "window_id": "S2-W03",
+      "model": "qwen3:14b",
+      "prompt_hash": "f4e5fae0be32d7b978287143c652dfb352f50e9916172e4d1eeb1377c28c5b06",
+      "response_hash": "d78c8c93dc91809223d7d26d9dfd630a4594a331d31784381b05f6b2107bf1d0",
+      "validator_reasons": [
+        "extractive:S2:possible_strategy_rule: not an exact passage of the snapshot; quote the source or leave the rule empty"
+      ],
+      "response_text": "{\n  \"research_id\": \"RQ-6d9c12f4\",\n  \"source_id\": \"S2\",\n  \"window_id\": \"S2-W03\",\n  \"outcome\": \"evidence\",\n  \"source\": {\n    \"source_id\": \"S2\",\n    \"title\": \"https://articles.stockcharts.com/article/articles-arthurhill-2016-12-systemtrader---testing-and-tweaking-an-rsi-mean-reversion-system-for-spy-qqq-and-ijr\",\n    \"source_type\": \"web\",\n    \"url_or_citation\": \"https://articles.stockcharts.com/article/articles-arthurhill-2016-12-systemtrader---testing-and-tweaking-an-rsi-mean-reversion-system-for-spy-qqq-and-ijr\",\n    \"main_claim\": \"Testing and tweaking an RSI mean-reversion system for SPY, QQQ, and IJR\",\n    \"evidence\": [\n      \"The first two tests buy on a cross below 30 and do not wait for an upturn. The first test sells on a cross above 70 and does not wait for a downturn. The second test waits for a downturn in RSI by waiting for a cross below 70. Thus, RSI must exceed 70 and then cross back below for an exit.\",\n      \"The second two tests buy when RSI crosses back above 30. In other words, these tests wait for RSI to bounce and turn back up. The third test sells when RSI crosses above 70 and the fourth tests sells when RSI crosses below 70. The fourth tests is quite interesting because it waits for an upturn to buy and then waits for a downturn to sell.\"\n    ],\n    \"risks\": [],\n    \"confidence\": \"high\",\n    \"source_quality\": \"practitioner\",\n    \"asset_classes\": [\"equity\"],\n    \"data_required\": [\"daily price data\", \"RSI(5)\"],\n    \"data_access\": \"available-now\",\n    \"mvp_testable\": true,\n    \"possible_strategy_rule\": \"Sell on cross above 70 (Test 1) or cross below 70 (Test 2) after buying on cross below 30; or sell on cross below 70 (Test 4) after buying on cross above 30.\"\n  },\n  \"open_questions\": []\n}"
+    },
+    {
+      "source_id": "S3",
+      "window_id": null,
+      "model": "qwen3:14b",
+      "prompt_hash": "5426cafa47b845971bb8d1136e654d6135493cc53dd7e9ab521b4a74d6acc557",
+      "response_hash": "ccd915d7d0c0ba9b2055f2a13e814afa2711fa6a89e6215a99afd8e4b9976d83",
+      "validator_reasons": [
+        "quote:S3: exact evidence is absent from snapshot",
+        "quote:S3: exact evidence is absent from snapshot",
+        "contradiction:S3: high confidence is forbidden for discovery-only",
+        "ungrounded-promotion:S3: main_claim asserts a strategy/performance claim that is not an exact passage of the snapshot, so it cannot carry mvp_testable or promote_source"
+      ],
+      "response_text": "{\n  \"research_id\": \"RQ-6d9c12f4\",\n  \"status\": \"raw_saved\",\n  \"sources\": [\n    {\n      \"title\": \"https://connorsresearch.com/connors-research-traders-journal-volume-1-does-mean-reversion-still-work\",\n      \"source_type\": \"web\",\n      \"url_or_citation\": \"https://connorsresearch.com/connors-research-traders-journal-volume-1-does-mean-reversion-still-work\",\n      \"main_claim\": \"The RSI 25 Strategy has correctly predicted the short-term direction of the S&P 500 ETF (SPY) over 91% of the time since 1993.\",\n      \"evidence\": [\n        \"The RSI 25 has three simple rules. Here they are: 1. **Buy** one unit at the close when- a. Its closing price is greater than the 200-day moving average  b. Its 4-period RSI is less than 25 2. **Buy** a second unit if the 4-period RSI closes below 20 at any time while the position is open. This is essentially doubling the position usually at lower prices. 3. **Sell** when the 4-period RSI closes above 55.\",\n        \"Test Results From 2009-2017 for SPY  # of Trades **62**  Winning Trades **60**  Losing Trades **2**  Percent Correct **96.77%**  Avg Gain Per Trade **1.32%**  Average Hold in Trading Days **4.53 days**\"\n      ],\n      \"risks\": [\n        \"Please note, this is a tendency, not a rule. Oversold can and often does become even more oversold.\"\n      ],\n      \"confidence\": \"high\",\n      \"source_quality\": \"discovery-only\",\n      \"asset_classes\": [\"ETF\"],\n      \"data_required\": [\"4-period RSI\", \"200-day moving average\"],\n      \"data_access\": \"available-now\",\n      \"mvp_testable\": true,\n      \"source_id\": \"S3\"\n    }\n  ],\n  \"open_questions\": [],\n  \"curator_recommendation\": \"needs_more_work\"\n}"
+    },
+    {
+      "source_id": "S3",
+      "window_id": null,
+      "model": "qwen3:14b",
+      "prompt_hash": "525cca3a1f7f07b9f3307466c875b56978b857a1f4f5d96758e40817e3eb950d",
+      "response_hash": "7a78e81573245869c3a6e0e7615ef93595eb3dc8494990729c0d9be06990a01c",
+      "validator_reasons": [
+        "quote:S3: exact evidence is absent from snapshot",
+        "quote:S3: exact evidence is absent from snapshot"
+      ],
+      "response_text": "{\n  \"research_id\": \"RQ-6d9c12f4\",\n  \"status\": \"raw_saved\",\n  \"sources\": [\n    {\n      \"title\": \"https://connorsresearch.com/connors-research-traders-journal-volume-1-does-mean-reversion-still-work\",\n      \"source_type\": \"web\",\n      \"url_or_citation\": \"https://connorsresearch.com/connors-research-traders-journal-volume-1-does-mean-reversion-still-work\",\n      \"main_claim\": \"The RSI 25 Strategy has correctly predicted the short-term direction of the S&P 500 ETF (SPY) over 91% of the time since 1993.\",\n      \"evidence\": [\n        \"The RSI 25 has three simple rules. Here they are: 1. **Buy** one unit at the close when- a. Its closing price is greater than the 200-day moving average  b. Its 4-period RSI is less than 25 2. **Buy** a second unit if the 4-period RSI closes below 20 at any time while the position is open. This is essentially doubling the position usually at lower prices. 3. **Sell** when the 4-period RSI closes above 55.\",\n        \"Test Results From 2009-2017 for SPY  # of Trades **62**  Winning Trades **60**  Losing Trades **2**  Percent Correct **96.77%**  Avg Gain Per Trade **1.32%**  Average Hold in Trading Days **4.53 days**\"\n      ],\n      \"risks\": [\n        \"Please note, this is a tendency, not a rule. Oversold can and often does become even more oversold.\"\n      ],\n      \"confidence\": \"low\",\n      \"source_quality\": \"discovery-only\",\n      \"asset_classes\": [\n        \"ETF\"\n      ],\n      \"data_required\": [\n        \"4-period RSI\",\n        \"200-day moving average\"\n      ],\n      \"data_access\": \"available-now\",\n      \"mvp_testable\": false,\n      \"source_id\": \"S3\"\n    }\n  ],\n  \"open_questions\": [],\n  \"curator_recommendation\": \"needs_more_work\"\n}"
+    },
+    {
+      "source_id": "S4",
+      "window_id": "S4-W02",
+      "model": "qwen3:14b",
+      "prompt_hash": "b9c0ef09de281855f0688727fbcff7f71ce5e0751950158b9500dfd2fc0577d0",
+      "response_hash": "eeae790c8a1ade66764fdb79711f4a4567cd2f15e845a2b11b1667172bf7339e",
+      "validator_reasons": [
+        "quote:S4: exact evidence is absent from snapshot",
+        "contradiction:S4: high confidence is forbidden for discovery-only",
+        "ungrounded-promotion:S4: main_claim asserts a strategy/performance claim that is not an exact passage of the snapshot, so it cannot carry mvp_testable or promote_source",
+        "quote-full:S4: exact evidence is absent from the full snapshot"
+      ],
+      "response_text": "{\n  \"research_id\": \"RQ-6d9c12f4\",\n  \"source_id\": \"S4\",\n  \"window_id\": \"S4-W02\",\n  \"outcome\": \"evidence\",\n  \"source\": {\n    \"source_id\": \"S4\",\n    \"title\": \"https://www.naaim.org/wp-content/uploads/2014/04/00V_Alexander_Pagonidis_The-IBS-Effect-Mean-Reversion-in-Equity-ETFs-1.pdf\",\n    \"source_type\": \"paper\",\n    \"url_or_citation\": \"https://www.naaim.org/wp-content/uploads/2014/04/00V_Alexander_Pagonidis_The-IBS-Effect-Mean-Reversion-in-Equity-ETFs-1.pdf\",\n    \"main_claim\": \"The IBS effect is a mean reversion phenomenon in equity ETFs, with statistically significant returns when trading based on IBS thresholds.\",\n    \"evidence\": [\n      \"A simple demonstration using the Cutler’s RSI indicator will show how the IBS effect can be used to boost returns of a swing trading strategy while significantly decreasing the number of trades needed.\",\n      \"• Go long at the close if RSI(3) < 10\\n• Maintain the position while RSI(3) ≤ 40\\nI then filter these returns by adding an additional rule based on the value of IBS:\"\n    ],\n    \"risks\": [\n      \"Commissions will greatly decrease the returns and increase the maximum drawdowns, however, making such an approach problematic in the real world.\"\n    ],\n    \"confidence\": \"high\",\n    \"source_quality\": \"discovery-only\",\n    \"asset_classes\": [\"equity ETFs\"],\n    \"data_required\": [\"IBS values\", \"Cutler’s RSI(3) values\"],\n    \"data_access\": \"available-now\",\n    \"mvp_testable\": true\n  },\n  \"open_questions\": []\n}"
+    },
+    {
+      "source_id": "S4",
+      "window_id": "S4-W02",
+      "model": "qwen3:14b",
+      "prompt_hash": "ed54566f00d284ba429d60f0e8add07aa231dc963a34ffab86e7f91b7d4acd8e",
+      "response_hash": "98f10c0306260ac94e3da3983e9764ce4caf77a9ccd5b0cb9100e2fbdc3597a4",
+      "validator_reasons": [
+        "quote:S4: exact evidence is absent from snapshot",
+        "quote-full:S4: exact evidence is absent from the full snapshot"
+      ],
+      "response_text": "{\n  \"research_id\": \"RQ-6d9c12f4\",\n  \"source_id\": \"S4\",\n  \"window_id\": \"S4-W02\",\n  \"outcome\": \"evidence\",\n  \"source\": {\n    \"source_id\": \"S4\",\n    \"title\": \"https://www.naaim.org/wp-content/uploads/2014/04/00V_Alexander_Pagonidis_The-IBS-Effect-Mean-Reversion-in-Equity-ETFs-1.pdf\",\n    \"source_type\": \"paper\",\n    \"url_or_citation\": \"https://www.naaim.org/wp-content/uploads/2014/04/00V_Alexander_Pagonidis_The-IBS-Effect-Mean-Reversion-in-Equity-ETFs-1.pdf\",\n    \"main_claim\": \"The IBS effect can be combined with Cutler’s RSI(3) to filter trades in a long-only strategy.\",\n    \"evidence\": [\n      \"A simple demonstration using the Cutler’s RSI indicator will show how the IBS effect can be used to boost returns of a swing trading strategy while significantly decreasing the number of trades needed.\",\n      \"• Go long at the close if RSI(3) < 10\\n• Maintain the position while RSI(3) ≤ 40\\nI then filter these returns by adding an additional rule based on the value of IBS:\"\n    ],\n    \"risks\": [\n      \"Commissions will greatly decrease the returns and increase the maximum drawdowns, however, making such an approach problematic in the real world.\"\n    ],\n    \"confidence\": \"low\",\n    \"source_quality\": \"discovery-only\",\n    \"asset_classes\": [\n      \"equity ETFs\"\n    ],\n    \"data_required\": [\n      \"IBS values\",\n      \"Cutler’s RSI(3) values\"\n    ],\n    \"data_access\": \"available-now\",\n    \"mvp_testable\": false\n  },\n  \"open_questions\": []\n}"
+    },
+    {
+      "source_id": "S4",
+      "window_id": "S4-W03",
+      "model": "qwen3:14b",
+      "prompt_hash": "40f650011dfc298d7d847988ce1d9cf9e6d64bdea85a5029a1e556fa4e21e750",
+      "response_hash": "eab94fd738168f4aee6661d2acd2c5c03975cded215833d28c6251c4e739061c",
+      "validator_reasons": [
+        "contradiction:S4: high confidence is forbidden for discovery-only",
+        "ungrounded-promotion:S4: main_claim asserts a strategy/performance claim that is not an exact passage of the snapshot, so it cannot carry mvp_testable or promote_source"
+      ],
+      "response_text": "{\n  \"research_id\": \"RQ-6d9c12f4\",\n  \"source_id\": \"S4\",\n  \"window_id\": \"S4-W03\",\n  \"outcome\": \"evidence\",\n  \"source\": {\n    \"source_id\": \"S4\",\n    \"title\": \"https://www.naaim.org/wp-content/uploads/2014/04/00V_Alexander_Pagonidis_The-IBS-Effect-Mean-Reversion-in-Equity-ETFs-1.pdf\",\n    \"source_type\": \"paper\",\n    \"url_or_citation\": \"https://www.naaim.org/wp-content/uploads/2014/04/00V_Alexander_Pagonidis_The-IBS-Effect-Mean-Reversion-in-Equity-ETFs-1.pdf\",\n    \"main_claim\": \"The IBS technical indicator is a strong and consistent predictor of close-to-close returns for equity ETFs trading in the U.S.\",\n    \"evidence\": [\n      \"• Go long at the close if RSI(3) < 10\",\n      \"• Maintain the position while RSI(3) ≤ 40\",\n      \"• Enter or maintain long position only if IBS ≤ 0.5\"\n    ],\n    \"risks\": [\n      \"The requirement of executing over a very small amount of time (near the end of the market closing) can be problematic in terms of price impact for large traders.\"\n    ],\n    \"confidence\": \"high\",\n    \"source_quality\": \"discovery-only\",\n    \"asset_classes\": [\"ETFs\"],\n    \"data_required\": [\"RSI(3)\", \"IBS\"],\n    \"data_access\": \"available-now\",\n    \"mvp_testable\": true\n  },\n  \"open_questions\": []\n}"
+    },
+    {
+      "source_id": "S4",
+      "window_id": "S4-W07",
+      "model": "qwen3:14b",
+      "prompt_hash": "7680bb1ad044252fad4e4c73d8a3285568bb6d0eaa7c46756b72f4e75d9c9ce7",
+      "response_hash": "1aeb43d6981fe2b700c20d18a68c1e202ccb3578580356217df53cd9b90a0bbb",
+      "validator_reasons": [
+        "quote:S4: exact evidence is absent from snapshot",
+        "ungrounded-promotion:S4: main_claim asserts a strategy/performance claim that is not an exact passage of the snapshot, so it cannot carry mvp_testable or promote_source",
+        "quote-full:S4: exact evidence is absent from the full snapshot"
+      ],
+      "response_text": "{\n  \"research_id\": \"RQ-6d9c12f4\",\n  \"source_id\": \"S4\",\n  \"window_id\": \"S4-W07\",\n  \"outcome\": \"evidence\",\n  \"source\": {\n    \"source_id\": \"S4\",\n    \"title\": \"https://www.naaim.org/wp-content/uploads/2014/04/00V_Alexander_Pagonidis_The-IBS-Effect-Mean-Reversion-in-Equity-ETFs-1.pdf\",\n    \"source_type\": \"paper\",\n    \"url_or_citation\": \"https://www.naaim.org/wp-content/uploads/2014/04/00V_Alexander_Pagonidis_The-IBS-Effect-Mean-Reversion-in-Equity-ETFs-1.pdf\",\n    \"main_claim\": \"The paper discusses the IBS effect and mean reversion in equity ETFs, including statistical analysis of returns and strategies involving RSI and IBS filters.\",\n    \"evidence\": [\n      \"Table 15: RSI Strategy Statistics   > Average daily returns, total returns, daily return win rate, and total days spent in market for the RSI(3) strategy and the RSI(3) strategy with the IBS ≤0.5 filter.\"\n    ],\n    \"risks\": [\n      \"The paper is discovery-only and may not provide actionable trading rules without further analysis.\"\n    ],\n    \"confidence\": \"medium\",\n    \"source_quality\": \"discovery-only\",\n    \"asset_classes\": [\"ETFs\"],\n    \"data_required\": [\"RSI(3) strategy\", \"IBS ≤0.5 filter\"],\n    \"data_access\": \"available-now\",\n    \"mvp_testable\": true\n  },\n  \"open_questions\": [\n    \"What specific exit rules are paired with RSI oversold entries in the RSI(3) strategy with the IBS ≤0.5 filter?\",\n    \"Are there any explicit exit rules mentioned in the paper for the RSI(3) strategy with the IBS ≤0.5 filter?\"\n  ]\n}"
+    },
+    {
+      "source_id": "S5",
+      "window_id": null,
+      "model": "qwen3:14b",
+      "prompt_hash": "957aa47a0ea992783745029107d5bf142b694c209d45197f1c2e9fb3de99b534",
+      "response_hash": "e07b111cee63568bed0650b0c00af68e02538f3163b4179b14ebd351ebab2791",
+      "validator_reasons": [
+        "quote:S5: exact evidence is absent from snapshot",
+        "quote:S5: exact evidence is absent from snapshot",
+        "quote:S5: exact evidence is absent from snapshot",
+        "ungrounded-promotion:S5: main_claim asserts a strategy/performance claim that is not an exact passage of the snapshot, so it cannot carry mvp_testable or promote_source"
+      ],
+      "response_text": "{\n  \"research_id\": \"RQ-6d9c12f4\",\n  \"status\": \"raw_saved\",\n  \"sources\": [\n    {\n      \"title\": \"https://thepatternsite.com/Double7sSetup.html\",\n      \"source_type\": \"web\",\n      \"url_or_citation\": \"https://thepatternsite.com/Double7sSetup.html\",\n      \"main_claim\": \"The Double 7s Trading Setup is a strategy for ETFs that involves buying on a seven-day low and exiting on a seven-day high, with modifications tested for performance.\",\n      \"evidence\": [\n        \"1. The ETF closes above the 30-bar simple moving average of closing prices.\",\n        \"2. When the ETF makes its lowest close in 11 price bars (including today), buy on the close today.\",\n        \"3. When the ETF makes its highest open in 7 price bars (including today), use a trailing stop placed 10 cents below today's high price to exit.\"\n      ],\n      \"risks\": [\n        \"The system has a low profitability rate (34% of ETFs showed gains in original tests).\",\n        \"The system's performance is not consistent across different ETFs and timeframes.\"\n      ],\n      \"confidence\": \"low\",\n      \"source_quality\": \"discovery-only\",\n      \"asset_classes\": [\"ETF\"],\n      \"data_required\": [\n        \"30-bar simple moving average of closing prices\",\n        \"11-bar look back for buying\",\n        \"7-bar look back for selling\",\n        \"Trailing stop placed 10 cents below today's high price\"\n      ],\n      \"data_access\": \"available-now\",\n      \"mvp_testable\": true,\n      \"source_id\": \"S5\"\n    }\n  ],\n  \"open_questions\": [\n    \"Are the rules for the Double 7s Trading Setup applicable to SPY, QQQ, and IWM?\",\n    \"Can the trailing stop rule be applied without optimization for daily ETF RSI oversold entries?\"\n  ],\n  \"curator_recommendation\": \"needs_more_work\"\n}"
+    },
+    {
+      "source_id": "S5",
+      "window_id": null,
+      "model": "qwen3:14b",
+      "prompt_hash": "a724354fd2cdb098333a7bbcc2d71f79e63827a144fce8d25e45b9e71f7712b5",
+      "response_hash": "e7c90f47ccc290bf6a79a0834c53a7ead3d20f1a9ecaf8a1c764125dfa2ebee6",
+      "validator_reasons": [
+        "quote:S5: exact evidence is absent from snapshot",
+        "quote:S5: exact evidence is absent from snapshot",
+        "quote:S5: exact evidence is absent from snapshot"
+      ],
+      "response_text": "{\n  \"research_id\": \"RQ-6d9c12f4\",\n  \"status\": \"raw_saved\",\n  \"sources\": [\n    {\n      \"title\": \"https://thepatternsite.com/Double7sSetup.html\",\n      \"source_type\": \"web\",\n      \"url_or_citation\": \"https://thepatternsite.com/Double7sSetup.html\",\n      \"main_claim\": \"The Double 7s Trading Setup is a strategy for ETFs that involves buying on a seven-day low and exiting on a seven-day high, with modifications tested for performance.\",\n      \"evidence\": [\n        \"1. The ETF closes above the 30-bar simple moving average of closing prices.\",\n        \"2. When the ETF makes its lowest close in 11 price bars (including today), buy on the close today.\",\n        \"3. When the ETF makes its highest open in 7 price bars (including today), use a trailing stop placed 10 cents below today's high price to exit.\"\n      ],\n      \"risks\": [\n        \"The system has a low profitability rate (34% of ETFs showed gains in original tests).\",\n        \"The system's performance is not consistent across different ETFs and timeframes.\"\n      ],\n      \"confidence\": \"low\",\n      \"source_quality\": \"discovery-only\",\n      \"asset_classes\": [\n        \"ETF\"\n      ],\n      \"data_required\": [\n        \"30-bar simple moving average of closing prices\",\n        \"11-bar look back for buying\",\n        \"7-bar look back for selling\",\n        \"Trailing stop placed 10 cents below today's high price\"\n      ],\n      \"data_access\": \"available-now\",\n      \"mvp_testable\": false,\n      \"source_id\": \"S5\"\n    }\n  ],\n  \"open_questions\": [\n    \"Are the rules for the Double 7s Trading Setup applicable to SPY, QQQ, and IWM?\",\n    \"Can the trailing stop rule be applied without optimization for daily ETF RSI oversold entries?\"\n  ],\n  \"curator_recommendation\": \"needs_more_work\"\n}"
+    }
+  ]
+}

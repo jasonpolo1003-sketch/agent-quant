@@ -1,0 +1,74 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/RZRbL5pKrKp7j4xHkRP6Z9MBRhE</id>
+  <title>arXiv Query: search_query=all:"mean reversion" AND all:"exit"&amp;id_list=&amp;start=0&amp;max_results=3</title>
+  <updated>2026-09-19T18:11:00Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:%22mean+reversion%22+AND+all:%22exit%22&amp;start=0&amp;max_results=3&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>3</opensearch:itemsPerPage>
+  <opensearch:totalResults>5</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/1411.5062v3</id>
+    <title>Optimal Mean Reversion Trading with Transaction Costs and Stop-Loss Exit</title>
+    <updated>2015-05-14T07:30:53Z</updated>
+    <link href="https://arxiv.org/abs/1411.5062v3" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/1411.5062v3" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Motivated by the industry practice of pairs trading, we study the optimal timing strategies for trading a mean-reverting price spread. An optimal double stopping problem is formulated to analyze the timing to start and subsequently liquidate the position subject to transaction costs. Modeling the price spread by an Ornstein-Uhlenbeck process, we apply a probabilistic methodology and rigorously derive the optimal price intervals for market entry and exit. As an extension, we incorporate a stop-loss constraint to limit the maximum loss. We show that the entry region is characterized by a bounded price interval that lies strictly above the stop-loss level. As for the exit timing, a higher stop-loss level always implies a lower optimal take-profit level. Both analytical and numerical results are provided to illustrate the dependence of timing strategies on model parameters such as transaction cost and stop-loss level.</summary>
+    <category term="q-fin.TR" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="q-fin.MF" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2014-11-18T23:24:03Z</published>
+    <arxiv:primary_category term="q-fin.TR"/>
+    <arxiv:journal_ref>International Journal of Theoretical and Applied Finance, Vol. 18, No. 3, 2015</arxiv:journal_ref>
+    <author>
+      <name>Tim Leung</name>
+    </author>
+    <author>
+      <name>Xin Li</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2309.16008v4</id>
+    <title>Optimal Entry and Exit with Signature in Statistical Arbitrage</title>
+    <updated>2024-03-04T22:56:45Z</updated>
+    <link href="https://arxiv.org/abs/2309.16008v4" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2309.16008v4" rel="related" type="application/pdf" title="pdf"/>
+    <summary>In this paper, we explore an optimal timing strategy for the trading of price spreads exhibiting mean-reverting characteristics. A sequential optimal stopping framework is formulated to analyze the optimal timings for both entering and subsequently liquidating positions, all while considering the impact of transaction costs. Then we leverages a refined signature optimal stopping method to resolve this sequential optimal stopping problem, thereby unveiling the precise entry and exit timings that maximize gains. Our framework operates without any predefined assumptions regarding the dynamics of the underlying mean-reverting spreads, offering adaptability to diverse scenarios. Numerical results are provided to demonstrate its superior performance when comparing with conventional mean reversion trading rules.</summary>
+    <category term="q-fin.CP" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2023-09-27T20:36:53Z</published>
+    <arxiv:comment>20 pages</arxiv:comment>
+    <arxiv:primary_category term="q-fin.CP"/>
+    <author>
+      <name>Boming Ning</name>
+    </author>
+    <author>
+      <name>Prakash Chakraborty</name>
+    </author>
+    <author>
+      <name>Kiseop Lee</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/1601.04210v1</id>
+    <title>Speculative Futures Trading under Mean Reversion</title>
+    <updated>2016-01-16T21:17:37Z</updated>
+    <link href="https://arxiv.org/abs/1601.04210v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/1601.04210v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>This paper studies the problem of trading futures with transaction costs when the underlying spot price is mean-reverting. Specifically, we model the spot dynamics by the Ornstein-Uhlenbeck (OU), Cox-Ingersoll-Ross (CIR), or exponential Ornstein-Uhlenbeck (XOU) model. The futures term structure is derived and its connection to futures price dynamics is examined. For each futures contract, we describe the evolution of the roll yield, and compute explicitly the expected roll yield. For the futures trading problem, we incorporate the investor's timing option to enter or exit the market, as well as a chooser option to long or short a futures upon entry. This leads us to formulate and solve the corresponding optimal double stopping problems to determine the optimal trading strategies. Numerical results are presented to illustrate the optimal entry and exit boundaries under different models. We find that the option to choose between a long or short position induces the investor to delay market entry, as compared to the case where the investor pre-commits to go either long or short.</summary>
+    <category term="q-fin.MF" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2016-01-16T21:17:37Z</published>
+    <arxiv:comment>22 pages,13 figures</arxiv:comment>
+    <arxiv:primary_category term="q-fin.MF"/>
+    <author>
+      <name>Tim Leung</name>
+    </author>
+    <author>
+      <name>Jiao Li</name>
+    </author>
+    <author>
+      <name>Xin Li</name>
+    </author>
+    <author>
+      <name>Zheng Wang</name>
+    </author>
+  </entry>
+</feed>

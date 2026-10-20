@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "dataset_id": "SPY-1d-yfinance-20260929T024440Z-472338d8",
+  "symbol": "SPY",
+  "timeframe": "1d",
+  "provider": "yfinance",
+  "provider_version": "1.7.0",
+  "requested_start": "2000-01-01",
+  "requested_end": "2026-09-28",
+  "downloaded_at": "2026-09-29T02:44:40.544764+00:00",
+  "path": "data/parquet/SPY/SPY-1d-yfinance-20260929T024440Z-472338d8.parquet",
+  "rows": 6723,
+  "first_date": "2000-01-03",
+  "last_date": "2026-09-25",
+  "columns": [
+    "date",
+    "open",
+    "high",
+    "low",
+    "close",
+    "adj_close",
+    "volume",
+    "dividends",
+    "stock_splits"
+  ],
+  "price_basis": "yahoo_split_adjusted",
+  "price_basis_note": "open/high/low/close are Yahoo's split-adjusted prices (auto_adjust=False), not the as-traded historical tape; a backtest must state which basis it executes on",
+  "adjustment_note": "adj_close is Yahoo's split-and-dividend-adjusted close; adj_close / close is Yahoo's dividend adjustment factor, applied to open/high/low to derive adjusted OHLC",
+  "date_note": "dates are the exchange's trading dates (US/Eastern), not UTC",
+  "warnings": [],
+  "content_sha256": "3a206c0ee32e65a946fa195489f51bca29f83db06990f656907a8f27e920cc13",
+  "file_sha256": "ce6f4afaa0099649020ced1d3c2e99cf3e9753cd3d6e4d9723e637cffe56043f",
+  "cross_check": {
+    "status": "unavailable",
+    "reason": "NotImplementedError: data_source='stooq' is not implemented"
+  }
+}
