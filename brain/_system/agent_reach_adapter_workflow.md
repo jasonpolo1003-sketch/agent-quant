@@ -10,7 +10,7 @@ Pytest never opens the network. Tests inject a subprocess `runner` and a `fetch_
 
 | Step | Tool | How |
 |---|---|---|
-| Health | `agent-reach doctor --json` | Required before search. Unhealthy doctor fails closed. |
+| Health | `agent-reach doctor --json` | Routes Exa/GitHub only. An unhealthy doctor disables those lanes but does not gate independent arXiv search. |
 | Search (preferred) | Exa via `mcporter call exa.web_search_exa` | Zero-config search channel. |
 | Search (fallback) | `gh search repos` | Used when Exa is empty or the search channel is unusable. |
 | Fetch | Jina Reader (`https://r.jina.ai/URL`) | Web channel. Snapshots cite the **upstream** URL, never Agent Reach. |
@@ -30,8 +30,9 @@ Resolved in this order:
 ## Run a real dispatcher Scout command (no Python injection)
 
 ```bash
-# 1. Confirm Agent Reach doctor is healthy and see which lanes are usable.
-#    Exit 0 = at least one search lane usable, 2 = doctor unusable, 3 = none usable.
+# 1. Check routed-lane health and see which independent lanes remain usable.
+#    Exit 0 = at least one lane usable, 2 = doctor unusable with no independent
+#    lane, 3 = doctor answered but none are usable.
 uv run python scripts/agent_reach_check.py
 
 # 1b. A usable lane is not the same as a lane that can answer YOUR question.
@@ -60,14 +61,16 @@ Pytest sets `QUANT_BRAIN_DISCOVERY=seeded` so the suite makes zero network calls
 
 ## Fail closed
 
-If doctor is unhealthy, the executable is missing, search returns no URLs, or a fetch fails:
+An unhealthy/missing Agent Reach doctor disables Exa and GitHub, but independent
+arXiv discovery is still attempted. If every available search lane returns no
+URLs, or a fetch fails:
 
 - the research question returns to `queued` with `raw_note_path` cleared
 - incomplete raw-note scaffolds are deleted
 - `brain/00_Inbox/Failed_Runs/{run_id}.md` is written (`retryable: true`)
 - scout events `discovery_started`, `discovery_failed`, and `failed_run_written` are recorded
 
-Re-run the same dispatch command after fixing Agent Reach / network.
+Re-run the same dispatch command after fixing the failed routed lane, arXiv, or network.
 
 ## Snapshots
 

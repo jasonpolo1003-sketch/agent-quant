@@ -66,6 +66,8 @@ def project(tmp_path, monkeypatch):
     # The synthetic project is not a git repository; the ledger-commit gate has its own test.
     monkeypatch.setattr(rn, "ledger_committed", lambda root, path: True)
     monkeypatch.setattr(rn, "code_unchanged_since", lambda root, commit: True)
+    monkeypatch.setattr(rn, "replay_code_unchanged_since", lambda root, commit: True)
+    monkeypatch.setattr(rn, "replay_code_commit", lambda root: "test-replay-commit")
     return tmp_path, db, card_path
 
 
@@ -116,6 +118,51 @@ def test_the_held_out_period_needs_approval_and_is_read_exactly_once(project):
     assert len(events(root, "held_out_started")) == 1
     report = (root / rn.REPORT_DIR / "SC-9001-held-out.md").read_text(encoding="utf-8")
     assert "## Verdict" in report and rn.NOT_PROOF in report
+
+
+def test_replay_requires_the_exact_completed_held_out_trial(project):
+    root, db, _ = project
+    rn.run_in_sample(root, db, "SC-9001")
+    rn.approve_in_sample(root, "SC-9001", by="Jason")
+    rn.run_held_out(root, db, "SC-9001")
+    card, entry, _ = rn.gated_inputs(root, db, "SC-9001")
+
+    trial = rn.authorized_replay_trial(
+        root, card, entry, phase="held_out", rule_id="A", symbol="SPY", cost_bps=5
+    )
+    assert trial["trial_id"]
+    assert trial["code_commit"] == "test-commit"
+    assert trial["replay_code_commit"] == "test-replay-commit"
+
+    with pytest.raises(rn.RunnerError, match="no matching completed held-out trial"):
+        rn.authorized_replay_trial(
+            root, card, entry, phase="held_out", rule_id="A", symbol="SPY", cost_bps=123
+        )
+
+
+def test_replay_refuses_dirty_or_changed_trial_code(project, monkeypatch):
+    root, db, _ = project
+    rn.run_in_sample(root, db, "SC-9001")
+    rn.approve_in_sample(root, "SC-9001", by="Jason")
+    rn.run_held_out(root, db, "SC-9001")
+    card, entry, _ = rn.gated_inputs(root, db, "SC-9001")
+
+    monkeypatch.setattr(
+        rn,
+        "replay_code_commit",
+        lambda root: (_ for _ in ()).throw(rn.RunnerError("uncommitted replay code")),
+    )
+    with pytest.raises(rn.RunnerError, match="uncommitted"):
+        rn.authorized_replay_trial(
+            root, card, entry, phase="held_out", rule_id="A", symbol="SPY", cost_bps=5
+        )
+
+    monkeypatch.setattr(rn, "replay_code_commit", lambda root: "current-clean-commit")
+    monkeypatch.setattr(rn, "replay_code_unchanged_since", lambda root, commit: False)
+    with pytest.raises(rn.RunnerError, match="replay code changed"):
+        rn.authorized_replay_trial(
+            root, card, entry, phase="held_out", rule_id="A", symbol="SPY", cost_bps=5
+        )
 
 
 def test_a_crash_after_the_held_out_start_still_counts_as_the_one_read(project, monkeypatch):
@@ -272,6 +319,26 @@ def test_the_code_gate_covers_everything_the_run_depends_on(tmp_path):
 def _git(cwd, *args):
     subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", *args], cwd=cwd,
                    check=True, capture_output=True)
+
+
+def test_replay_code_commit_covers_the_authorizer_renderer_exporter_and_lock(tmp_path):
+    assert "src/quant_brain/backtest/run.py" in rn.REPLAY_CURRENT_PATHS
+    _git(tmp_path, "init", "-q")
+    for relative in rn.REPLAY_CURRENT_PATHS:
+        target = tmp_path / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("pinned\n", encoding="utf-8")
+    _git(tmp_path, "add", "-A")
+    _git(tmp_path, "commit", "-qm", "replay baseline")
+
+    expected = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=tmp_path, check=True, capture_output=True, text=True
+    ).stdout.strip()
+    assert rn.replay_code_commit(tmp_path) == expected
+
+    (tmp_path / "scripts/export_trade_replay.py").write_text("changed\n", encoding="utf-8")
+    with pytest.raises(rn.RunnerError, match="uncommitted replay code"):
+        rn.replay_code_commit(tmp_path)
 
 
 def test_committing_the_ledger_does_not_count_as_a_code_change(tmp_path):

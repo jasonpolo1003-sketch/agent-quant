@@ -95,10 +95,13 @@ class FeedState:
         out: list[dict[str, Any]] = []
         seq = message.get("sequence_num")
         if isinstance(seq, int):
-            if self.last_seq is not None and seq != self.last_seq + 1:
-                out.append({"type": "status", "state": "gap",
-                            "detail": f"missed messages {self.last_seq + 1}..{seq - 1}; resyncing"})
-            self.last_seq = seq
+            if self.last_seq is None:
+                self.last_seq = seq
+            elif seq > self.last_seq:
+                if seq > self.last_seq + 1:
+                    out.append({"type": "status", "state": "gap",
+                                "detail": f"missed messages {self.last_seq + 1}..{seq - 1}; resyncing"})
+                self.last_seq = seq
         channel = message.get("channel")
         when = message.get("timestamp")
         for event in message.get("events", []):

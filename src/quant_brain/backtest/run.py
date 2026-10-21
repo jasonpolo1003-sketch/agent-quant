@@ -36,6 +36,24 @@ REPORT_DIR = "brain/04_Backtest_Reports"
 # Everything a run depends on: all package code (card checks, data loading, the
 # engine), the runner script, and the locked dependency set.
 CODE_PATHS = ("src/quant_brain", "scripts/run_backtest.py", "pyproject.toml", "uv.lock")
+REPLAY_TRIAL_CODE_PATHS = (
+    "src/quant_brain/backtest/engine.py",
+    "src/quant_brain/backtest/indicators.py",
+    "src/quant_brain/backtest/reference.py",
+    "src/quant_brain/data/market_data.py",
+    "src/quant_brain/strategy/card.py",
+)
+# The historical trial commit must match the execution core above. The renderer
+# was added later, so it is instead pinned to the clean current commit in every
+# exported artifact.
+REPLAY_CURRENT_PATHS = (
+    *REPLAY_TRIAL_CODE_PATHS,
+    "src/quant_brain/backtest/run.py",
+    "src/quant_brain/market/replay.py",
+    "scripts/export_trade_replay.py",
+    "pyproject.toml",
+    "uv.lock",
+)
 NOT_PROOF = "A backtest is not proof of future profit."
 
 
@@ -117,6 +135,35 @@ def code_unchanged_since(root: Path, commit: str) -> bool:
     return result.returncode == 0
 
 
+def replay_code_unchanged_since(root: Path, commit: str) -> bool:
+    """True when the code that determines replay trades matches the recorded trial."""
+    result = subprocess.run(
+        ["git", "diff", "--quiet", commit, "HEAD", "--", *REPLAY_TRIAL_CODE_PATHS],
+        cwd=root,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode not in (0, 1):
+        raise RunnerError(f"cannot compare replay code with {commit}: {result.stderr.strip()}")
+    return result.returncode == 0
+
+
+def replay_code_commit(root: Path) -> str:
+    """Current commit for a replay, refusing dirty execution, render, or lock inputs."""
+    status = subprocess.run(
+        ["git", "status", "--porcelain", "--", *REPLAY_CURRENT_PATHS],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    if status:
+        raise RunnerError(f"uncommitted replay code; commit it first:\n{status}")
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True, check=True
+    ).stdout.strip()
+
+
 HELD_OUT_MARKER = "{card_id}:held_out_started"
 
 
@@ -173,6 +220,104 @@ def gated_inputs(root: Path, db_path: Path, card_id: str) -> tuple[sc.StrategyCa
             raise RunnerError(f"{dataset.dataset_id}: content hash differs from the card")
         frames[dataset.symbol] = frame
     return card, entry, frames
+
+
+def authorized_replay_trial(
+    root: Path,
+    card: sc.StrategyCard,
+    entry: dict[str, Any],
+    *,
+    phase: str,
+    rule_id: str,
+    symbol: str,
+    cost_bps: float,
+) -> dict[str, Any]:
+    """Return the exact completed trial that authorizes a replay export.
+
+    A replay is a rendering of a recorded trial, not a new way to read or
+    recompute a period. Match every material input inside a completed phase
+    boundary; held-out replays additionally prove the approval and independent
+    cross-check that authorized the one-time read.
+    """
+    if phase not in {"in_sample", "held_out"}:
+        raise RunnerError(f"unsupported replay phase: {phase}")
+    ledger = read_ledger(root, card.card_id)
+    if not ledger_committed(root, ledger_path(root, card.card_id)):
+        raise RunnerError(f"{card.card_id}: commit the trial ledger before exporting a replay")
+    current_replay_commit = replay_code_commit(root)
+
+    started_event = f"{phase}_started"
+    completed_event = f"{phase}_completed"
+    starts = [i for i, row in enumerate(ledger) if row.get("event") == started_event]
+    if not starts:
+        raise RunnerError(
+            f"{card.card_id}: no matching completed {phase.replace('_', '-')} trial"
+        )
+    start_index = starts[-1]
+    completions = [
+        i for i in range(start_index + 1, len(ledger))
+        if ledger[i].get("event") == completed_event
+    ]
+    if not completions:
+        raise RunnerError(
+            f"{card.card_id}: no matching completed {phase.replace('_', '-')} trial"
+        )
+    completed_index = completions[0]
+    segment = ledger[start_index:completed_index + 1]
+    if any(row.get("event") == f"{phase}_failed" for row in segment):
+        raise RunnerError(
+            f"{card.card_id}: no matching completed {phase.replace('_', '-')} trial"
+        )
+
+    if phase == "held_out":
+        in_sample_starts = [
+            i for i, row in enumerate(ledger[:start_index])
+            if row.get("event") == "in_sample_started"
+        ]
+        if not in_sample_starts:
+            raise RunnerError(f"{card.card_id}: held-out replay has no approved in-sample run")
+        in_sample_start = in_sample_starts[-1]
+        prior = ledger[in_sample_start:start_index]
+        completed = [i for i, row in enumerate(prior) if row.get("event") == "in_sample_completed"]
+        approvals = [i for i, row in enumerate(prior) if row.get("event") == "in_sample_approved"]
+        checks = [row for row in prior if row.get("event") == "reference_check"]
+        if (
+            not completed
+            or not approvals
+            or approvals[-1] < completed[-1]
+            or not checks
+            or not all(row.get("match") is True for row in checks)
+        ):
+            raise RunnerError(f"{card.card_id}: held-out replay has no approved in-sample run")
+
+    dataset = next((item for item in card.data if item.symbol == symbol), None)
+    if dataset is None:
+        raise RunnerError(f"{card.card_id}: symbol {symbol} is not pinned on the card")
+    period = list(_period(card, phase))
+    matches = [
+        row for row in segment
+        if row.get("kind") == "rule"
+        and row.get("card_id") == card.card_id
+        and row.get("spec_sha256") == entry["spec_sha256"]
+        and row.get("phase") == phase
+        and row.get("rule") == rule_id
+        and row.get("symbol") == symbol
+        and row.get("dataset_id") == dataset.dataset_id
+        and row.get("period") == period
+        and float(row.get("cost_bps", float("nan"))) == float(cost_bps)
+        and row.get("trial_id")
+        and row.get("code_commit")
+    ]
+    if len(matches) != 1:
+        raise RunnerError(
+            f"{card.card_id}: no matching completed {phase.replace('_', '-')} trial"
+        )
+    trial = matches[0]
+    if not replay_code_unchanged_since(root, trial["code_commit"]):
+        raise RunnerError(
+            f"{card.card_id}: replay code changed since recorded trial {trial['trial_id']}"
+        )
+    return {**trial, "replay_code_commit": current_replay_commit}
 
 
 # --- one trial -------------------------------------------------------------------------
