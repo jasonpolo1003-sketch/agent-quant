@@ -47,6 +47,16 @@ def test_a_sequence_gap_is_reported():
     assert out[0]["type"] == "status" and out[0]["state"] == "gap" and "1..2" in out[0]["detail"]
 
 
+def test_out_of_order_startup_sequence_is_not_a_gap():
+    state = lc.FeedState()
+
+    assert state.process(MESSAGES[0]) == []  # subscriptions, sequence 1
+    out = state.process(MESSAGES[1])  # ticker snapshot, sequence 0
+
+    assert [event["type"] for event in out] == ["ticker"]
+    assert state.last_seq == 1
+
+
 def test_live_trades_build_one_minute_candles():
     state = lc.FeedState()
     def trades(*rows):

@@ -13,12 +13,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 from datetime import UTC, datetime
 
 from quant_brain.backtest import engine, reference
-from quant_brain.backtest.run import _period, gated_inputs
+from quant_brain.backtest.run import _period, authorized_replay_trial, gated_inputs
 from quant_brain.config import PROJECT_ROOT
 from quant_brain.db.init_db import DEFAULT_DB_PATH
 from quant_brain.market.replay import build_replay
@@ -43,6 +42,15 @@ def main() -> int:
     start, end = _period(card, phase)
     spec = engine.RuleSpec.from_card_rule(next(r for r in card.rules if r.rule_id == rule_id))
     frame = frames[symbol].reset_index(drop=True)
+    trial = authorized_replay_trial(
+        PROJECT_ROOT,
+        card,
+        entry,
+        phase=phase,
+        rule_id=rule_id,
+        symbol=symbol,
+        cost_bps=cost,
+    )
 
     replay = build_replay(frame, spec, cost_bps=cost, start=start, end=end)
 
@@ -61,8 +69,6 @@ def main() -> int:
             return 1
         check = f"match ({len(ours)} trades)"
 
-    commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=PROJECT_ROOT, capture_output=True,
-                            text=True, check=True).stdout.strip()
     dataset = next(d for d in card.data if d.symbol == symbol)
     replay = {
         "card_id": card.card_id,
@@ -71,7 +77,10 @@ def main() -> int:
         "symbol": symbol,
         "dataset_id": dataset.dataset_id,
         "content_sha256": dataset.content_sha256,
-        "code_commit": commit,
+        "trial_id": trial["trial_id"],
+        "trial_code_commit": trial["code_commit"],
+        "replay_code_commit": trial["replay_code_commit"],
+        "code_commit": trial["replay_code_commit"],
         "generated_at": datetime.now(UTC).isoformat(),
         "reference_check": check,
         "note": "A replay of a past backtest. It is not proof of future profit.",
