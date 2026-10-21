@@ -168,8 +168,8 @@ This exists because the project's core design rule is *move slowly, one verified
 
   A source-insufficient outcome never counts as research acceptance. It never unlocks Phase 8, whose entry gate still requires a source-supported exit rule, maximum holding period and cost assumptions.
 - **Cost of not changing:** Phase 6 stays pending until the approved lanes can reach ≥3 relevant sources for every child. That is a legitimate choice: the alternative is to keep the gate as written.
-- **Status:** proposed
-- **Jason's decision:** _pending_
+- **Status:** accepted
+- **Jason's decision:** accepted as written, 2026-09-28. Claude builds it; the scheduler is always-on (Windows Task Scheduler); Claude CLI is the only backend for now.
 
 ### PROP-006 — Window-only extraction outcome for a single oversize source
 - **Date:** 2026-09-27
@@ -230,7 +230,28 @@ This exists because the project's core design rule is *move slowly, one verified
 - **Status:** accepted
 - **Jason's decision:** approved the direction, 2026-09-28. The optional Phase 6 rerun was not yet chosen.
 
-> **Numbering note:** PROP-008 (the local Brain Terminal UI, accepted 2026-09-28) lives on branch `ui-terminal` until that branch is merged. This proposal is numbered after it on purpose.
+### PROP-008 — Local read-mostly "Brain Terminal" UI
+- **Date:** 2026-09-28
+- **Proposed by:** Claude session, from a brainstorm with Jason
+- **Affects:** PLAN.md §6 (non-goals), §10. Detail: [ui_terminal_plan.md](ui_terminal_plan.md).
+- **Current plan says:** "A GUI/dashboard/TUI. CLI + Markdown + SQLite is the interface." (§6 non-goals)
+- **Problem:**
+  - Jason builds in Codex and cannot see what the harness, the data or the agents are doing while work happens.
+  - The backtest stage (PROP-007 steps 4–6) will produce equity curves and trial ledgers that are hard to judge as text.
+  - Jason also wants to understand the system well enough to rebuild it.
+- **Proposed change:**
+  - Remove "GUI/dashboard" from §6 and add a bounded, local-only terminal (127.0.0.1) per `ui_terminal_plan.md`.
+  - **Reads by default.** `brain.sqlite` is opened read-only, and the only writes into it are `agent_events` through `ops.events`.
+  - UI state lives in a separate `db/terminal.sqlite`.
+  - **Actions:** a fixed job allowlist (health_check, data_refresh, agent_prompt; research_run disabled while PROP-007's freeze holds), with caps and events.
+  - **Tutor:** a NotebookLM-style tutor with no tools; its notes are `trusted: false` and never indexed as evidence.
+  - **Model calls:** only through official subscription CLIs (`claude -p`, `codex exec`) or local Ollama. No token handling.
+  - **Not a harness change:** the harness extraction model policy (§9) is unchanged.
+  - **No cross-over:** builds only in its own paths; never edits the data, harness or research code, `schema.sql`, or `brain/03`–`07`.
+- **Cost of not changing:** work stays invisible between handoffs, backtest judgement relies on reading tables, and the learning goal has no home.
+- **Still forbidden:** trading buttons, market feeds or brokers, remote or multi-user access, arbitrary shell from the UI, token extraction, and promoting UI-generated text to evidence.
+- **Status:** accepted
+- **Jason's decision:** accepted as written, 2026-09-28. Claude builds it; the scheduler is always-on (Windows Task Scheduler); Claude CLI is the only backend for now.
 
 ### PROP-009 — FRED macro and rate series, with provenance, for risk-free returns and regime analysis
 - **Date:** 2026-09-29
@@ -274,8 +295,8 @@ This exists because the project's core design rule is *move slowly, one verified
   - revised macro series without point-in-time vintages;
   - editing or re-running SC-0002 under new rules;
   - committing the key.
-- **Status:** proposed
-- **Jason's decision:** _pending_
+- **Status:** accepted
+- **Jason's decision:** accepted 2026-09-29. His free FRED key is in the project `.env` and verified live (DTB3, T10Y2Y, USREC, VIXCLS).
 
 ---
 
@@ -330,4 +351,6 @@ Once Jason accepts a proposal, apply it to `PLAN.md`, then record the applied ch
 | 2026-09-19 | PROP-003 | `PLAN.md`, `src/quant_brain/discovery/arxiv_search.py`, `agent_reach.py`, `research/executor.py`, `scripts/{gate_readiness,agent_reach_check}.py` | Added the zero-account arXiv lane; made the ≥3-source bar enforceable over distinct upstream works; quarantined sparse results in Failed_Runs. One of three questions became probe-ready; no child run executed. |
 | 2026-09-26 | PROP-004 (E2 scope only) | `discovery/{work_identity,candidate_list}.py`, `live_discovery.py`, `research/executor.py`, `harness/handlers.py` (Scout handler only), `scripts/{dispatch_task,gate_readiness}.py` | Added a pre-registered candidate-list lane through the unchanged live path, and DOI-alias collapse in the source minimum. No list registered, no run executed. PROP-005 remains proposed. |
 | 2026-09-28 | PROP-007 | PLAN.md §10 (direction note) | Freeze research harness; move to Gate F data, one frozen card, one honest backtest |
+| 2026-09-28 | PROP-008 | PLAN.md §6, §10; `ui_terminal_plan.md` | Local Brain Terminal UI: reads by default, allowlisted jobs, tutor with no tools, auth only through subscription CLIs |
+| 2026-09-29 | PROP-009 | `plan_change_proposals.md` (status accepted) | FRED rate and regime series under Gate F rules; key only in the git-ignored `.env` |
 | 2026-09-29 | PROP-010 | `learning_terminal_plan.md` (status accepted); PLAN.md §10 | Beginner-first learning terminal, free tier first; lighter process for this track; safety rules kept |
