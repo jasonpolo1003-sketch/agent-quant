@@ -1,0 +1,194 @@
+{
+ "_note": "Captured from wss://advanced-trade-ws.coinbase.com public channels on 2026-09-30 (BTC-USD); trimmed; two offer levels added to the snapshot because the trim kept bids only.",
+ "messages": [
+  {
+   "channel": "subscriptions",
+   "timestamp": "2026-09-30T01:02:57.938445224Z",
+   "sequence_num": 1,
+   "events": [
+    {
+     "subscriptions": {
+      "ticker": [
+       "BTC-USD"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "channel": "ticker",
+   "timestamp": "2026-09-30T01:02:57.93842084Z",
+   "sequence_num": 0,
+   "events": [
+    {
+     "type": "snapshot",
+     "tickers": [
+      {
+       "type": "ticker",
+       "product_id": "BTC-USD",
+       "price": "83439.74",
+       "volume_24_h": "4937.19455406",
+       "low_24_h": "82736",
+       "high_24_h": "84557.01",
+       "low_52_w": "57717.55",
+       "high_52_w": "126296",
+       "price_percent_chg_24_h": "0.29552654594304",
+       "best_bid": "83439.74",
+       "best_ask": "83439.75",
+       "best_bid_quantity": "0.01478889",
+       "best_ask_quantity": "0.04759615"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "channel": "market_trades",
+   "timestamp": "2026-09-30T01:02:57.945336311Z",
+   "sequence_num": 2,
+   "events": [
+    {
+     "type": "snapshot",
+     "trades": [
+      {
+       "product_id": "BTC-USD",
+       "trade_id": "1100227329",
+       "price": "83439.74",
+       "size": "0.00000004",
+       "time": "2026-09-30T01:02:57.376863Z",
+       "side": "BUY"
+      },
+      {
+       "product_id": "BTC-USD",
+       "trade_id": "1100227328",
+       "price": "83439.74",
+       "size": "0.00000006",
+       "time": "2026-09-30T01:02:57.051888Z",
+       "side": "BUY"
+      },
+      {
+       "product_id": "BTC-USD",
+       "trade_id": "1100227327",
+       "price": "83439.74",
+       "size": "0.00000004",
+       "time": "2026-09-30T01:02:56.840103Z",
+       "side": "BUY"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "channel": "l2_data",
+   "timestamp": "2026-09-30T01:02:58.288084619Z",
+   "sequence_num": 5,
+   "events": [
+    {
+     "type": "snapshot",
+     "product_id": "BTC-USD",
+     "updates": [
+      {
+       "side": "bid",
+       "event_time": "2026-09-30T01:02:57.514102Z",
+       "price_level": "83439.74",
+       "new_quantity": "0.01478889"
+      },
+      {
+       "side": "bid",
+       "event_time": "2026-09-30T01:02:57.514102Z",
+       "price_level": "83439.4",
+       "new_quantity": "0.00004446"
+      },
+      {
+       "side": "bid",
+       "event_time": "2026-09-30T01:02:57.514102Z",
+       "price_level": "83439.16",
+       "new_quantity": "0.04638284"
+      },
+      {
+       "side": "offer",
+       "event_time": "2026-09-30T01:02:57.514102Z",
+       "price_level": "83439.75",
+       "new_quantity": "0.04759615"
+      },
+      {
+       "side": "offer",
+       "event_time": "2026-09-30T01:02:57.514102Z",
+       "price_level": "83441.2",
+       "new_quantity": "0.25"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "channel": "l2_data",
+   "timestamp": "2026-09-30T01:02:58.312454523Z",
+   "sequence_num": 7,
+   "events": [
+    {
+     "type": "update",
+     "product_id": "BTC-USD",
+     "updates": [
+      {
+       "side": "bid",
+       "event_time": "2026-09-30T01:02:57.553044Z",
+       "price_level": "83420.74",
+       "new_quantity": "0.80746922"
+      },
+      {
+       "side": "bid",
+       "event_time": "2026-09-30T01:02:57.553044Z",
+       "price_level": "83420",
+       "new_quantity": "0"
+      },
+      {
+       "side": "bid",
+       "event_time": "2026-09-30T01:02:57.553044Z",
+       "price_level": "83341.01",
+       "new_quantity": "1.13311987"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "channel": "heartbeats",
+   "timestamp": "2026-09-30T01:02:58.406513998Z",
+   "sequence_num": 26,
+   "events": [
+    {
+     "current_time": "2026-09-30 01:02:58.404429333 +0000 UTC m=+94576.245960599",
+     "heartbeat_counter": 94576
+    }
+   ]
+  },
+  {
+   "channel": "ticker",
+   "timestamp": "2026-09-30T01:02:58.142085972Z",
+   "sequence_num": 4,
+   "events": [
+    {
+     "type": "update",
+     "tickers": [
+      {
+       "type": "ticker",
+       "product_id": "BTC-USD",
+       "price": "83439.74",
+       "volume_24_h": "4937.19455406",
+       "low_24_h": "82736",
+       "high_24_h": "84557.01",
+       "low_52_w": "57717.55",
+       "high_52_w": "126296",
+       "price_percent_chg_24_h": "0.29552654594304",
+       "best_bid": "83439.74",
+       "best_ask": "83439.75",
+       "best_bid_quantity": "0.01480456",
+       "best_ask_quantity": "0.05359005"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

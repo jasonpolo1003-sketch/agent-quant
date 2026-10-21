@@ -1,5 +1,24 @@
 # Quant Agent Brain — Session Handoff
 
+## PROP-010 accepted; free-tier backend built (2026-09-29)
+
+- **Decision:** Jason said "let's create the free one first" and relaxed the process gates for this direction. The safety rules stand: no live trading or broker routing, no paid data without a decision, provenance on data, and SC-0002 stays closed.
+- **Built on `testing`** (`d5f111a..6a834c5`, new package `src/quant_brain/market/`):
+  - **Trade replay:** `scripts/export_trade_replay.py`, cross-checked against the reference implementation. SC-0002 replays are committed for held-out (91 trades) and in-sample (101).
+  - **Risk Center math** (`risk.py`): sizing, recovery, Kelly, seeded risk of ruin, heat, correlation.
+  - **Starter universe:** `data/universe/starter.json`, 45 symbols with 45 accepted daily datasets.
+    - `fetch_market_data.py --universe starter --no-cross-check`.
+    - Screener with 5 presets (why + trap); `scripts/market_snapshot.py`.
+  - **Calendar:** Fed FOMC page (official), 9 FRED releases (official; `FRED_API_KEY` in `.env`) and yfinance earnings; `scripts/fetch_calendar.py`.
+  - **SEC EDGAR fundamentals:** `scripts/fetch_fundamentals.py`. It **needs `SEC_USER_AGENT="Name email"` in `.env`** and has not run live yet.
+  - **Live crypto:** Coinbase public WebSocket, no key (`live_crypto.py`, `scripts/live_crypto_watch.py`). Checked live on BTC and ETH.
+- **Checks:** 741 passed, 1 skipped; Ruff clean.
+- **Incident:** a mistaken double run created 45 duplicate datasets. They were removed minutes later (Parquet, manifests and DB rows), and all 48 remaining datasets verify as accepted.
+- **Next:**
+  1. The UI agent builds the pages from `brain/_system/plan/learning_terminal_ui_prompt.md`, after merging `testing` into `ui-terminal`.
+  2. Jason sets `SEC_USER_AGENT`.
+  3. Academy lessons (plan §5.2) and the rule builder (phase 4) are the next backend-side work.
+
 ## PROP-010 proposed: Quant Learning Terminal plan (2026-09-29)
 
 - **Plan:** `brain/_system/plan/learning_terminal_plan.md`, with PROP-010 in `plan_change_proposals.md`. Proposed, not accepted; nothing built.
