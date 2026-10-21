@@ -1,6 +1,6 @@
 # Builder prompt: Learning Terminal pages (PROP-010, free tier)
 
-You are working in: `C:\Users\jason\OneDrive\Desktop\quant-agent-brain-ui` (branch `ui-terminal`). Never `git switch` in the main checkout.
+You are working in: `C:\Users\jason\OneDrive\Desktop\Quant\quant-agent-brain-ui` (branch `ui-terminal`). Never `git switch` in the main checkout.
 
 **Goal**
 Turn the Brain Terminal into a beginner-first, TradingView-style learning workspace on top of the free-data backend that now exists on `testing`.
