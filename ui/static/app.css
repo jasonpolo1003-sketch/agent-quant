@@ -710,3 +710,40 @@ body.wide .foot { display: none; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ---------- Responsive Cockpit Architecture ---------- */
+.cockpit-split {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .cockpit-split {
+    grid-template-columns: 1fr;
+  }
+  main {
+    padding: 16px 14px 40px !important;
+  }
+  .steps {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+    gap: 8px !important;
+  }
+  .step {
+    padding: 10px 12px !important;
+    gap: 4px !important;
+  }
+  .step .n {
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 11px !important;
+  }
+  .step h3 {
+    font-size: 13px !important;
+  }
+  .step p {
+    font-size: 11.5px !important;
+  }
+}
+/* End responsive cockpit rules. */

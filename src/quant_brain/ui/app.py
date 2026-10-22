@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import sys
 import threading
 import time
@@ -35,6 +36,56 @@ from quant_brain.ui import (
 from quant_brain.ui.backends import BACKENDS, BackendError, get_backend
 
 STATIC_DIR = Path(__file__).resolve().parents[3] / "ui" / "static"
+
+MARKET_NUMERIC_FIELDS = {
+    "close", "change_1d_pct", "change_1w_pct", "change_1m_pct", "change_3m_pct",
+    "change_1y_pct", "change_ytd_pct", "rsi_2", "rsi_14", "sma_50", "sma_200",
+    "vs_sma_50_pct", "vs_sma_200_pct", "volatility_20d_pct", "high_52w", "low_52w",
+    "from_52w_high_pct", "from_52w_low_pct", "avg_dollar_volume_20d",
+    "drawdown_from_peak_pct", "bars",
+}
+
+
+def _market_text(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def validate_market_snapshot(snapshot: Any) -> dict[str, Any]:
+    """Fail closed when a cached or rebuilt snapshot could fabricate rendered market facts."""
+    if not isinstance(snapshot, dict):
+        raise ValueError("root must be an object")
+    if not isinstance(snapshot.get("rows"), list):
+        raise ValueError("rows must be a list")
+    if not isinstance(snapshot.get("missing"), list) or not all(
+            _market_text(symbol) for symbol in snapshot["missing"]):
+        raise ValueError("missing must be a list of symbols")
+    if not _market_text(snapshot.get("universe")):
+        raise ValueError("universe is required")
+    if not isinstance(snapshot.get("presets"), (list, dict)):
+        raise ValueError("presets must be a list or object")
+
+    seen: set[str] = set()
+    for index, row in enumerate(snapshot["rows"]):
+        if not isinstance(row, dict) or not _market_text(row.get("symbol")):
+            raise ValueError(f"row {index} needs a symbol")
+        if row["symbol"] in seen:
+            raise ValueError(f"duplicate symbol {row['symbol']}")
+        seen.add(row["symbol"])
+        for field_name in MARKET_NUMERIC_FIELDS:
+            value = row.get(field_name)
+            if value is not None and (
+                    isinstance(value, bool) or not isinstance(value, (int, float))
+                    or not math.isfinite(float(value))):
+                raise ValueError(f"row {index} has invalid {field_name}")
+        if row.get("last_date") is not None and not _market_text(row["last_date"]):
+            raise ValueError(f"row {index} has invalid last_date")
+        provenance = row.get("provenance")
+        if not isinstance(provenance, dict):
+            raise ValueError(f"row {index} needs provenance")
+        for field_name in ("source", "freshness", "last_date"):
+            if not _market_text(provenance.get(field_name)):
+                raise ValueError(f"row {index} provenance needs {field_name}")
+    return snapshot
 
 
 @dataclass
@@ -434,9 +485,10 @@ def create_app(config: TerminalConfig) -> FastAPI:
         path = root / "data" / "processed" / "market_snapshot.json"
         if path.is_file():
             try:
-                return json.loads(path.read_text(encoding="utf-8"))
-            except Exception:
-                pass
+                cached = json.loads(path.read_text(encoding="utf-8"))
+                return validate_market_snapshot(cached)
+            except (json.JSONDecodeError, OSError, ValueError) as exc:
+                raise HTTPException(503, f"Invalid cached market snapshot: {exc}") from exc
         try:
             universe = load_universe(root, universe_name)
             manifests = latest_accepted(root, config.brain_db)
@@ -449,7 +501,7 @@ def create_app(config: TerminalConfig) -> FastAPI:
                 frame = read_frame(root, manifest)
                 rows.append({**entry, **screener.screen_row(frame), "provenance": provenance(manifest)})
                 closes[entry["symbol"]] = frame.set_index("date")["adj_close"]
-            return {
+            snapshot = {
                 "generated_at": datetime.now(UTC).isoformat(),
                 "universe": universe_name,
                 "survivorship_note": universe.get("survivorship_note", ""),
@@ -459,6 +511,7 @@ def create_app(config: TerminalConfig) -> FastAPI:
                 "correlation_1y": risk.correlation_matrix(closes, window=252) if closes else {},
                 "note": "End-of-day data. Nothing here is a recommendation to trade.",
             }
+            return validate_market_snapshot(snapshot)
         except Exception as exc:
             raise HTTPException(500, f"Unable to load market snapshot: {exc}") from exc
 

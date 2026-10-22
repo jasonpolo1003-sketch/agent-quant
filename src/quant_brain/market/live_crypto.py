@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import math
 from collections.abc import AsyncIterator, Callable, Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -26,8 +27,11 @@ SOURCE = {"name": "Coinbase Advanced Trade (public WebSocket)", "freshness": "LI
 
 
 def _f(x: Any) -> float | None:
+    if isinstance(x, bool):
+        return None
     try:
-        return float(x)
+        value = float(x)
+        return value if math.isfinite(value) else None
     except (TypeError, ValueError):
         return None
 
@@ -42,8 +46,10 @@ class OrderBook:
             self.bids.clear()
             self.asks.clear()
         for u in updates:
-            side = self.bids if u["side"] == "bid" else self.asks
-            price, qty = float(u["price_level"]), float(u["new_quantity"])
+            price, qty = _f(u.get("price_level")), _f(u.get("new_quantity"))
+            if price is None or qty is None or price <= 0 or qty < 0:
+                continue
+            side = self.bids if u.get("side") == "bid" else self.asks
             if qty == 0:
                 side.pop(price, None)
             else:
@@ -117,7 +123,9 @@ class FeedState:
                 history = event.get("type") == "snapshot"
                 trades = sorted(event.get("trades", []), key=lambda x: x["time"])
                 for t in trades:
-                    price, size = float(t["price"]), float(t["size"])
+                    price, size = _f(t.get("price")), _f(t.get("size"))
+                    if price is None or size is None or price <= 0 or size < 0:
+                        continue
                     out.append({"type": "trade", "product": t["product_id"], "time": t["time"],
                                 "price": price, "size": size, "side": t["side"].lower(),
                                 "history": history})
