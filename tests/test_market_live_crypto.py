@@ -31,6 +31,63 @@ def test_ticker_trades_book_and_heartbeat_are_normalised():
     assert all(t["history"] for t in trades) and trades[0]["time"] <= trades[-1]["time"]
 
 
+@pytest.mark.parametrize("value", [
+    True, False, "NaN", "Infinity", "-Infinity", float("nan"), float("inf"),
+])
+def test_nonfinite_or_non_numeric_coinbase_values_normalize_to_unavailable(value):
+    assert lc._f(value) is None
+
+
+def test_nonfinite_ticker_numbers_never_reach_the_normalized_event():
+    state = lc.FeedState()
+    [event] = state.process({
+        "channel": "ticker",
+        "timestamp": "2026-10-22T12:00:00Z",
+        "events": [{"tickers": [{
+            "product_id": "BTC-USD",
+            "price": "NaN",
+            "best_bid": "Infinity",
+            "best_ask": "-Infinity",
+        }]}],
+    })
+
+    assert event["product"] == "BTC-USD"
+    assert event["price"] is None and event["bid"] is None and event["ask"] is None
+
+
+def test_nonfinite_trades_are_dropped_before_candle_or_tape_output():
+    state = lc.FeedState()
+    events = state.process({
+        "channel": "market_trades",
+        "timestamp": "2026-10-22T12:00:00Z",
+        "events": [{"type": "update", "trades": [{
+            "product_id": "BTC-USD",
+            "time": "2026-10-22T12:00:00Z",
+            "price": "NaN",
+            "size": "1",
+            "side": "BUY",
+        }]}],
+    })
+
+    assert events == []
+    assert state.candles == {}
+
+
+def test_nonfinite_order_book_levels_are_dropped():
+    state = lc.FeedState()
+    [event] = state.process({
+        "channel": "l2_data",
+        "timestamp": "2026-10-22T12:00:00Z",
+        "events": [{"type": "snapshot", "product_id": "BTC-USD", "updates": [{
+            "side": "bid", "price_level": "Infinity", "new_quantity": "1",
+        }, {
+            "side": "offer", "price_level": "100", "new_quantity": "NaN",
+        }]}],
+    })
+
+    assert event["bids"] == [] and event["asks"] == []
+
+
 def test_book_applies_snapshot_then_updates_and_removes_zero_levels():
     state, events = run_all(MESSAGES)
     book = [e for e in events if e["type"] == "book"][-1]

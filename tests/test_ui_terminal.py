@@ -559,3 +559,79 @@ def test_review_notes_count_and_drive_the_headline(brain):
     assert h["title"] == "SC-0002 finished all 5 steps"
     assert h["detail"].startswith('The review rejected it ("no edge shown" is upheld).')
     assert "normal, honest result" in h["detail"]
+
+
+# --- Phase A market snapshot truthfulness -----------------------------------------------
+
+
+def _write_snapshot(cfg, payload: object) -> None:
+    path = cfg.project_root / "data/processed/market_snapshot.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if isinstance(payload, str):
+        path.write_text(payload, encoding="utf-8")
+    else:
+        path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def test_terminal_loads_tested_state_helpers_before_the_main_script(client):
+    c, _ = client
+
+    html = c.get("/").text
+
+    assert html.index('/static/state.js') < html.index('/static/app.js')
+    assert c.get("/static/state.js").status_code == 200
+
+
+def test_market_snapshot_returns_cached_provenance_and_missing_symbols(client):
+    c, cfg = client
+    payload = {
+        "generated_at": "2026-10-22T12:00:00+00:00",
+        "universe": "starter",
+        "missing": ["IWM"],
+        "rows": [{
+            "symbol": "SPY",
+            "close": 765.61,
+            "change_1d_pct": -0.74,
+            "last_date": "2026-09-28",
+            "provenance": {
+                "source": "yfinance",
+                "freshness": "END OF DAY",
+                "last_date": "2026-09-28",
+            },
+        }],
+        "presets": [],
+    }
+    _write_snapshot(cfg, payload)
+
+    response = c.get("/api/market/snapshot")
+
+    assert response.status_code == 200
+    assert response.json()["rows"][0]["provenance"]["source"] == "yfinance"
+    assert response.json()["missing"] == ["IWM"]
+
+
+@pytest.mark.parametrize("payload", [
+    "{not-json",
+    {
+        "generated_at": "2026-10-22T12:00:00+00:00",
+        "universe": "starter",
+        "missing": [],
+        "rows": [{
+            "symbol": "SPY",
+            "close": "NaN",
+            "change_1d_pct": 0,
+            "last_date": "2026-09-28",
+            "provenance": {"source": "yfinance", "freshness": "END OF DAY",
+                           "last_date": "2026-09-28"},
+        }],
+        "presets": [],
+    },
+])
+def test_market_snapshot_fails_closed_on_invalid_cache(client, payload):
+    c, cfg = client
+    _write_snapshot(cfg, payload)
+
+    response = c.get("/api/market/snapshot")
+
+    assert response.status_code == 503
+    assert response.json()["detail"].startswith("Invalid cached market snapshot:")

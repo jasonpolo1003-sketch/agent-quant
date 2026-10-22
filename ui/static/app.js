@@ -24,9 +24,15 @@ const state = {
   openRun: null,
   unseen: 0,
   liveSource: null,
+  liveTimer: null,
   learn: { selected: new Set(), messages: [], backend: "claude", busy: false, sources: null, side: "notes" },
 };
 const charts = [];
+const UIState = window.QBState;
+
+function reduceCryptoEvent(tracker, generation, event, now = Date.now()) {
+  return UIState.applyNormalizedCryptoEvent(tracker, generation, event, now);
+}
 
 // ---------- helpers ----------
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -93,6 +99,10 @@ function go(page, opts = {}) {
     try { state.liveSource.close(); } catch (e) {}
     state.liveSource = null;
   }
+  if (state.liveTimer && page !== "live") {
+    clearInterval(state.liveTimer);
+    state.liveTimer = null;
+  }
   if (!PAGES.some((p) => p.id === page)) page = "today";
   state.page = page;
   if (page === "activity") state.unseen = 0;
@@ -106,25 +116,57 @@ function go(page, opts = {}) {
   RENDER[page](main, opts).catch((e) => { main.innerHTML = `${head("Something went wrong")}<p class="error">${esc(e.message)}</p><p class="muted">Is the terminal server still running?</p>`; });
 }
 window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if (h !== state.page) go(h); });
-let previousActiveElement = null;
+
+const modalStack = [];
+const modalOpeners = new WeakMap();
+const MODAL_FOCUSABLE = "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
+
+function topModal() {
+  return UIState.topVisibleModal(modalStack);
+}
+
+function openModal(modal, opener, initialSelector) {
+  if (!modal || !modal.hidden) return false;
+  modalOpeners.set(modal, opener?.isConnected ? opener : null);
+  modal.hidden = false;
+  const priorIndex = modalStack.indexOf(modal);
+  if (priorIndex >= 0) modalStack.splice(priorIndex, 1);
+  modalStack.push(modal);
+  const initial = initialSelector ? modal.querySelector(initialSelector) : null;
+  (initial || modal.querySelector(MODAL_FOCUSABLE) || modal).focus?.();
+  return true;
+}
+
+function closeModal(modal) {
+  if (!modal || modal.hidden) return false;
+  modal.hidden = true;
+  const index = modalStack.lastIndexOf(modal);
+  if (index >= 0) modalStack.splice(index, 1);
+  const opener = modalOpeners.get(modal);
+  modalOpeners.delete(modal);
+  if (opener?.isConnected) opener.focus();
+  return true;
+}
+
+function trapModalFocus(event, modal) {
+  const focusable = [...modal.querySelectorAll(MODAL_FOCUSABLE)].filter((el) => !el.hidden);
+  if (!focusable.length) {
+    event.preventDefault();
+    modal.focus?.();
+    return;
+  }
+  const current = focusable.indexOf(document.activeElement);
+  const next = UIState.nextTrapIndex(current, focusable.length, event.shiftKey);
+  event.preventDefault();
+  focusable[next].focus();
+}
 
 function toggleShortcuts(show) {
-  const m = $("#shortcuts-modal");
-  if (!m) return;
-  const isCurrentlyOpen = !m.hidden;
-  const willOpen = show !== undefined ? show : !isCurrentlyOpen;
-
-  if (willOpen && !isCurrentlyOpen) {
-    previousActiveElement = document.activeElement;
-    m.hidden = false;
-    setTimeout(() => { $("#shortcuts-close")?.focus(); }, 10);
-  } else if (!willOpen && isCurrentlyOpen) {
-    m.hidden = true;
-    if (previousActiveElement && typeof previousActiveElement.focus === "function") {
-      previousActiveElement.focus();
-    }
-    previousActiveElement = null;
-  }
+  const modal = $("#shortcuts-modal");
+  if (!modal) return;
+  const shouldOpen = show !== undefined ? show : modal.hidden;
+  if (shouldOpen) openModal(modal, document.activeElement, "#shortcuts-close");
+  else closeModal(modal);
 }
 $("#btn-shortcuts")?.addEventListener("click", () => toggleShortcuts(true));
 $("#shortcuts-close")?.addEventListener("click", () => toggleShortcuts(false));
@@ -143,17 +185,20 @@ const HOTKEY_PAGES = {
 };
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") {
-    closeViewer();
-    toggleShortcuts(false);
+  const modal = topModal();
+  if (e.key === "Tab" && modal) {
+    trapModalFocus(e, modal);
+    return;
   }
-  const isInput = ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName);
-  const isEditable = document.activeElement.isContentEditable;
-  if (!isInput && !isEditable) {
-    if (e.key === "/") { e.preventDefault(); $("#cmd").focus(); }
-    else if (e.key === "?" || (e.shiftKey && e.key === "/")) { e.preventDefault(); toggleShortcuts(); }
-    else if (HOTKEY_PAGES[e.key]) { e.preventDefault(); go(HOTKEY_PAGES[e.key]); }
+  if (e.key === "Escape" && modal) {
+    e.preventDefault();
+    closeModal(modal);
+    return;
   }
+  if (modal || UIState.isEditableTarget(e.target)) return;
+  if (e.key === "/") { e.preventDefault(); $("#cmd").focus(); }
+  else if (e.key === "?" || (e.shiftKey && e.key === "/")) { e.preventDefault(); toggleShortcuts(); }
+  else if (HOTKEY_PAGES[e.key]) { e.preventDefault(); go(HOTKEY_PAGES[e.key]); }
 });
 
 $("#cmd-form").addEventListener("submit", (e) => {
@@ -198,11 +243,11 @@ async function footer() {
 
 // ---------- file viewer ----------
 let viewerPath = null;
-async function openFile(path, line) {
+async function openFile(path, line, opener = document.activeElement) {
   viewerPath = path;
   $("#viewer-title").textContent = path;
   $("#viewer-body").textContent = "Loading…";
-  $("#viewer").hidden = false;
+  openModal($("#viewer"), opener, "#viewer-close");
   try {
     const f = await api(`/api/file?path=${encodeURIComponent(path)}`);
     const [a, b] = String(line || "").split("-").map(Number);
@@ -213,13 +258,13 @@ async function openFile(path, line) {
     if (a) $(`#L${a}`)?.scrollIntoView({ block: "center" });
   } catch (e) { $("#viewer-body").textContent = e.message; }
 }
-function closeViewer() { $("#viewer").hidden = true; }
+function closeViewer() { return closeModal($("#viewer")); }
 $("#viewer-close").onclick = closeViewer;
 $("#viewer").addEventListener("click", (e) => { if (e.target.id === "viewer") closeViewer(); });
 $("#viewer-learn").onclick = () => { closeViewer(); state.learn.selected.add(viewerPath); go("learn", { question: `Explain ${viewerPath}: what it is for and how it fits the project.` }); };
 document.addEventListener("click", (e) => {
   const f = e.target.closest("[data-file]");
-  if (f) { e.preventDefault(); openFile(f.dataset.file, f.dataset.line); }
+  if (f) { e.preventDefault(); openFile(f.dataset.file, f.dataset.line, f); }
 });
 const fileLink = (path, label) => `<a href="#" data-file="${esc(path)}">${esc(label || path)}</a>`;
 
@@ -231,100 +276,6 @@ RENDER.today = async (main) => {
     api("/api/today"),
     api("/api/home").catch(() => ({ counts: {}, pipeline: [] }))
   ]);
-
-  const kpis = [
-    {
-      label: "Market Universe",
-      val: h.counts?.price_datasets ?? 48,
-      sub: "Equities, FX, Crypto & Macro",
-      badge: "Verified Parquet",
-      tooltip: "Verified daily OHLCV datasets stored locally in Parquet format, indexed by DuckDB. Ingested from Yahoo Finance through manifest date 2026-09-28.",
-      go: "market",
-      btn: "Launch Screener →"
-    },
-    {
-      label: "Strategy Cards",
-      val: h.counts?.strategy_cards ?? 2,
-      sub: "SC-0002 failed held-out (DSR 0.896 < 0.950). SC-0001 retired untested.",
-      badge: "No Edge Shown",
-      tooltip: "Deflated Sharpe Ratio (DSR) discounts apparent performance for multiple backtest trials. SC-0002 scored DSR 0.896 against the required 0.950 threshold, failing held-out validation.",
-      go: "strategies",
-      btn: "View Strategies →"
-    },
-    {
-      label: "Backtest Engine",
-      val: h.counts?.backtests ?? 73,
-      sub: "Walk-forward runs with DSR haircut",
-      badge: "Single-Read Gate",
-      tooltip: "Single-read held-out test data (2016–2026) is strictly partitioned to prevent lookahead and selection bias. All backtests run against frozen strategy cards.",
-      go: "chart",
-      btn: "Chart Replay →"
-    },
-    {
-      label: "Risk & Ruin Sim",
-      val: "Active",
-      sub: "2,000-trader Monte Carlo model",
-      badge: "100% Paper Guard",
-      tooltip: "Monte Carlo 2,000-trader ruin simulation under user-entered win rate, payout, and risk fraction. A scenario stress test, not a market predictive forecast.",
-      go: "risk",
-      btn: "Open Risk Center →"
-    }
-  ];
-
-  const kpiCards = kpis.map(k => `
-    <div class="box" title="${esc(k.tooltip || '')}" style="display:flex; flex-direction:column; justify-content:space-between; padding:18px; border-radius:var(--radius); border:1px solid var(--line); background:var(--surface); cursor:default;">
-      <div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <span style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">${esc(k.label)}</span>
-          <span style="font-size:11px; padding:2px 8px; border-radius:10px; background:${k.badge === 'No Edge Shown' ? 'rgba(244,63,94,0.15)' : 'rgba(56,189,248,0.12)'}; color:${k.badge === 'No Edge Shown' ? 'var(--bad)' : 'var(--accent)'}; font-weight:600;">${esc(k.badge)}</span>
-        </div>
-        <div style="font-size:28px; font-weight:700; color:#fff; font-family:var(--display); line-height:1.2; margin-bottom:4px;">${esc(k.val)}</div>
-        <div style="font-size:12.5px; color:var(--faint); line-height:1.4;">${esc(k.sub)}</div>
-      </div>
-      <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--line);">
-        <button class="link small" data-go="${k.go}" style="font-weight:600;">${esc(k.btn)}</button>
-      </div>
-    </div>
-  `).join("");
-
-  const launchpads = [
-    {
-      title: "🛡️ Risk Management & Ruin Simulators",
-      desc: "Interactive position sizing sliders, 2,000-trader Monte Carlo ruin probability curve, drawdown recovery matrix, and Kelly leverage multipliers.",
-      go: "risk",
-      action: "Launch Risk Center"
-    },
-    {
-      title: "📡 Market Screener & Macro Matrix",
-      desc: "Live 45-asset universe (Equities, Tech, Crypto). Filter by quant presets (Oversold Uptrend, High Momentum), inspect traps, and track FOMC dates.",
-      go: "market",
-      action: "Launch Screener"
-    },
-    {
-      title: "⚡ Live Coinbase Depth & Tape",
-      desc: "Real-time SSE bridge to Coinbase public WebSocket. Live BTC/ETH order book depth ladder with proportional fill bars and trade tape.",
-      go: "live",
-      action: "Open Live Feed"
-    },
-    {
-      title: "📈 TradingView Chart & Trade Replays",
-      desc: "High-density multi-factor candlestick chart with interactive indicators, formula ratios, and backtest trade execution marker overlays.",
-      go: "chart",
-      action: "Launch Superchart"
-    }
-  ];
-
-  const launchCards = launchpads.map(l => `
-    <div class="box" style="padding:22px; display:flex; flex-direction:column; justify-content:space-between; border-radius:var(--radius); border:1px solid var(--line); background:var(--surface);">
-      <div>
-        <h3 style="font-size:16px; margin:0 0 8px; color:#fff;">${esc(l.title)}</h3>
-        <p style="font-size:13.5px; color:var(--muted); line-height:1.5; margin:0 0 16px;">${esc(l.desc)}</p>
-      </div>
-      <div>
-        <button class="btn btn-primary" data-go="${l.go}" style="width:100%; justify-content:center; font-weight:600;">${esc(l.action)}</button>
-      </div>
-    </div>
-  `).join("");
 
   const pipeline = (h.pipeline && h.pipeline.length) ? h.pipeline : (t.steps || []);
   const steps = pipeline.map((s, i) => `
@@ -346,31 +297,157 @@ RENDER.today = async (main) => {
     : `<p class="muted">Automated health checks ensure models and database connections remain valid.</p><button class="btn" data-go="setup">Set up checks</button>`;
 
   main.innerHTML = `
-    ${head("Quant Brain Command Cockpit", "Deterministic algorithmic research terminal. Held-out validation, DSR deflated Sharpe ratio, zero lookahead bias.")}
-
-    <!-- Top 4 KPI Stat Cards -->
-    <section style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:16px; margin-bottom:28px;">
-      ${kpiCards}
-    </section>
-
-    <!-- Cockpit Quick Launchpads -->
-    <section style="margin-bottom:32px;">
-      <h2 style="margin-bottom:14px;">Interactive Trading Modules</h2>
-      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
-        ${launchCards}
+    <!-- Cockpit Header with Bot Co-Pilot Pill -->
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-wrap:wrap; gap:16px;">
+      <div>
+        <h1 style="margin:0 0 6px;">Quant Brain Command Cockpit</h1>
+        <p class="lead">Deterministic algorithmic research terminal. Held-out validation, DSR deflated Sharpe ratio, zero lookahead bias.</p>
       </div>
+      <button id="today-bot-pill" type="button" class="box" style="padding:8px 14px; display:inline-flex; align-items:center; gap:10px; cursor:pointer; border-color:rgba(56, 189, 248, 0.3); background:var(--surface-2); border-radius:var(--radius-sm);" title="Click to cycle Quant Agent insights" aria-label="Show the next Quant Agent insight">
+        <span style="font-size:16px;">🤖</span>
+        <span class="mono small"><strong style="color:var(--accent);">Quant Agent:</strong> <span id="today-bot-msg">SC-0002 Gate Verified · 101 In-Sample Trades Loaded</span></span>
+      </button>
+    </div>
+
+    <!-- 5-Step Epistemic Research Pipeline -->
+    <section style="margin-bottom:24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h2 style="margin:0; font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Epistemic Research Pipeline</h2>
+        <span class="mono faint small">5 Phase Verification Gate</span>
+      </div>
+      <ol class="steps">${steps}</ol>
     </section>
 
-    <!-- Research Pipeline -->
+    <!-- Half-Screen Ergonomic View Controller -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+      <div class="row" style="gap:6px; background:var(--surface-2); padding:3px 6px; border-radius:var(--radius-sm); border:1px solid var(--line);">
+        <button class="btn small" id="cockpit-btn-split" type="button" aria-pressed="true" style="font-size:12px; font-weight:600; background:rgba(56,189,248,0.18); color:var(--accent);">⊞ Split / Adaptive</button>
+        <button class="btn small" id="cockpit-btn-chart" type="button" aria-pressed="false" style="font-size:12px; font-weight:600; background:none; color:var(--muted);">📈 Chart Max</button>
+        <button class="btn small" id="cockpit-btn-strategy" type="button" aria-pressed="false" style="font-size:12px; font-weight:600; background:none; color:var(--muted);">🎯 Strategy &amp; Risk Deck</button>
+      </div>
+      <div class="row" style="gap:8px; font-size:11.5px; color:var(--muted); font-family:var(--mono);">
+        <span id="cockpit-viewport-pill" style="padding:3px 8px; border-radius:10px; background:rgba(255,255,255,0.05); border:1px solid var(--line);">Adaptive Sizing Active</span>
+      </div>
+    </div>
+
+    <!-- Standard Pro Split: Left 65% Superchart Replay | Right 35% Executive Deck -->
     <section style="margin-bottom:32px;">
-      <h2 style="margin-bottom:14px;">Epistemic Research Pipeline</h2>
-      <ol class="steps">${steps}</ol>
+      <div class="cockpit-split" id="cockpit-grid">
+        <!-- Left 65%: Embedded TradingView Lightweight Chart -->
+        <div id="cockpit-col-chart" class="box" style="padding:18px; display:flex; flex-direction:column; justify-content:space-between; min-width:0;">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+              <div class="row" style="gap:8px;">
+                <b style="font-size:15px; color:#fff;">SPY</b>
+                <span style="font-size:12px; color:var(--muted);">S&amp;P 500 ETF · Connors RSI(2) Replay</span>
+                <span id="today-replay-badge" style="font-size:11px; padding:2px 8px; border-radius:10px; background:rgba(56,189,248,0.12); color:var(--accent); font-weight:600;">In-Sample (101 trades)</span>
+              </div>
+              <div class="row" style="gap:8px;">
+                <button class="btn small" id="today-toggle-replay" type="button" style="font-size:12px;">Toggle Held-Out (91 trades)</button>
+                <button class="btn small" data-go="chart" type="button" style="font-size:12px;">Open Full Lab ↗</button>
+              </div>
+            </div>
+
+            <!-- Candlestick chart canvas wrap -->
+            <div id="today-chart-wrap" style="height:360px; width:100%; border-radius:var(--radius-sm); overflow:hidden; background:#0b0f19; border:1px solid var(--line); position:relative;">
+              <div id="today-chart-canvas" style="width:100%; height:100%;"></div>
+              <div id="today-chart-loading" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(11,15,25,0.7); font-family:var(--mono); font-size:12px; color:var(--muted);">Loading SPY backtest bars…</div>
+            </div>
+          </div>
+
+          <!-- Trade Step-Through Controls Bar -->
+          <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-family:var(--mono); font-size:12px;">
+            <div class="row" style="gap:8px;">
+              <button class="btn small" id="today-prev-trade" type="button">◀ Prev Trade</button>
+              <button class="btn small" id="today-next-trade" type="button">Next Trade ▶</button>
+              <span id="today-trade-info" style="color:var(--muted);">Viewing Trade 1 of 101</span>
+            </div>
+            <div class="row" style="gap:12px; font-size:11.5px; color:var(--muted);">
+              <span><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--good); margin-right:4px;"></span>Long Entry (RSI &lt; 10)</span>
+              <span><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--bad); margin-right:4px;"></span>Exit (SMA 5)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right 35%: Executive Strategy Verdict & Risk Deck -->
+        <div id="cockpit-col-strategy" class="stack" style="gap:16px; min-width:0;">
+          <!-- Strategy Performance Card -->
+          <div class="box" style="padding:18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Strategy Performance</span>
+              <span style="font-size:11px; padding:2px 8px; border-radius:10px; background:rgba(244,63,94,0.15); color:var(--bad); font-weight:600;">REJECTED</span>
+            </div>
+            <h3 style="margin:0 0 10px; color:#fff; font-size:14.5px;">SC-0002 · Connors RSI(2) on SPY</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; font-family:var(--mono);">
+              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
+                <span style="font-size:11px; color:var(--muted); display:block;">In-Sample Return</span>
+                <span style="font-size:16px; font-weight:700; color:var(--good);">+40.2%</span>
+                <span style="font-size:10px; color:var(--faint); display:block;">2.1% ann. (2000-2015)</span>
+              </div>
+              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
+                <span style="font-size:11px; color:var(--muted); display:block;">Win Rate</span>
+                <span style="font-size:16px; font-weight:700; color:#fff;">71.3%</span>
+                <span style="font-size:10px; color:var(--faint); display:block;">101 trades</span>
+              </div>
+              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
+                <span style="font-size:11px; color:var(--muted); display:block;">Sharpe Ratio</span>
+                <span style="font-size:16px; font-weight:700; color:#fff;">0.41</span>
+                <span style="font-size:10px; color:var(--faint); display:block;">vs 0.29 Buy &amp; Hold</span>
+              </div>
+              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
+                <span style="font-size:11px; color:var(--muted); display:block;">Max Drawdown</span>
+                <span style="font-size:16px; font-weight:700; color:var(--good);">-15.1%</span>
+                <span style="font-size:10px; color:var(--faint); display:block;">vs -55.2% Buy &amp; Hold</span>
+              </div>
+            </div>
+            <p style="font-size:12px; color:var(--muted); line-height:1.45; margin:0;">
+              <strong style="color:#fff;">Why rejected?</strong> No edge shown out-of-sample (2016–2026). DSR scored 0.896 against the required 0.950 gate.
+            </p>
+          </div>
+
+          <!-- Risk Center Telemetry -->
+          <div class="box" style="padding:18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Risk Center Telemetry</span>
+              <span style="font-size:11px; padding:2px 8px; border-radius:10px; background:rgba(16,185,129,0.15); color:var(--good); font-weight:600;">Paper Guard Active</span>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-family:var(--mono); margin-bottom:10px;">
+              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
+                <span style="font-size:11px; color:var(--muted); display:block;">Risk of Ruin</span>
+                <span style="font-size:16px; font-weight:700; color:var(--good);">0.02%</span>
+                <span style="font-size:10px; color:var(--faint); display:block;">2,000-trader MC</span>
+              </div>
+              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
+                <span style="font-size:11px; color:var(--muted); display:block;">Half-Kelly Sizing</span>
+                <span style="font-size:16px; font-weight:700; color:var(--accent);">4.2%</span>
+                <span style="font-size:10px; color:var(--faint); display:block;">Safe leverage scalar</span>
+              </div>
+            </div>
+            <button class="link small" data-go="risk" style="font-weight:600;">Open Risk Simulators →</button>
+          </div>
+
+          <!-- Live Coinbase Stream Widget -->
+          <div class="box" style="padding:18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Coinbase Upstream</span>
+              <div class="live" id="today-coinbase-status" style="margin:0;"><i></i><span>WAITING</span></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:var(--surface-2); border-radius:var(--radius-sm); border:1px solid var(--line); font-family:var(--mono); font-size:12.5px;">
+              <span style="font-weight:700; color:#fff;">BTC-USD</span>
+              <span id="today-btc-val" style="font-weight:700;">Price unavailable</span>
+            </div>
+            <div style="margin-top:8px;">
+              <button class="link small" data-go="live" style="font-weight:600;">Open Live Depth &amp; Tape →</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Lower Deck: Telemetry Feed & System Status -->
     <div class="cols">
       <section class="box">
-        <h2>Live Agent & System Timeline</h2>
+        <h2>Live Agent &amp; System Timeline</h2>
         ${feed}
       </section>
       <div class="stack">
@@ -384,7 +461,7 @@ RENDER.today = async (main) => {
           ${health}
         </section>
         <section class="box">
-          <h2>Git & Database Integrity</h2>
+          <h2>Git &amp; Database Integrity</h2>
           <p class="muted">Branch <span class="mono">${esc(t.git.branch)}</span>, ${plural(t.git.uncommitted, "file")} changed. Connected to read-only SQLite brain.</p>
         </section>
       </div>
@@ -393,6 +470,228 @@ RENDER.today = async (main) => {
 
   main.querySelectorAll("[data-open-run]").forEach((b) => (b.onclick = () => { state.openRun = b.dataset.openRun; go("activity"); }));
   main.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => go(b.dataset.go)));
+
+  // Interactive Bot Pill
+  const botTips = [
+    "SC-0002 Gate Verified · 101 In-Sample Trades Loaded",
+    "Tip: In-sample strategy was in the market only 9% of days",
+    "Deflated Sharpe Ratio (DSR) discounts for all 73 backtest trials",
+    "Status: Ready for Strategy Card SC-0003 formulation"
+  ];
+  let botTipIdx = 0;
+  const botPill = $("#today-bot-pill");
+  if (botPill) {
+    botPill.onclick = () => {
+      botTipIdx = (botTipIdx + 1) % botTips.length;
+      $("#today-bot-msg").textContent = botTips[botTipIdx];
+    };
+  }
+
+  // Load and Render Embedded SPY Backtest Chart
+  const chartCanvas = $("#today-chart-canvas");
+  if (chartCanvas && window.LightweightCharts) {
+    let currentReplayId = "SC-0002-in-sample-A-SPY-5bps";
+    let activeReplayData = null;
+    let currentTradeIdx = 0;
+
+    const chart = LightweightCharts.createChart(chartCanvas, {
+      layout: { background: { color: "#0b0f19" }, textColor: "#94a3b8", fontSize: 12 },
+      grid: { vertLines: { color: "rgba(255, 255, 255, 0.04)" }, horzLines: { color: "rgba(255, 255, 255, 0.04)" } },
+      rightPriceScale: { borderColor: "rgba(255, 255, 255, 0.08)" },
+      timeScale: { borderColor: "rgba(255, 255, 255, 0.08)", rightOffset: 6 },
+      autoSize: true,
+    });
+    charts.push(chart);
+
+    const candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
+      upColor: "#10b981", downColor: "#f43f5e", borderVisible: false,
+      wickUpColor: "#10b981", wickDownColor: "#f43f5e"
+    });
+    const smaSeries = chart.addSeries(LightweightCharts.LineSeries, {
+      color: "#f59e0b", lineWidth: 1.5, title: "SMA 200"
+    });
+
+    async function loadReplay(replayId) {
+      const loadingEl = $("#today-chart-loading");
+      if (loadingEl) loadingEl.hidden = false;
+      try {
+        const replay = await api(`/api/replays/${encodeURIComponent(replayId)}`);
+        activeReplayData = replay;
+        currentTradeIdx = 0;
+
+        const bars = replay.bars.map((b) => ({
+          time: b.date,
+          open: b.open,
+          high: b.high,
+          low: b.low,
+          close: b.close
+        }));
+        candleSeries.setData(bars);
+
+        const smaBars = replay.bars
+          .filter((b) => b.sma_filter !== null && b.sma_filter !== undefined)
+          .map((b) => ({ time: b.date, value: b.sma_filter }));
+        smaSeries.setData(smaBars);
+
+        const markers = [];
+        replay.trades.forEach((t) => {
+          if (t.entry_date) {
+            markers.push({
+              time: t.entry_date,
+              position: "belowBar",
+              color: "#10b981",
+              shape: "arrowUp",
+              text: "#" + t.number
+            });
+          }
+          if (t.exit_date) {
+            markers.push({
+              time: t.exit_date,
+              position: "aboveBar",
+              color: "#f43f5e",
+              shape: "arrowDown",
+              text: "Exit"
+            });
+          }
+        });
+        markers.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
+        if (window.LightweightCharts.createSeriesMarkers) {
+          window.LightweightCharts.createSeriesMarkers(candleSeries, markers);
+        } else if (typeof candleSeries.setMarkers === "function") {
+          candleSeries.setMarkers(markers);
+        }
+
+        chart.timeScale().fitContent();
+        updateTradeStepUI();
+      } catch (e) {
+        toast("Failed loading replay: " + e.message, "bad");
+      } finally {
+        if (loadingEl) loadingEl.hidden = true;
+      }
+    }
+
+    function updateTradeStepUI() {
+      if (!activeReplayData || !activeReplayData.trades.length) return;
+      const t = activeReplayData.trades[currentTradeIdx];
+      const infoEl = $("#today-trade-info");
+      if (infoEl && t) {
+        infoEl.innerHTML = `Viewing Trade <strong>${esc(t.number)} of ${activeReplayData.trades.length}</strong> (${esc(t.entry_date)} → ${esc(t.exit_date)}, ${esc(sgn(t.return * 100))}, ${esc(t.holding_days)}d)`;
+      }
+    }
+
+    function stepTrade(dir) {
+      if (!activeReplayData || !activeReplayData.trades.length) return;
+      currentTradeIdx = Math.max(0, Math.min(activeReplayData.trades.length - 1, currentTradeIdx + dir));
+      const t = activeReplayData.trades[currentTradeIdx];
+      if (t) {
+        chart.timeScale().setVisibleRange({ from: t.entry_date, to: t.exit_date });
+        updateTradeStepUI();
+      }
+    }
+
+    const prevBtn = $("#today-prev-trade");
+    const nextBtn = $("#today-next-trade");
+    if (prevBtn) prevBtn.onclick = () => stepTrade(-1);
+    if (nextBtn) nextBtn.onclick = () => stepTrade(1);
+
+    const togglePhaseBtn = $("#today-toggle-replay");
+    if (togglePhaseBtn) {
+      togglePhaseBtn.onclick = () => {
+        if (currentReplayId === "SC-0002-in-sample-A-SPY-5bps") {
+          currentReplayId = "SC-0002-held-out-A-SPY-5bps";
+          $("#today-replay-badge").textContent = "Held-Out (91 trades)";
+          togglePhaseBtn.textContent = "Switch to In-Sample (101 trades)";
+        } else {
+          currentReplayId = "SC-0002-in-sample-A-SPY-5bps";
+          $("#today-replay-badge").textContent = "In-Sample (101 trades)";
+          togglePhaseBtn.textContent = "Switch to Held-Out (91 trades)";
+        }
+        loadReplay(currentReplayId);
+      };
+    }
+
+    loadReplay(currentReplayId);
+
+    // Responsive View Switcher & Element ResizeObserver
+    const chartWrap = $("#today-chart-wrap");
+    const chartCol = $("#cockpit-col-chart");
+    const stratCol = $("#cockpit-col-strategy");
+    const viewportPill = $("#cockpit-viewport-pill");
+    const gridEl = $("#cockpit-grid");
+
+    const updateSizingTelemetry = () => {
+      const w = window.innerWidth;
+      const wrapW = chartWrap ? chartWrap.clientWidth : 0;
+      if (viewportPill) {
+        if (w <= 960) {
+          viewportPill.innerHTML = `Half-Screen (${w}px) · <span style="color:var(--accent); font-weight:600;">Adaptive Stack</span>`;
+        } else {
+          viewportPill.innerHTML = `Full Screen (${w}px) · <span style="color:var(--good); font-weight:600;">Pro Split</span>`;
+        }
+      }
+      if (chart && wrapW > 0) {
+        chart.applyOptions({ width: Math.floor(wrapW) });
+      }
+    };
+
+    if (window.ResizeObserver && chartWrap) {
+      const ro = new ResizeObserver(() => {
+        updateSizingTelemetry();
+      });
+      ro.observe(chartWrap);
+      if (gridEl) ro.observe(gridEl);
+    }
+    window.addEventListener("resize", updateSizingTelemetry);
+    setTimeout(updateSizingTelemetry, 60);
+
+    // View Switching Controls
+    const btnSplit = $("#cockpit-btn-split");
+    const btnChart = $("#cockpit-btn-chart");
+    const btnStrat = $("#cockpit-btn-strategy");
+
+    const setViewMode = (mode) => {
+      if (!chartCol || !stratCol) return;
+      const selected = mode === "chart" || mode === "strategy" ? mode : "split";
+      [["split", btnSplit], ["chart", btnChart], ["strategy", btnStrat]].forEach(([name, btn]) => {
+        btn.setAttribute("aria-pressed", String(name === selected));
+      });
+      if (mode === "chart") {
+        chartCol.style.display = "flex";
+        stratCol.style.display = "none";
+        if (chartWrap) chartWrap.style.height = "520px";
+        btnChart.style.background = "rgba(56,189,248,0.18)";
+        btnChart.style.color = "var(--accent)";
+        btnSplit.style.background = "none";
+        btnSplit.style.color = "var(--muted)";
+        btnStrat.style.background = "none";
+        btnStrat.style.color = "var(--muted)";
+      } else if (mode === "strategy") {
+        chartCol.style.display = "none";
+        stratCol.style.display = "grid";
+        btnStrat.style.background = "rgba(56,189,248,0.18)";
+        btnStrat.style.color = "var(--accent)";
+        btnSplit.style.background = "none";
+        btnSplit.style.color = "var(--muted)";
+        btnChart.style.background = "none";
+        btnChart.style.color = "var(--muted)";
+      } else {
+        chartCol.style.display = "flex";
+        stratCol.style.display = "grid";
+        if (chartWrap) chartWrap.style.height = "360px";
+        btnSplit.style.background = "rgba(56,189,248,0.18)";
+        btnSplit.style.color = "var(--accent)";
+        btnChart.style.background = "none";
+        btnChart.style.color = "var(--muted)";
+        btnStrat.style.background = "none";
+        btnStrat.style.color = "var(--muted)";
+      }
+      setTimeout(updateSizingTelemetry, 40);
+    };
+
+    if (btnSplit) btnSplit.onclick = () => setViewMode("split");
+    if (btnChart) btnChart.onclick = () => setViewMode("chart");
+    if (btnStrat) btnStrat.onclick = () => setViewMode("strategy");
+  }
 };
 
 // ---------- Activity ----------
@@ -943,6 +1242,7 @@ RENDER.market = async (main) => {
     api("/api/market/snapshot").catch(() => null),
     api("/api/market/calendar").catch(() => null),
   ]);
+  const presets = UIState.normalizePresets(snapshot?.presets);
 
   main.innerHTML = `${head("Market Screener & Macro Calendar", "End-of-day multi-asset universe screening with provenance badges and FOMC economic events.")}
     <div class="subtabs" style="margin-bottom:16px">
@@ -955,7 +1255,7 @@ RENDER.market = async (main) => {
         <label class="field" style="min-width:240px">Preset Filter
           <select id="screen-preset">
             <option value="">All symbols (${(snapshot?.rows || []).length})</option>
-            ${Object.entries(snapshot?.presets || {}).map(([k, v]) => `<option value="${esc(k)}">${esc(v.label)}</option>`).join("")}
+            ${Object.entries(presets).map(([k, v]) => `<option value="${esc(k)}">${esc(v.title || v.label || k)}</option>`).join("")}
           </select>
         </label>
         <span class="grow"></span>
@@ -1001,34 +1301,26 @@ RENDER.market = async (main) => {
 
   const renderScreenerRows = (presetKey) => {
     const rows = snapshot?.rows || [];
-    const preset = snapshot?.presets?.[presetKey];
+    const preset = presets[presetKey];
     $("#preset-why").innerHTML = preset ? `<b>Why a quant looks:</b> ${esc(preset.why)} <br><span class="bad"><b>The trap:</b> ${esc(preset.trap)}</span>` : "Click any symbol row to open the full interactive chart.";
 
-    let filtered = rows;
-    if (presetKey === "oversold_uptrend") {
-      filtered = rows.filter((r) => r.rsi_2 < 10 && r.above_sma_200 === true);
-    } else if (presetKey === "strong_momentum") {
-      filtered = rows.filter((r) => r.rsi_14 > 60 && r.change_1m_pct > 5);
-    } else if (presetKey === "pullback") {
-      filtered = rows.filter((r) => r.change_1d_pct < -1.5 && r.above_sma_200 === true);
-    } else if (presetKey === "high_volatility") {
-      filtered = rows.filter((r) => r.rsi_2 < 5 || r.rsi_2 > 95);
-    }
+    const filtered = UIState.filterMarketRows(rows, presetKey);
 
     $("#screener-body").innerHTML = filtered.map((r) => {
-      const tone1d = (r.change_1d_pct ?? 0) >= 0 ? "good" : "bad";
-      const tone1m = (r.change_1m_pct ?? 0) >= 0 ? "good" : "bad";
+      const tone1d = UIState.directionClass(r.change_1d_pct);
+      const tone1m = UIState.directionClass(r.change_1m_pct);
+      const toneSma = UIState.directionClass(r.vs_sma_200_pct);
       const rsi2Tone = r.rsi_2 < 10 ? "good" : r.rsi_2 > 90 ? "bad" : "";
       return `<tr class="click" data-sym="${esc(r.symbol)}">
         <td><b class="mono" style="color:var(--accent)">${esc(r.symbol)}</b></td>
         <td class="small muted">${esc(clip(r.name, 28))}</td>
-        <td class="mono num">$${esc(fmt(r.close, 2))}</td>
-        <td class="mono num ${tone1d}">${esc(pct((r.change_1d_pct ?? 0) / 100, 1))}</td>
-        <td class="mono num ${tone1m}">${esc(pct((r.change_1m_pct ?? 0) / 100, 1))}</td>
+        <td class="mono num">${esc(UIState.formatPrice(r.close))}</td>
+        <td class="mono num ${tone1d}">${esc(UIState.formatPercentPoints(r.change_1d_pct, 1))}</td>
+        <td class="mono num ${tone1m}">${esc(UIState.formatPercentPoints(r.change_1m_pct, 1))}</td>
         <td class="mono num ${rsi2Tone}"><b>${esc(fmt(r.rsi_2, 1))}</b></td>
         <td class="mono num">${esc(fmt(r.rsi_14, 1))}</td>
-        <td class="mono num ${(r.vs_sma_200_pct ?? 0) >= 0 ? "good" : "bad"}">${esc(pct((r.vs_sma_200_pct ?? 0) / 100, 1))}</td>
-        <td><span class="badge small">${esc(r.provenance?.freshness || "EOD")}</span></td>
+        <td class="mono num ${toneSma}">${esc(UIState.formatPercentPoints(r.vs_sma_200_pct, 1))}</td>
+        <td><span class="badge small" title="${esc(UIState.provenanceLabel(r.provenance))}">${esc(r.provenance?.freshness || "Unavailable")}</span></td>
       </tr>`;
     }).join("") || `<tr><td colspan="9" class="empty">No symbols matched this preset filter.</td></tr>`;
 
@@ -1066,6 +1358,15 @@ RENDER.live = async (main) => {
     "BTC-USD": { price: null, bid: null, ask: null, change: null, high: null, low: null, volume: null, trades: [], bids: [], asks: [] },
     "ETH-USD": { price: null, bid: null, ask: null, change: null, high: null, low: null, volume: null, trades: [], bids: [], asks: [] },
   };
+  let liveTracker = UIState.beginCryptoConnection(
+    UIState.createCryptoTracker(Object.keys(stateFeed))
+  );
+  const liveGeneration = liveTracker.generation;
+  const clearLiveCaches = () => {
+    Object.values(stateFeed).forEach((productState) => {
+      UIState.clearCryptoProductState(productState);
+    });
+  };
 
   main.innerHTML = `${head("Live Crypto Feed (Public WebSocket)", "Real-time, zero-key streaming from Coinbase Advanced Trade. Watch ticks, spread, and order book depth live.")}
     <div class="row" style="margin-bottom:16px">
@@ -1074,7 +1375,7 @@ RENDER.live = async (main) => {
         <button type="button" data-prod="ETH-USD">ETH-USD</button>
       </div>
       <span class="grow"></span>
-      <div class="live on" id="crypto-conn-pill"><i></i><span>Connecting to Coinbase WS</span></div>
+      <div class="live" id="crypto-conn-pill"><i></i><span>WAITING · Coinbase upstream</span></div>
     </div>
 
     <div class="cols">
@@ -1129,49 +1430,68 @@ RENDER.live = async (main) => {
 
   const renderActive = () => {
     const data = stateFeed[activeProduct];
-    if (data.price != null) {
-      $("#live-price").textContent = `$${fmt(data.price, 2)}`;
-      const chg = data.change != null ? (data.change >= 0 ? "+" : "") + data.change.toFixed(2) + "%" : "--";
-      $("#live-change").textContent = chg;
-      $("#live-change").className = "mono " + (data.change >= 0 ? "good" : "bad");
-      $("#live-bid").textContent = `$${fmt(data.bid, 2)}`;
-      $("#live-ask").textContent = `$${fmt(data.ask, 2)}`;
-      const spread = data.ask != null && data.bid != null ? Math.max(0, data.ask - data.bid) : 0;
-      $("#live-spread").textContent = `$${fmt(spread, 2)}`;
-      $("#live-spread-detail").textContent = `Spread: $${fmt(spread, 2)} (${((spread / data.price) * 100).toFixed(3)}%)`;
-      $("#live-vol").textContent = fmt(data.volume, 2);
+    const display = UIState.cryptoDisplayState(liveTracker, activeProduct, Date.now());
+    const pill = $("#crypto-conn-pill");
+    if (pill) {
+      pill.className = `live ${display === "LIVE" ? "on" : display === "WAITING" ? "" : "off"}`;
+      pill.querySelector("span").textContent = `${display} · Coinbase upstream`;
     }
+
+    const price = UIState.strictFiniteNumber(data.price);
+    const bid = UIState.strictFiniteNumber(data.bid);
+    const ask = UIState.strictFiniteNumber(data.ask);
+    const change = UIState.strictFiniteNumber(data.change);
+    const volume = UIState.strictFiniteNumber(data.volume);
+    const spread = bid !== null && ask !== null && ask >= bid ? ask - bid : null;
+
+    $("#live-price").textContent = UIState.formatPrice(price);
+    $("#live-change").textContent = UIState.formatPercentPoints(change, 2);
+    $("#live-change").className = `mono ${UIState.directionClass(change)}`;
+    $("#live-bid").textContent = UIState.formatPrice(bid);
+    $("#live-ask").textContent = UIState.formatPrice(ask);
+    $("#live-spread").textContent = spread === null ? "Unavailable" : UIState.formatPrice(spread);
+    $("#live-spread-detail").textContent = spread === null || price === null || price <= 0
+      ? "Spread: Unavailable"
+      : `Spread: ${UIState.formatPrice(spread)} (${((spread / price) * 100).toFixed(3)}%)`;
+    $("#live-vol").textContent = volume === null ? "Unavailable" : volume.toLocaleString(undefined, { maximumFractionDigits: 2 });
 
     $("#live-trades-tape").innerHTML = (data.trades || []).slice(0, 15).map((t) => {
       const isBuy = t.side === "buy";
+      const tradePrice = UIState.strictFiniteNumber(t.price);
+      const tradeSize = UIState.strictFiniteNumber(t.size);
       return `<tr>
-        <td class="mono faint small">${esc(String(t.time || "").slice(11, 19))}</td>
+        <td class="mono faint small">${esc(String(t.time || "").slice(11, 19) || "Unavailable")}</td>
         <td class="${isBuy ? "good" : "bad"} small"><b>${isBuy ? "BUY" : "SELL"}</b></td>
-        <td class="mono num ${isBuy ? "good" : "bad"}">$${esc(fmt(t.price, 2))}</td>
-        <td class="mono num faint">${esc(fmt(t.size, 4))}</td>
+        <td class="mono num ${isBuy ? "good" : "bad"}">${esc(UIState.formatPrice(tradePrice))}</td>
+        <td class="mono num faint">${tradeSize === null ? "Unavailable" : esc(tradeSize.toFixed(4))}</td>
       </tr>`;
-    }).join("");
+    }).join("") || `<tr><td colspan="4" class="empty">No usable trades received.</td></tr>`;
 
-    const maxQty = Math.max(...(data.bids || []).map((b) => b[1]), ...(data.asks || []).map((a) => a[1]), 0.01);
-    $("#live-book-asks").innerHTML = (data.asks || []).slice(-7).reverse().map(([p, q]) => {
+    const bookLevels = (levels) => (levels || []).map(([p, q]) => [
+      UIState.strictFiniteNumber(p), UIState.strictFiniteNumber(q)
+    ]).filter(([p, q]) => p !== null && q !== null && p > 0 && q >= 0);
+    const bids = bookLevels(data.bids);
+    const asks = bookLevels(data.asks);
+    const maxQty = Math.max(...bids.map((b) => b[1]), ...asks.map((a) => a[1]), 0.01);
+    $("#live-book-asks").innerHTML = asks.slice(-7).reverse().map(([p, q]) => {
       const pctWidth = Math.min(100, Math.round((q / maxQty) * 100));
       return `<div class="row mono small" style="position:relative;padding:3px 6px">
         <div style="position:absolute;inset:0;right:${100 - pctWidth}%;background:rgba(239,107,107,0.18);border-radius:2px;pointer-events:none"></div>
-        <span class="bad num">$${esc(fmt(p, 2))}</span>
+        <span class="bad num">${esc(UIState.formatPrice(p))}</span>
         <span class="grow"></span>
-        <span class="faint num">${esc(fmt(q, 4))}</span>
+        <span class="faint num">${esc(q.toFixed(4))}</span>
       </div>`;
-    }).join("");
+    }).join("") || `<div class="empty small">Asks unavailable</div>`;
 
-    $("#live-book-bids").innerHTML = (data.bids || []).slice(0, 7).map(([p, q]) => {
+    $("#live-book-bids").innerHTML = bids.slice(0, 7).map(([p, q]) => {
       const pctWidth = Math.min(100, Math.round((q / maxQty) * 100));
       return `<div class="row mono small" style="position:relative;padding:3px 6px">
         <div style="position:absolute;inset:0;right:${100 - pctWidth}%;background:rgba(92,201,143,0.18);border-radius:2px;pointer-events:none"></div>
-        <span class="good num">$${esc(fmt(p, 2))}</span>
+        <span class="good num">${esc(UIState.formatPrice(p))}</span>
         <span class="grow"></span>
-        <span class="faint num">${esc(fmt(q, 4))}</span>
+        <span class="faint num">${esc(q.toFixed(4))}</span>
       </div>`;
-    }).join("");
+    }).join("") || `<div class="empty small">Bids unavailable</div>`;
   };
 
   document.querySelectorAll("#live-prod-seg button").forEach((b) => {
@@ -1186,37 +1506,57 @@ RENDER.live = async (main) => {
   if (state.liveSource) {
     try { state.liveSource.close(); } catch (e) {}
   }
+  if (state.liveTimer) clearInterval(state.liveTimer);
   const sse = new EventSource("/api/live/crypto?products=BTC-USD,ETH-USD");
   state.liveSource = sse;
 
   sse.onopen = () => {
-    const pill = $("#crypto-conn-pill");
-    if (pill) { pill.className = "live on"; pill.querySelector("span").textContent = "Connected (Coinbase WS)"; }
+    liveTracker = reduceCryptoEvent(liveTracker, liveGeneration, { type: "transport", status: "open" });
+    renderActive();
   };
   sse.onerror = () => {
-    const pill = $("#crypto-conn-pill");
-    if (pill) { pill.className = "live off"; pill.querySelector("span").textContent = "Reconnecting feed"; }
+    liveTracker = reduceCryptoEvent(liveTracker, liveGeneration, { type: "transport", status: "error" });
+    clearLiveCaches();
+    renderActive();
   };
 
+  sse.addEventListener("status", (e) => {
+    try {
+      liveTracker = reduceCryptoEvent(liveTracker, liveGeneration, JSON.parse(e.data));
+    } catch (_) {
+      liveTracker = reduceCryptoEvent(liveTracker, liveGeneration, { type: "status", state: "error" });
+    }
+    if (liveTracker.upstream !== "live") clearLiveCaches();
+    renderActive();
+  });
+
   sse.addEventListener("ticker", (e) => {
-    const ev = JSON.parse(e.data);
-    const prod = ev.product;
-    if (stateFeed[prod]) {
-      stateFeed[prod].price = ev.price;
-      stateFeed[prod].bid = ev.bid;
-      stateFeed[prod].ask = ev.ask;
-      stateFeed[prod].change = ev.change_24h_pct;
-      stateFeed[prod].high = ev.high_24h;
-      stateFeed[prod].low = ev.low_24h;
-      stateFeed[prod].volume = ev.volume_24_h || ev.volume_24h;
-      if (prod === activeProduct) renderActive();
+    try {
+      const ev = JSON.parse(e.data);
+      const receivedAt = Date.now();
+      liveTracker = reduceCryptoEvent(liveTracker, liveGeneration, ev, receivedAt);
+      const prod = ev.product;
+      if (stateFeed[prod] && liveTracker.lastTickAt[prod] === receivedAt) {
+        stateFeed[prod].price = UIState.strictFiniteNumber(ev.price);
+        stateFeed[prod].bid = UIState.strictFiniteNumber(ev.bid);
+        stateFeed[prod].ask = UIState.strictFiniteNumber(ev.ask);
+        stateFeed[prod].change = UIState.strictFiniteNumber(ev.change_24h_pct);
+        stateFeed[prod].high = UIState.strictFiniteNumber(ev.high_24h);
+        stateFeed[prod].low = UIState.strictFiniteNumber(ev.low_24h);
+        stateFeed[prod].volume = UIState.strictFiniteNumber(ev.volume_24_h ?? ev.volume_24h);
+        if (prod === activeProduct) renderActive();
+      }
+    } catch (_) {
+      liveTracker = reduceCryptoEvent(liveTracker, liveGeneration, { type: "status", state: "error" });
+      clearLiveCaches();
+      renderActive();
     }
   });
 
   sse.addEventListener("trade", (e) => {
     const ev = JSON.parse(e.data);
     const prod = ev.product;
-    if (stateFeed[prod]) {
+    if (stateFeed[prod] && liveTracker.transport === "open" && liveTracker.upstream === "live") {
       stateFeed[prod].trades.unshift(ev);
       if (stateFeed[prod].trades.length > 50) stateFeed[prod].trades.pop();
       if (prod === activeProduct) renderActive();
@@ -1226,12 +1566,16 @@ RENDER.live = async (main) => {
   sse.addEventListener("book", (e) => {
     const ev = JSON.parse(e.data);
     const prod = ev.product;
-    if (stateFeed[prod]) {
+    if (stateFeed[prod] && liveTracker.transport === "open" && liveTracker.upstream === "live") {
       stateFeed[prod].bids = ev.bids || [];
       stateFeed[prod].asks = ev.asks || [];
       if (prod === activeProduct) renderActive();
     }
   });
+  state.liveTimer = setInterval(() => {
+    if (state.page === "live") renderActive();
+  }, 1000);
+  renderActive();
 };
 
 function scheduleForm(d, s = null) {
@@ -1283,14 +1627,17 @@ async function hydrateTicker() {
     for (const sym of syms) {
       const item = (snap.rows || []).find((i) => i.symbol === sym);
       const el = $(`#tick-${sym.toLowerCase()}`);
-      if (item && el) {
-        const closeHtml = item.close != null ? `$${item.close.toFixed(2)}` : `<span style="color:var(--faint);">price unavailable</span>`;
-        const chgHtml = item.change_1d_pct != null
-          ? `<span style="color:${item.change_1d_pct >= 0 ? 'var(--good)' : 'var(--bad)'};">${item.change_1d_pct >= 0 ? '+' : ''}${item.change_1d_pct.toFixed(2)}%</span>`
-          : `<span style="color:var(--faint);">unavailable</span>`;
-        const asOf = item.last_date ? `as of ${esc(item.last_date)}` : `date unavailable`;
-        el.innerHTML = `<b style="color:#fff;">${item.symbol}</b> ${closeHtml} ${chgHtml} <span style="color:var(--faint); font-size:10.5px;">EOD · Yahoo · ${asOf}</span>`;
+      if (!el) continue;
+      if (!item) {
+        el.innerHTML = `<b style="color:#fff;">${sym}</b> <span style="color:var(--faint); font-size:10.5px;">Unavailable · no accepted dataset</span>`;
+        continue;
       }
+      const closeText = UIState.formatPrice(item.close);
+      const changeText = UIState.formatPercentPoints(item.change_1d_pct, 2);
+      const direction = UIState.directionClass(item.change_1d_pct);
+      const changeColor = direction === "good" ? "var(--good)" : direction === "bad" ? "var(--bad)" : "var(--faint)";
+      const sourceText = UIState.provenanceLabel(item.provenance);
+      el.innerHTML = `<b style="color:#fff;">${esc(item.symbol)}</b> ${esc(closeText)} <span style="color:${changeColor};">${esc(changeText)}</span> <span style="color:var(--faint); font-size:10.5px;">${esc(sourceText)}</span>`;
     }
   } catch (e) {
     ["spy", "qqq", "iwm"].forEach((s) => {
@@ -1301,20 +1648,43 @@ async function hydrateTicker() {
 }
 
 let tickerSSE = null;
-const lastTickAt = { "BTC-USD": null, "ETH-USD": null };
+let tickerTracker = UIState.createCryptoTracker(["BTC-USD", "ETH-USD"]);
+const tickerValues = Object.create(null);
+
+function clearTickerValues() {
+  for (const product of ["BTC-USD", "ETH-USD"]) delete tickerValues[product];
+}
+
+function cryptoTone(status) {
+  if (status === "LIVE") return "var(--good)";
+  if (status === "DELAYED" || status === "WAITING") return "var(--warn)";
+  return "var(--bad)";
+}
 
 function updateTickerAge() {
   const now = Date.now();
-  for (const [prod, elId] of [["BTC-USD", "#tick-btc"], ["ETH-USD", "#tick-eth"]]) {
-    const t = lastTickAt[prod];
+  for (const [product, elId] of [["BTC-USD", "#tick-btc"], ["ETH-USD", "#tick-eth"]]) {
+    const display = UIState.cryptoDisplayState(tickerTracker, product, now);
     const el = $(elId);
-    if (!el || !t) continue;
-    const sec = Math.max(0, Math.floor((now - t.at) / 1000));
-    const sym = prod.replace("-USD", "");
-    const isStale = sec > 15;
-    const badgeColor = isStale ? "var(--warn)" : "var(--good)";
-    const badgeLabel = isStale ? "STALE · Coinbase" : "LIVE · Coinbase";
-    el.innerHTML = `<b style="color:#fff;">${sym}</b> $${t.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <span style="color:${badgeColor}; font-size:10.5px;">${badgeLabel} · updated ${sec === 0 ? "just now" : sec + "s ago"}</span>`;
+    if (!el) continue;
+    const symbol = product.replace("-USD", "");
+    const price = tickerValues[product];
+    const priceText = price == null ? "Price unavailable" : UIState.formatPrice(price);
+    const tickAt = tickerTracker.lastTickAt[product];
+    const ageText = tickAt == null ? "no usable quote" : `updated ${Math.round(Math.max(0, now - tickAt) / 1000)}s ago`;
+    el.innerHTML = `<b style="color:#fff;">${symbol}</b> ${esc(priceText)} <span style="color:${cryptoTone(display)}; font-size:10.5px;">${display} · Coinbase · ${ageText}</span>`;
+    if (product === "BTC-USD") {
+      const todayValue = $("#today-btc-val");
+      const todayStatus = $("#today-coinbase-status");
+      if (todayValue) {
+        todayValue.textContent = priceText;
+        todayValue.style.color = cryptoTone(display);
+      }
+      if (todayStatus) {
+        todayStatus.className = `live ${display === "LIVE" ? "on" : display === "WAITING" ? "" : "off"}`;
+        todayStatus.querySelector("span").textContent = display;
+      }
+    }
   }
 }
 setInterval(updateTickerAge, 1000);
@@ -1322,27 +1692,49 @@ setInterval(updateTickerAge, 1000);
 function connectTickerLive() {
   try {
     if (tickerSSE) tickerSSE.close();
+    tickerTracker = UIState.beginCryptoConnection(tickerTracker);
+    clearTickerValues();
+    const generation = tickerTracker.generation;
     tickerSSE = new EventSource("/api/live/crypto");
+    tickerSSE.onopen = () => {
+      tickerTracker = reduceCryptoEvent(tickerTracker, generation, { type: "transport", status: "open" });
+      updateTickerAge();
+    };
+    tickerSSE.addEventListener("status", (e) => {
+      try {
+        tickerTracker = reduceCryptoEvent(tickerTracker, generation, JSON.parse(e.data));
+      } catch (err) {
+        tickerTracker = reduceCryptoEvent(tickerTracker, generation, { type: "status", state: "error" });
+      }
+      if (tickerTracker.upstream !== "live") clearTickerValues();
+      updateTickerAge();
+    });
     tickerSSE.addEventListener("ticker", (e) => {
       try {
-        const d = JSON.parse(e.data);
-        if (d.product_id && d.price) {
-          lastTickAt[d.product_id] = { price: d.price, at: Date.now() };
-          updateTickerAge();
+        const event = JSON.parse(e.data);
+        const receivedAt = Date.now();
+        tickerTracker = reduceCryptoEvent(tickerTracker, generation, event, receivedAt);
+        const price = UIState.strictFiniteNumber(event.price);
+        if (event.product && price !== null
+            && tickerTracker.lastTickAt[event.product] === receivedAt) {
+          tickerValues[event.product] = price;
         }
-      } catch (err) {}
+      } catch (err) {
+        tickerTracker = reduceCryptoEvent(tickerTracker, generation, { type: "status", state: "error" });
+        clearTickerValues();
+      }
+      updateTickerAge();
     });
     tickerSSE.onerror = () => {
-      ["btc", "eth"].forEach((s) => {
-        const el = $(`#tick-${s}`);
-        if (el && !lastTickAt[`${s.toUpperCase()}-USD`]) {
-          el.innerHTML = `<b style="color:#fff;">${s.toUpperCase()}</b> <span style="color:var(--warn); font-size:10.5px;">Waiting for Coinbase — no quote</span>`;
-        } else if (el) {
-          el.innerHTML = `<b style="color:#fff;">${s.toUpperCase()}</b> <span style="color:var(--bad); font-size:10.5px;">Disconnected / Stale</span>`;
-        }
-      });
+      tickerTracker = reduceCryptoEvent(tickerTracker, generation, { type: "transport", status: "error" });
+      clearTickerValues();
+      updateTickerAge();
     };
-  } catch (e) {}
+    updateTickerAge();
+  } catch (e) {
+    tickerTracker = reduceCryptoEvent(tickerTracker, tickerTracker.generation, { type: "transport", status: "error" });
+    updateTickerAge();
+  }
 }
 
 // ---------- boot ----------
