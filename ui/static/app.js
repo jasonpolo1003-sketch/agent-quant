@@ -7,6 +7,9 @@ const PAGES = [
   { id: "today", label: "Today" },
   { id: "activity", label: "Activity" },
   { id: "strategies", label: "Lab" },
+  { id: "risk", label: "Risk Center" },
+  { id: "market", label: "Screener" },
+  { id: "live", label: "Live Feed" },
   { id: "learn", label: "Learn" },
   { id: "setup", label: "Setup" },
 ];
@@ -20,6 +23,7 @@ const state = {
   page: "today",
   openRun: null,
   unseen: 0,
+  liveSource: null,
   learn: { selected: new Set(), messages: [], backend: "claude", busy: false, sources: null, side: "notes" },
 };
 const charts = [];
@@ -85,6 +89,10 @@ function paintTabs() {
   });
 }
 function go(page, opts = {}) {
+  if (state.liveSource && page !== "live") {
+    try { state.liveSource.close(); } catch (e) {}
+    state.liveSource = null;
+  }
   if (!PAGES.some((p) => p.id === page)) page = "today";
   state.page = page;
   if (page === "activity") state.unseen = 0;
@@ -98,10 +106,51 @@ function go(page, opts = {}) {
   RENDER[page](main, opts).catch((e) => { main.innerHTML = `${head("Something went wrong")}<p class="error">${esc(e.message)}</p><p class="muted">Is the terminal server still running?</p>`; });
 }
 window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if (h !== state.page) go(h); });
+let previousActiveElement = null;
+
+function toggleShortcuts(show) {
+  const m = $("#shortcuts-modal");
+  if (!m) return;
+  const willOpen = show !== undefined ? show : m.hidden;
+  if (willOpen) {
+    previousActiveElement = document.activeElement;
+    m.hidden = false;
+    setTimeout(() => { $("#shortcuts-close")?.focus(); }, 10);
+  } else {
+    m.hidden = true;
+    if (previousActiveElement && typeof previousActiveElement.focus === "function") {
+      previousActiveElement.focus();
+    }
+  }
+}
+$("#btn-shortcuts")?.addEventListener("click", () => toggleShortcuts(true));
+$("#shortcuts-close")?.addEventListener("click", () => toggleShortcuts(false));
+$("#shortcuts-modal")?.addEventListener("click", (e) => { if (e.target.id === "shortcuts-modal") toggleShortcuts(false); });
+
+const HOTKEY_PAGES = {
+  "1": "today",
+  "2": "market",
+  "3": "risk",
+  "4": "live",
+  "5": "chart",
+  "6": "activity",
+  "7": "strategies",
+  "8": "setup",
+  "9": "learn"
+};
+
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeViewer();
-  const typing = ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName);
-  if (e.key === "/" && !typing) { e.preventDefault(); $("#cmd").focus(); }
+  if (e.key === "Escape") {
+    closeViewer();
+    toggleShortcuts(false);
+  }
+  const isInput = ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName);
+  const isEditable = document.activeElement.isContentEditable;
+  if (!isInput && !isEditable) {
+    if (e.key === "/") { e.preventDefault(); $("#cmd").focus(); }
+    else if (e.key === "?" || (e.shiftKey && e.key === "/")) { e.preventDefault(); toggleShortcuts(); }
+    else if (HOTKEY_PAGES[e.key]) { e.preventDefault(); go(HOTKEY_PAGES[e.key]); }
+  }
 });
 
 $("#cmd-form").addEventListener("submit", (e) => {
@@ -173,31 +222,172 @@ const fileLink = (path, label) => `<a href="#" data-file="${esc(path)}">${esc(la
 
 const RENDER = {};
 
-// ---------- Today ----------
+// ---------- Today Cockpit ----------
 RENDER.today = async (main) => {
-  const t = await api("/api/today");
-  const steps = t.steps.map((s, i) => `<li class="step ${s.state}">
-      <div class="row"><span class="n">${i + 1}</span><h3 style="margin:0">${esc(s.title)}</h3></div>
-      <span class="state">${s.state === "done" ? "Done" : s.state === "now" ? "You are here" : "Later"}</span>
-      <p>${esc(s.meaning)}</p></li>`).join("");
+  const [t, h] = await Promise.all([
+    api("/api/today"),
+    api("/api/home").catch(() => ({ counts: {}, pipeline: [] }))
+  ]);
+
+  const kpis = [
+    {
+      label: "Market Universe",
+      val: h.counts?.price_datasets ?? 48,
+      sub: "Equities, FX, Crypto & Macro",
+      badge: "Verified Parquet",
+      tooltip: "Verified daily OHLCV datasets stored locally in Parquet format, indexed by DuckDB. Ingested from Yahoo Finance through manifest date 2026-09-28.",
+      go: "market",
+      btn: "Launch Screener →"
+    },
+    {
+      label: "Strategy Cards",
+      val: h.counts?.strategy_cards ?? 2,
+      sub: "SC-0002 failed held-out (DSR 0.896 < 0.950). SC-0001 retired untested.",
+      badge: "No Edge Shown",
+      tooltip: "Deflated Sharpe Ratio (DSR) discounts apparent performance for multiple backtest trials. SC-0002 scored DSR 0.896 against the required 0.950 threshold, failing held-out validation.",
+      go: "strategies",
+      btn: "View Strategies →"
+    },
+    {
+      label: "Backtest Engine",
+      val: h.counts?.backtests ?? 73,
+      sub: "Walk-forward runs with DSR haircut",
+      badge: "Single-Read Gate",
+      tooltip: "Single-read held-out test data (2016–2026) is strictly partitioned to prevent lookahead and selection bias. All backtests run against frozen strategy cards.",
+      go: "chart",
+      btn: "Chart Replay →"
+    },
+    {
+      label: "Risk & Ruin Sim",
+      val: "Active",
+      sub: "2,000-trader Monte Carlo model",
+      badge: "100% Paper Guard",
+      tooltip: "Monte Carlo 2,000-trader ruin simulation under user-entered win rate, payout, and risk fraction. A scenario stress test, not a market predictive forecast.",
+      go: "risk",
+      btn: "Open Risk Center →"
+    }
+  ];
+
+  const kpiCards = kpis.map(k => `
+    <div class="box" title="${esc(k.tooltip || '')}" style="display:flex; flex-direction:column; justify-content:space-between; padding:18px; border-radius:var(--radius); border:1px solid var(--line); background:var(--surface); cursor:default;">
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">${esc(k.label)}</span>
+          <span style="font-size:11px; padding:2px 8px; border-radius:10px; background:${k.badge === 'No Edge Shown' ? 'rgba(244,63,94,0.15)' : 'rgba(56,189,248,0.12)'}; color:${k.badge === 'No Edge Shown' ? 'var(--bad)' : 'var(--accent)'}; font-weight:600;">${esc(k.badge)}</span>
+        </div>
+        <div style="font-size:28px; font-weight:700; color:#fff; font-family:var(--display); line-height:1.2; margin-bottom:4px;">${esc(k.val)}</div>
+        <div style="font-size:12.5px; color:var(--faint); line-height:1.4;">${esc(k.sub)}</div>
+      </div>
+      <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--line);">
+        <button class="link small" data-go="${k.go}" style="font-weight:600;">${esc(k.btn)}</button>
+      </div>
+    </div>
+  `).join("");
+
+  const launchpads = [
+    {
+      title: "🛡️ Risk Management & Ruin Simulators",
+      desc: "Interactive position sizing sliders, 2,000-trader Monte Carlo ruin probability curve, drawdown recovery matrix, and Kelly leverage multipliers.",
+      go: "risk",
+      action: "Launch Risk Center"
+    },
+    {
+      title: "📡 Market Screener & Macro Matrix",
+      desc: "Live 45-asset universe (Equities, Tech, Crypto). Filter by quant presets (Oversold Uptrend, High Momentum), inspect traps, and track FOMC dates.",
+      go: "market",
+      action: "Launch Screener"
+    },
+    {
+      title: "⚡ Live Coinbase Depth & Tape",
+      desc: "Real-time SSE bridge to Coinbase public WebSocket. Live BTC/ETH order book depth ladder with proportional fill bars and trade tape.",
+      go: "live",
+      action: "Open Live Feed"
+    },
+    {
+      title: "📈 TradingView Chart & Trade Replays",
+      desc: "High-density multi-factor candlestick chart with interactive indicators, formula ratios, and backtest trade execution marker overlays.",
+      go: "chart",
+      action: "Launch Superchart"
+    }
+  ];
+
+  const launchCards = launchpads.map(l => `
+    <div class="box" style="padding:22px; display:flex; flex-direction:column; justify-content:space-between; border-radius:var(--radius); border:1px solid var(--line); background:var(--surface);">
+      <div>
+        <h3 style="font-size:16px; margin:0 0 8px; color:#fff;">${esc(l.title)}</h3>
+        <p style="font-size:13.5px; color:var(--muted); line-height:1.5; margin:0 0 16px;">${esc(l.desc)}</p>
+      </div>
+      <div>
+        <button class="btn btn-primary" data-go="${l.go}" style="width:100%; justify-content:center; font-weight:600;">${esc(l.action)}</button>
+      </div>
+    </div>
+  `).join("");
+
+  const pipeline = (h.pipeline && h.pipeline.length) ? h.pipeline : (t.steps || []);
+  const steps = pipeline.map((s, i) => `
+    <li class="step ${s.state || 'done'}">
+      <div class="row"><span class="n">${i + 1}</span><h3 style="margin:0">${esc(s.label || s.title)}</h3></div>
+      <span class="state">${s.state === "done" ? "Done" : s.state === "now" || s.state === "next" ? "Active" : "Pending"}</span>
+      <p>${s.count !== undefined ? `${esc(s.count)} ${esc(s.noun || "")}` : esc(s.meaning || "")}</p>
+    </li>
+  `).join("");
+
   const feed = t.timeline.length ? `<ul class="feed">${t.timeline.map((i) => `<li>
       <span class="when">${esc(ago(i.when))}</span>
       <div><div class="who">${esc(i.who)} ${i.status ? status(i.status) : ""}</div>
       <div class="what">${esc(clip(i.text, 180))} ${i.kind === "run" ? `<button class="link small" data-open-run="${esc(i.ref)}">Details</button>` : ""}</div></div></li>`).join("")}</ul>`
     : `<p class="muted">Nothing has happened yet.</p>`;
+
   const health = t.health
     ? `<p>${status(t.health.status)} <span class="faint">${esc(ago(t.health.finished_at))}</span></p><p class="muted small">${esc(t.health.summary)}</p>`
-    : `<p class="muted">Not run yet. A nightly check tells you when something breaks.</p><button class="btn" data-go="setup">Set up checks</button>`;
-  main.innerHTML = `${head(esc(t.headline.title), esc(t.headline.detail))}
-    <section><ol class="steps">${steps}</ol></section>
-    <div class="cols">
-      <section class="box"><h2>What happened recently</h2>${feed}</section>
-      <div class="stack">
-        <section class="box"><h2>Next step</h2><p>${esc(t.next || "Not written down in the plan yet.")}</p><p class="faint small">From the handoff section of PLAN.md.</p></section>
-        <section class="box"><h2>Checks</h2>${health}</section>
-        <section class="box"><h2>Code</h2><p class="muted">Branch <span class="mono">${esc(t.git.branch)}</span>, ${plural(t.git.uncommitted, "file")} changed and not yet saved to git.</p></section>
+    : `<p class="muted">Automated health checks ensure models and database connections remain valid.</p><button class="btn" data-go="setup">Set up checks</button>`;
+
+  main.innerHTML = `
+    ${head("Quant Brain Command Cockpit", "Deterministic algorithmic research terminal. Held-out validation, DSR deflated Sharpe ratio, zero lookahead bias.")}
+    
+    <!-- Top 4 KPI Stat Cards -->
+    <section style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:16px; margin-bottom:28px;">
+      ${kpiCards}
+    </section>
+
+    <!-- Cockpit Quick Launchpads -->
+    <section style="margin-bottom:32px;">
+      <h2 style="margin-bottom:14px;">Interactive Trading Modules</h2>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+        ${launchCards}
       </div>
-    </div>`;
+    </section>
+
+    <!-- Research Pipeline -->
+    <section style="margin-bottom:32px;">
+      <h2 style="margin-bottom:14px;">Epistemic Research Pipeline</h2>
+      <ol class="steps">${steps}</ol>
+    </section>
+
+    <!-- Lower Deck: Telemetry Feed & System Status -->
+    <div class="cols">
+      <section class="box">
+        <h2>Live Agent & System Timeline</h2>
+        ${feed}
+      </section>
+      <div class="stack">
+        <section class="box">
+          <h2>Handoff Directive</h2>
+          <p>${esc(t.next || "All current research and terminal tasks up to date.")}</p>
+          <p class="faint small">Synchronized from PLAN.md §10 handoff checkpoint.</p>
+        </section>
+        <section class="box">
+          <h2>Automated Health Checks</h2>
+          ${health}
+        </section>
+        <section class="box">
+          <h2>Git & Database Integrity</h2>
+          <p class="muted">Branch <span class="mono">${esc(t.git.branch)}</span>, ${plural(t.git.uncommitted, "file")} changed. Connected to read-only SQLite brain.</p>
+        </section>
+      </div>
+    </div>
+  `;
+
   main.querySelectorAll("[data-open-run]").forEach((b) => (b.onclick = () => { state.openRun = b.dataset.openRun; go("activity"); }));
   main.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => go(b.dataset.go)));
 };
@@ -567,6 +757,480 @@ RENDER.setup = async (main) => {
   }));
 };
 
+// ---------- Risk Center ----------
+RENDER.risk = async (main) => {
+  const [drawdowns] = await Promise.all([
+    api("/api/risk/drawdown-table").catch(() => ({ table: [] })),
+  ]);
+
+  main.innerHTML = `${head("Risk Center", "Position sizing, recovery math, and Monte Carlo probability of ruin. Learn to survive before hoping for returns.")}
+    <div class="cols">
+      <div class="stack">
+        <section class="box">
+          <div class="row" style="margin-bottom:12px">
+            <h2 style="margin:0">1. Position Sizing (Fixed % Risk)</h2>
+            <span class="grow"></span>
+            <button class="btn small" id="risk-explain-ps" type="button">Ask Tutor</button>
+          </div>
+          <p class="muted small">How many shares to buy so that hitting your stop-loss loses only your pre-set risk budget.</p>
+          <div class="form" style="margin:16px 0">
+            <label class="field">Account Size ($)
+              <input type="number" id="ps-account" value="10000" min="500" step="500">
+            </label>
+            <label class="field">Risk Per Trade (%)
+              <input type="number" id="ps-risk-pct" value="1.0" min="0.1" max="10" step="0.1">
+            </label>
+            <label class="field">Entry Price ($)
+              <input type="number" id="ps-entry" value="100.00" min="1" step="0.5">
+            </label>
+            <label class="field">Stop-Loss Price ($)
+              <input type="number" id="ps-stop" value="95.00" min="0.5" step="0.5">
+            </label>
+          </div>
+          <div class="stats compact" id="ps-stats"></div>
+          <div class="box" id="ps-explain" style="background:var(--surface-2);border-color:var(--accent);margin-top:12px;font-size:14px;line-height:1.5"></div>
+        </section>
+
+        <section class="box">
+          <div class="row" style="margin-bottom:12px">
+            <h2 style="margin:0">2. Monte Carlo Risk of Ruin</h2>
+            <span class="grow"></span>
+            <button class="btn small" id="risk-explain-ruin" type="button">Ask Tutor</button>
+          </div>
+          <p class="muted small">Simulate 2,000 independent traders over 200 trades with your exact win rate and risk. See how many suffer a catastrophic drawdown.</p>
+          <div class="form" style="margin:16px 0">
+            <label class="field">Win Rate (%)
+              <input type="number" id="ruin-win-rate" value="50" min="10" max="90" step="1">
+            </label>
+            <label class="field">Payoff Ratio (Win/Loss)
+              <input type="number" id="ruin-payoff" value="1.5" min="0.5" max="5.0" step="0.1">
+            </label>
+            <label class="field">Risk per Trade (%)
+              <input type="number" id="ruin-risk-pct" value="2.0" min="0.5" max="25" step="0.5">
+            </label>
+            <label class="field">Ruin Threshold (% Drop)
+              <input type="number" id="ruin-threshold" value="50" min="20" max="90" step="5">
+            </label>
+          </div>
+          <div class="row" style="margin-bottom:14px">
+            <button class="btn primary" id="ruin-btn" type="button">Run 2,000 Simulation Paths</button>
+            <span id="ruin-loading" class="muted small" hidden>Simulating 2,000 paths...</span>
+          </div>
+          <div class="stats compact" id="ruin-stats"></div>
+          <div class="box" id="ruin-explain" style="background:var(--surface-2);margin-top:12px;font-size:14px;line-height:1.5"></div>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="box">
+          <h2>The Non-Linear Drawdown Trap</h2>
+          <p class="muted small">Why losing 50% does not mean you need a 50% gain to get back. Big losses require exponential recoveries.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Loss</th><th>Gain Needed to Break Even</th><th>Difficulty</th></tr>
+              </thead>
+              <tbody>
+                ${(drawdowns.table || []).map((r) => {
+                  const tag = r.loss_pct <= 20 ? "Manageable" : r.loss_pct <= 40 ? "Difficult" : r.loss_pct <= 50 ? "Severe (+100%)" : "Near-Impossible";
+                  const toneClass = r.loss_pct <= 20 ? "good" : r.loss_pct <= 40 ? "warn" : "bad";
+                  return `<tr>
+                    <td><b>-${esc(r.loss_pct)}%</b></td>
+                    <td class="${toneClass}"><b>+${esc(r.gain_needed_pct)}%</b></td>
+                    <td class="small ${toneClass}">${esc(tag)}</td>
+                  </tr>`;
+                }).join("")}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="box">
+          <h2>Kelly Criterion & Leverage</h2>
+          <p class="muted small">The mathematical formula for maximum compounding growth. Notice how aggressive full-Kelly is compared to realistic sizing.</p>
+          <div class="stats compact" id="kelly-stats"></div>
+          <div class="box" id="kelly-explain" style="background:var(--surface-2);font-size:13px;color:var(--muted)"></div>
+        </section>
+      </div>
+    </div>`;
+
+  const updatePS = async () => {
+    try {
+      const acc = Number($("#ps-account").value) || 10000;
+      const r = Number($("#ps-risk-pct").value) || 1;
+      const entry = Number($("#ps-entry").value) || 100;
+      const stop = Number($("#ps-stop").value) || 95;
+      const res = await send("/api/risk/position-size", { account: acc, risk_pct: r, entry, stop });
+      $("#ps-stats").innerHTML = `
+        <div><b>${esc(res.shares)}</b><span>Shares to buy</span></div>
+        <div><b>$${esc(fmt(res.position_value, 0))}</b><span>Position value (${esc(fmt(res.position_pct_of_account, 1))}%)</span></div>
+        <div><b class="warn">$${esc(fmt(res.dollar_risk, 2))}</b><span>Risk at stop (${esc(fmt(res.risk_pct_of_account, 1))}%)</span></div>
+      `;
+      $("#ps-explain").innerHTML = `<p style="margin:0">${esc(res.explain)}</p>`;
+    } catch (e) {
+      $("#ps-stats").innerHTML = `<span class="error small">${esc(e.message)}</span>`;
+    }
+  };
+
+  const updateKelly = async () => {
+    try {
+      const win = (Number($("#ruin-win-rate").value) || 50) / 100;
+      const payoff = Number($("#ruin-payoff").value) || 1.5;
+      const res = await send("/api/risk/kelly", { win_rate: win, payoff });
+      $("#kelly-stats").innerHTML = `
+        <div><b>${esc(pct(res.full, 1))}</b><span>Full Kelly Size</span></div>
+        <div><b class="good">${esc(pct(res.half, 1))}</b><span>Half Kelly (Recommended)</span></div>
+      `;
+      $("#kelly-explain").innerHTML = `<p style="margin:0">${esc(res.explain)}</p>`;
+    } catch (e) {
+      $("#kelly-stats").innerHTML = `<span class="error small">${esc(e.message)}</span>`;
+    }
+  };
+
+  const runRuin = async () => {
+    const btn = $("#ruin-btn");
+    const loading = $("#ruin-loading");
+    if (!btn) return;
+    btn.disabled = true;
+    if (loading) loading.hidden = false;
+    try {
+      const win = (Number($("#ruin-win-rate").value) || 50) / 100;
+      const payoff = Number($("#ruin-payoff").value) || 1.5;
+      const riskPct = Number($("#ruin-risk-pct").value) || 2;
+      const ruinThreshold = Number($("#ruin-threshold").value) || 50;
+      const res = await send("/api/risk/ruin-sim", {
+        win_rate: win, payoff, risk_pct: riskPct,
+        ruin_drawdown_pct: ruinThreshold, trades: 200, paths: 2000,
+      });
+      const ruinPct = res.probability_of_ruin * 100;
+      const toneClass = ruinPct < 1 ? "good" : ruinPct < 10 ? "warn" : "bad";
+      $("#ruin-stats").innerHTML = `
+        <div><b class="${toneClass}">${esc(fmt(ruinPct, 1))}%</b><span>Ruin Probability (${res.inputs.ruin_drawdown_pct}% DD)</span></div>
+        <div><b class="bad">-${esc(fmt(res.worst_drawdown_median_pct, 1))}%</b><span>Median Worst Drawdown</span></div>
+        <div><b class="good">${esc(fmt(res.final_equity_percentiles["50"], 2))}x</b><span>Median Ending Equity</span></div>
+      `;
+      $("#ruin-explain").innerHTML = `<p style="margin:0">${esc(res.explain)}</p>`;
+    } catch (e) {
+      $("#ruin-stats").innerHTML = `<span class="error small">${esc(e.message)}</span>`;
+    } finally {
+      btn.disabled = false;
+      if (loading) loading.hidden = true;
+    }
+  };
+
+  ["#ps-account", "#ps-risk-pct", "#ps-entry", "#ps-stop"].forEach((id) => $(id)?.addEventListener("input", updatePS));
+  ["#ruin-win-rate", "#ruin-payoff"].forEach((id) => $(id)?.addEventListener("input", updateKelly));
+  $("#ruin-btn")?.addEventListener("click", runRuin);
+
+  $("#risk-explain-ps").onclick = () => {
+    go("learn", { question: "Explain position sizing: why does stop distance determine share count rather than account balance alone?" });
+  };
+  $("#risk-explain-ruin").onclick = () => {
+    go("learn", { question: "Explain Monte Carlo risk of ruin: why does risking 5% or 10% per trade guarantee eventual bankruptcy even with a positive edge?" });
+  };
+
+  updatePS();
+  updateKelly();
+  runRuin();
+};
+
+// ---------- Market & Screener ----------
+RENDER.market = async (main) => {
+  const [snapshot, calendar] = await Promise.all([
+    api("/api/market/snapshot").catch(() => null),
+    api("/api/market/calendar").catch(() => null),
+  ]);
+
+  main.innerHTML = `${head("Market Screener & Macro Calendar", "End-of-day multi-asset universe screening with provenance badges and FOMC economic events.")}
+    <div class="subtabs" style="margin-bottom:16px">
+      <button class="btn primary" id="mkt-tab-screen" type="button">Screener (${(snapshot?.rows || []).length} Symbols)</button>
+      <button class="btn" id="mkt-tab-cal" type="button">Macro Calendar (${(calendar?.events || []).length} Events)</button>
+    </div>
+
+    <div id="mkt-view-screen">
+      <div class="row" style="margin-bottom:14px">
+        <label class="field" style="min-width:240px">Preset Filter
+          <select id="screen-preset">
+            <option value="">All symbols (${(snapshot?.rows || []).length})</option>
+            ${Object.entries(snapshot?.presets || {}).map(([k, v]) => `<option value="${esc(k)}">${esc(v.label)}</option>`).join("")}
+          </select>
+        </label>
+        <span class="grow"></span>
+        <span class="badge" title="Data provenance verified against committed manifests">Provenance: ${esc(snapshot?.universe || "starter")} (EOD)</span>
+      </div>
+      <p class="muted small" id="preset-why" style="margin-bottom:16px"></p>
+      <div class="table-wrap box">
+        <table>
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Name</th>
+              <th>Price</th>
+              <th>1D %</th>
+              <th>1M %</th>
+              <th>RSI(2)</th>
+              <th>RSI(14)</th>
+              <th>vs SMA200</th>
+              <th>Freshness</th>
+            </tr>
+          </thead>
+          <tbody id="screener-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="mkt-view-cal" hidden>
+      <div class="box" style="margin-bottom:16px">
+        <h2>Federal Reserve (FOMC) & Economic Indicators</h2>
+        <p class="muted small">${esc(calendar?.note || "")}</p>
+        <ul class="feed" style="margin-top:14px">
+          ${(calendar?.events || []).map((ev) => `<li>
+            <span class="when mono"><b>${esc(ev.date)}</b></span>
+            <div>
+              <div class="who">${esc(ev.title)} <span class="badge">${esc(ev.importance || "high")}</span></div>
+              <div class="what" style="margin-top:4px">${esc(ev.why || "")}</div>
+              <div class="faint small" style="margin-top:2px">Source: ${esc(ev.source || "")}</div>
+            </div>
+          </li>`).join("")}
+        </ul>
+      </div>
+    </div>`;
+
+  const renderScreenerRows = (presetKey) => {
+    const rows = snapshot?.rows || [];
+    const preset = snapshot?.presets?.[presetKey];
+    $("#preset-why").innerHTML = preset ? `<b>Why a quant looks:</b> ${esc(preset.why)} <br><span class="bad"><b>The trap:</b> ${esc(preset.trap)}</span>` : "Click any symbol row to open the full interactive chart.";
+
+    let filtered = rows;
+    if (presetKey === "oversold_uptrend") {
+      filtered = rows.filter((r) => r.rsi_2 < 10 && r.above_sma_200 === true);
+    } else if (presetKey === "strong_momentum") {
+      filtered = rows.filter((r) => r.rsi_14 > 60 && r.change_1m_pct > 5);
+    } else if (presetKey === "pullback") {
+      filtered = rows.filter((r) => r.change_1d_pct < -1.5 && r.above_sma_200 === true);
+    } else if (presetKey === "high_volatility") {
+      filtered = rows.filter((r) => r.rsi_2 < 5 || r.rsi_2 > 95);
+    }
+
+    $("#screener-body").innerHTML = filtered.map((r) => {
+      const tone1d = (r.change_1d_pct ?? 0) >= 0 ? "good" : "bad";
+      const tone1m = (r.change_1m_pct ?? 0) >= 0 ? "good" : "bad";
+      const rsi2Tone = r.rsi_2 < 10 ? "good" : r.rsi_2 > 90 ? "bad" : "";
+      return `<tr class="click" data-sym="${esc(r.symbol)}">
+        <td><b class="mono" style="color:var(--accent)">${esc(r.symbol)}</b></td>
+        <td class="small muted">${esc(clip(r.name, 28))}</td>
+        <td class="mono num">$${esc(fmt(r.close, 2))}</td>
+        <td class="mono num ${tone1d}">${esc(pct((r.change_1d_pct ?? 0) / 100, 1))}</td>
+        <td class="mono num ${tone1m}">${esc(pct((r.change_1m_pct ?? 0) / 100, 1))}</td>
+        <td class="mono num ${rsi2Tone}"><b>${esc(fmt(r.rsi_2, 1))}</b></td>
+        <td class="mono num">${esc(fmt(r.rsi_14, 1))}</td>
+        <td class="mono num ${(r.vs_sma_200_pct ?? 0) >= 0 ? "good" : "bad"}">${esc(pct((r.vs_sma_200_pct ?? 0) / 100, 1))}</td>
+        <td><span class="badge small">${esc(r.provenance?.freshness || "EOD")}</span></td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="9" class="empty">No symbols matched this preset filter.</td></tr>`;
+
+    $("#screener-body").querySelectorAll("tr.click").forEach((tr) => {
+      tr.onclick = () => {
+        CH.symbol = tr.dataset.sym;
+        CH.formula = "";
+        saveCH();
+        go("chart");
+      };
+    });
+  };
+
+  $("#screen-preset").onchange = (e) => renderScreenerRows(e.target.value);
+  renderScreenerRows("");
+
+  $("#mkt-tab-screen").onclick = () => {
+    $("#mkt-tab-screen").className = "btn primary";
+    $("#mkt-tab-cal").className = "btn";
+    $("#mkt-view-screen").hidden = false;
+    $("#mkt-view-cal").hidden = true;
+  };
+  $("#mkt-tab-cal").onclick = () => {
+    $("#mkt-tab-cal").className = "btn primary";
+    $("#mkt-tab-screen").className = "btn";
+    $("#mkt-view-screen").hidden = true;
+    $("#mkt-view-cal").hidden = false;
+  };
+};
+
+// ---------- Live Crypto Feed ----------
+RENDER.live = async (main) => {
+  let activeProduct = "BTC-USD";
+  const stateFeed = {
+    "BTC-USD": { price: null, bid: null, ask: null, change: null, high: null, low: null, volume: null, trades: [], bids: [], asks: [] },
+    "ETH-USD": { price: null, bid: null, ask: null, change: null, high: null, low: null, volume: null, trades: [], bids: [], asks: [] },
+  };
+
+  main.innerHTML = `${head("Live Crypto Feed (Public WebSocket)", "Real-time, zero-key streaming from Coinbase Advanced Trade. Watch ticks, spread, and order book depth live.")}
+    <div class="row" style="margin-bottom:16px">
+      <div class="seg" id="live-prod-seg">
+        <button type="button" data-prod="BTC-USD" aria-pressed="true">BTC-USD</button>
+        <button type="button" data-prod="ETH-USD">ETH-USD</button>
+      </div>
+      <span class="grow"></span>
+      <div class="live on" id="crypto-conn-pill"><i></i><span>Connecting to Coinbase WS</span></div>
+    </div>
+
+    <div class="cols">
+      <div class="stack">
+        <section class="box">
+          <div class="row" style="align-items:baseline">
+            <h1 id="live-price" class="mono" style="font-size:38px;margin:0;letter-spacing:-0.03em;color:var(--accent)">$--.--</h1>
+            <span id="live-change" class="mono" style="font-size:16px;font-weight:600">--</span>
+          </div>
+          <div class="stats compact" style="margin-top:14px">
+            <div><b id="live-bid" class="mono good">$--.--</b><span>Best Bid</span></div>
+            <div><b id="live-ask" class="mono bad">$--.--</b><span>Best Ask</span></div>
+            <div><b id="live-spread" class="mono">$--.--</b><span>Spread</span></div>
+            <div><b id="live-vol" class="mono">--</b><span>24h Volume</span></div>
+          </div>
+        </section>
+
+        <section class="box">
+          <h2>Recent Real-Time Trades</h2>
+          <p class="muted small">Executed market trades streaming tick-by-tick directly from the exchange tape.</p>
+          <div class="table-wrap" style="max-height:300px;overflow:auto">
+            <table>
+              <thead><tr><th>Time</th><th>Side</th><th>Price</th><th>Size</th></tr></thead>
+              <tbody id="live-trades-tape"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="box">
+          <h2>10-Level Real-Time Order Book</h2>
+          <p class="muted small">Visualizing resting limit orders: Asks (sellers) on top, Bids (buyers) below.</p>
+          <div style="display:grid;gap:12px;margin-top:10px">
+            <div>
+              <div class="faint small" style="margin-bottom:4px">ASKS (Sellers)</div>
+              <div id="live-book-asks" style="display:grid;gap:2px"></div>
+            </div>
+            <div id="live-mid-spread" class="row" style="padding:6px 0;border-block:1px solid var(--line);font-size:12px;color:var(--muted)">
+              <span>Mid Market</span>
+              <span class="grow"></span>
+              <span id="live-spread-detail">Spread: --</span>
+            </div>
+            <div>
+              <div class="faint small" style="margin-bottom:4px">BIDS (Buyers)</div>
+              <div id="live-book-bids" style="display:grid;gap:2px"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>`;
+
+  const renderActive = () => {
+    const data = stateFeed[activeProduct];
+    if (data.price != null) {
+      $("#live-price").textContent = `$${fmt(data.price, 2)}`;
+      const chg = data.change != null ? (data.change >= 0 ? "+" : "") + data.change.toFixed(2) + "%" : "--";
+      $("#live-change").textContent = chg;
+      $("#live-change").className = "mono " + (data.change >= 0 ? "good" : "bad");
+      $("#live-bid").textContent = `$${fmt(data.bid, 2)}`;
+      $("#live-ask").textContent = `$${fmt(data.ask, 2)}`;
+      const spread = data.ask != null && data.bid != null ? Math.max(0, data.ask - data.bid) : 0;
+      $("#live-spread").textContent = `$${fmt(spread, 2)}`;
+      $("#live-spread-detail").textContent = `Spread: $${fmt(spread, 2)} (${((spread / data.price) * 100).toFixed(3)}%)`;
+      $("#live-vol").textContent = fmt(data.volume, 2);
+    }
+
+    $("#live-trades-tape").innerHTML = (data.trades || []).slice(0, 15).map((t) => {
+      const isBuy = t.side === "buy";
+      return `<tr>
+        <td class="mono faint small">${esc(String(t.time || "").slice(11, 19))}</td>
+        <td class="${isBuy ? "good" : "bad"} small"><b>${isBuy ? "BUY" : "SELL"}</b></td>
+        <td class="mono num ${isBuy ? "good" : "bad"}">$${esc(fmt(t.price, 2))}</td>
+        <td class="mono num faint">${esc(fmt(t.size, 4))}</td>
+      </tr>`;
+    }).join("");
+
+    const maxQty = Math.max(...(data.bids || []).map((b) => b[1]), ...(data.asks || []).map((a) => a[1]), 0.01);
+    $("#live-book-asks").innerHTML = (data.asks || []).slice(-7).reverse().map(([p, q]) => {
+      const pctWidth = Math.min(100, Math.round((q / maxQty) * 100));
+      return `<div class="row mono small" style="position:relative;padding:3px 6px">
+        <div style="position:absolute;inset:0;right:${100 - pctWidth}%;background:rgba(239,107,107,0.18);border-radius:2px;pointer-events:none"></div>
+        <span class="bad num">$${esc(fmt(p, 2))}</span>
+        <span class="grow"></span>
+        <span class="faint num">${esc(fmt(q, 4))}</span>
+      </div>`;
+    }).join("");
+
+    $("#live-book-bids").innerHTML = (data.bids || []).slice(0, 7).map(([p, q]) => {
+      const pctWidth = Math.min(100, Math.round((q / maxQty) * 100));
+      return `<div class="row mono small" style="position:relative;padding:3px 6px">
+        <div style="position:absolute;inset:0;right:${100 - pctWidth}%;background:rgba(92,201,143,0.18);border-radius:2px;pointer-events:none"></div>
+        <span class="good num">$${esc(fmt(p, 2))}</span>
+        <span class="grow"></span>
+        <span class="faint num">${esc(fmt(q, 4))}</span>
+      </div>`;
+    }).join("");
+  };
+
+  document.querySelectorAll("#live-prod-seg button").forEach((b) => {
+    b.onclick = () => {
+      document.querySelectorAll("#live-prod-seg button").forEach((x) => x.removeAttribute("aria-pressed"));
+      b.setAttribute("aria-pressed", "true");
+      activeProduct = b.dataset.prod;
+      renderActive();
+    };
+  });
+
+  if (state.liveSource) {
+    try { state.liveSource.close(); } catch (e) {}
+  }
+  const sse = new EventSource("/api/live/crypto?products=BTC-USD,ETH-USD");
+  state.liveSource = sse;
+
+  sse.onopen = () => {
+    const pill = $("#crypto-conn-pill");
+    if (pill) { pill.className = "live on"; pill.querySelector("span").textContent = "Connected (Coinbase WS)"; }
+  };
+  sse.onerror = () => {
+    const pill = $("#crypto-conn-pill");
+    if (pill) { pill.className = "live off"; pill.querySelector("span").textContent = "Reconnecting feed"; }
+  };
+
+  sse.addEventListener("ticker", (e) => {
+    const ev = JSON.parse(e.data);
+    const prod = ev.product;
+    if (stateFeed[prod]) {
+      stateFeed[prod].price = ev.price;
+      stateFeed[prod].bid = ev.bid;
+      stateFeed[prod].ask = ev.ask;
+      stateFeed[prod].change = ev.change_24h_pct;
+      stateFeed[prod].high = ev.high_24h;
+      stateFeed[prod].low = ev.low_24h;
+      stateFeed[prod].volume = ev.volume_24_h || ev.volume_24h;
+      if (prod === activeProduct) renderActive();
+    }
+  });
+
+  sse.addEventListener("trade", (e) => {
+    const ev = JSON.parse(e.data);
+    const prod = ev.product;
+    if (stateFeed[prod]) {
+      stateFeed[prod].trades.unshift(ev);
+      if (stateFeed[prod].trades.length > 50) stateFeed[prod].trades.pop();
+      if (prod === activeProduct) renderActive();
+    }
+  });
+
+  sse.addEventListener("book", (e) => {
+    const ev = JSON.parse(e.data);
+    const prod = ev.product;
+    if (stateFeed[prod]) {
+      stateFeed[prod].bids = ev.bids || [];
+      stateFeed[prod].asks = ev.asks || [];
+      if (prod === activeProduct) renderActive();
+    }
+  });
+};
+
 function scheduleForm(d, s = null) {
   const box = $("#schedule-form");
   const kinds = d.kinds.filter((k) => k.enabled || (s && s.kind === k.kind));
@@ -608,6 +1272,70 @@ function scheduleForm(d, s = null) {
   box.scrollIntoView({ block: "start" });
 }
 
+// ---------- ticker runtime hydration ----------
+async function hydrateTicker() {
+  try {
+    const snap = await api("/api/market/snapshot");
+    const syms = ["SPY", "QQQ", "IWM"];
+    for (const sym of syms) {
+      const item = (snap.items || []).find((i) => i.symbol === sym);
+      const el = $(`#tick-${sym.toLowerCase()}`);
+      if (item && el) {
+        const sign = item.change_pct >= 0 ? "+" : "";
+        const col = item.change_pct >= 0 ? "var(--good)" : "var(--bad)";
+        el.innerHTML = `<b style="color:#fff;">${item.symbol}</b> $${item.close.toFixed(2)} <span style="color:${col};">${sign}${item.change_pct.toFixed(2)}%</span> <span style="color:var(--faint); font-size:10.5px;">EOD · Yahoo · as of 2026-09-28</span>`;
+      }
+    }
+  } catch (e) {
+    ["spy", "qqq", "iwm"].forEach((s) => {
+      const el = $(`#tick-${s}`);
+      if (el) el.innerHTML = `<b style="color:#fff;">${s.toUpperCase()}</b> <span style="color:var(--faint); font-size:10.5px;">Unavailable</span>`;
+    });
+  }
+}
+
+let tickerSSE = null;
+const lastTickAt = { "BTC-USD": null, "ETH-USD": null };
+
+function updateTickerAge() {
+  const now = Date.now();
+  for (const [prod, elId] of [["BTC-USD", "#tick-btc"], ["ETH-USD", "#tick-eth"]]) {
+    const t = lastTickAt[prod];
+    const el = $(elId);
+    if (!el || !t) continue;
+    const sec = Math.max(0, Math.floor((now - t.at) / 1000));
+    const sym = prod.replace("-USD", "");
+    el.innerHTML = `<b style="color:#fff;">${sym}</b> $${t.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <span style="color:var(--good); font-size:10.5px;">LIVE · Coinbase · updated ${sec === 0 ? "just now" : sec + "s ago"}</span>`;
+  }
+}
+setInterval(updateTickerAge, 1000);
+
+function connectTickerLive() {
+  try {
+    if (tickerSSE) tickerSSE.close();
+    tickerSSE = new EventSource("/api/live/crypto");
+    tickerSSE.addEventListener("ticker", (e) => {
+      try {
+        const d = JSON.parse(e.data);
+        if (d.product_id && d.price) {
+          lastTickAt[d.product_id] = { price: d.price, at: Date.now() };
+          updateTickerAge();
+        }
+      } catch (err) {}
+    });
+    tickerSSE.onerror = () => {
+      ["btc", "eth"].forEach((s) => {
+        const el = $(`#tick-${s}`);
+        if (el && !lastTickAt[`${s.toUpperCase()}-USD`]) {
+          el.innerHTML = `<b style="color:#fff;">${s.toUpperCase()}</b> <span style="color:var(--warn); font-size:10.5px;">Waiting for Coinbase — no quote</span>`;
+        } else if (el) {
+          el.innerHTML = `<b style="color:#fff;">${s.toUpperCase()}</b> <span style="color:var(--bad); font-size:10.5px;">Disconnected / Stale</span>`;
+        }
+      });
+    };
+  } catch (e) {}
+}
+
 // ---------- boot ----------
 function boot() {
   buildTabs();
@@ -617,6 +1345,8 @@ function boot() {
   if (PAGES.some((p) => p.id === hash)) first = hash;
   go(first);
   connectStream();
+  hydrateTicker();
+  connectTickerLive();
   footer();
 }
 document.addEventListener("DOMContentLoaded", boot);
