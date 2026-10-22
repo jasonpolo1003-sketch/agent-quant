@@ -1278,12 +1278,14 @@ async function hydrateTicker() {
     const snap = await api("/api/market/snapshot");
     const syms = ["SPY", "QQQ", "IWM"];
     for (const sym of syms) {
-      const item = (snap.items || []).find((i) => i.symbol === sym);
+      const item = (snap.rows || []).find((i) => i.symbol === sym);
       const el = $(`#tick-${sym.toLowerCase()}`);
       if (item && el) {
-        const sign = item.change_pct >= 0 ? "+" : "";
-        const col = item.change_pct >= 0 ? "var(--good)" : "var(--bad)";
-        el.innerHTML = `<b style="color:#fff;">${item.symbol}</b> $${item.close.toFixed(2)} <span style="color:${col};">${sign}${item.change_pct.toFixed(2)}%</span> <span style="color:var(--faint); font-size:10.5px;">EOD · Yahoo · as of 2026-09-28</span>`;
+        const chg = item.change_1d_pct ?? 0;
+        const sign = chg >= 0 ? "+" : "";
+        const col = chg >= 0 ? "var(--good)" : "var(--bad)";
+        const asOf = item.last_date || "2026-09-28";
+        el.innerHTML = `<b style="color:#fff;">${item.symbol}</b> $${item.close.toFixed(2)} <span style="color:${col};">${sign}${chg.toFixed(2)}%</span> <span style="color:var(--faint); font-size:10.5px;">EOD · Yahoo · as of ${esc(asOf)}</span>`;
       }
     }
   } catch (e) {
