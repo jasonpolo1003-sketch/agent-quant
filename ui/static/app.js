@@ -111,16 +111,19 @@ let previousActiveElement = null;
 function toggleShortcuts(show) {
   const m = $("#shortcuts-modal");
   if (!m) return;
-  const willOpen = show !== undefined ? show : m.hidden;
-  if (willOpen) {
+  const isCurrentlyOpen = !m.hidden;
+  const willOpen = show !== undefined ? show : !isCurrentlyOpen;
+
+  if (willOpen && !isCurrentlyOpen) {
     previousActiveElement = document.activeElement;
     m.hidden = false;
     setTimeout(() => { $("#shortcuts-close")?.focus(); }, 10);
-  } else {
+  } else if (!willOpen && isCurrentlyOpen) {
     m.hidden = true;
     if (previousActiveElement && typeof previousActiveElement.focus === "function") {
       previousActiveElement.focus();
     }
+    previousActiveElement = null;
   }
 }
 $("#btn-shortcuts")?.addEventListener("click", () => toggleShortcuts(true));
@@ -344,7 +347,7 @@ RENDER.today = async (main) => {
 
   main.innerHTML = `
     ${head("Quant Brain Command Cockpit", "Deterministic algorithmic research terminal. Held-out validation, DSR deflated Sharpe ratio, zero lookahead bias.")}
-    
+
     <!-- Top 4 KPI Stat Cards -->
     <section style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:16px; margin-bottom:28px;">
       ${kpiCards}
@@ -1281,11 +1284,12 @@ async function hydrateTicker() {
       const item = (snap.rows || []).find((i) => i.symbol === sym);
       const el = $(`#tick-${sym.toLowerCase()}`);
       if (item && el) {
-        const chg = item.change_1d_pct ?? 0;
-        const sign = chg >= 0 ? "+" : "";
-        const col = chg >= 0 ? "var(--good)" : "var(--bad)";
-        const asOf = item.last_date || "2026-09-28";
-        el.innerHTML = `<b style="color:#fff;">${item.symbol}</b> $${item.close.toFixed(2)} <span style="color:${col};">${sign}${chg.toFixed(2)}%</span> <span style="color:var(--faint); font-size:10.5px;">EOD · Yahoo · as of ${esc(asOf)}</span>`;
+        const closeHtml = item.close != null ? `$${item.close.toFixed(2)}` : `<span style="color:var(--faint);">price unavailable</span>`;
+        const chgHtml = item.change_1d_pct != null
+          ? `<span style="color:${item.change_1d_pct >= 0 ? 'var(--good)' : 'var(--bad)'};">${item.change_1d_pct >= 0 ? '+' : ''}${item.change_1d_pct.toFixed(2)}%</span>`
+          : `<span style="color:var(--faint);">unavailable</span>`;
+        const asOf = item.last_date ? `as of ${esc(item.last_date)}` : `date unavailable`;
+        el.innerHTML = `<b style="color:#fff;">${item.symbol}</b> ${closeHtml} ${chgHtml} <span style="color:var(--faint); font-size:10.5px;">EOD · Yahoo · ${asOf}</span>`;
       }
     }
   } catch (e) {
@@ -1307,7 +1311,10 @@ function updateTickerAge() {
     if (!el || !t) continue;
     const sec = Math.max(0, Math.floor((now - t.at) / 1000));
     const sym = prod.replace("-USD", "");
-    el.innerHTML = `<b style="color:#fff;">${sym}</b> $${t.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <span style="color:var(--good); font-size:10.5px;">LIVE · Coinbase · updated ${sec === 0 ? "just now" : sec + "s ago"}</span>`;
+    const isStale = sec > 15;
+    const badgeColor = isStale ? "var(--warn)" : "var(--good)";
+    const badgeLabel = isStale ? "STALE · Coinbase" : "LIVE · Coinbase";
+    el.innerHTML = `<b style="color:#fff;">${sym}</b> $${t.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} <span style="color:${badgeColor}; font-size:10.5px;">${badgeLabel} · updated ${sec === 0 ? "just now" : sec + "s ago"}</span>`;
   }
 }
 setInterval(updateTickerAge, 1000);
