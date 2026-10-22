@@ -435,6 +435,8 @@ class AgentReachAdapter:
             completed = _as_completed(argv, self.runner(argv, timeout=timeout))
         except subprocess.TimeoutExpired as exc:
             raise AgentReachError(f"command timed out after {timeout:.3f}s: {argv[0]}") from exc
+        except OSError as exc:
+            raise AgentReachError(f"cannot run {argv[0]}: {type(exc).__name__}: {exc}") from exc
         return completed
 
     def check_health(self) -> dict[str, ChannelHealth]:
@@ -559,26 +561,36 @@ class AgentReachAdapter:
         pool is capped at ``CANDIDATE_POOL_FACTOR * limit`` so the run stays
         bounded while leaving the ranker something to choose between.
         """
-        health = self.check_health()
+        self.last_arxiv_error = None
+        health_error: str | None = None
+        try:
+            health = self.check_health()
+        except AgentReachError as exc:
+            # arXiv is an independent zero-account lane. A missing or unhealthy
+            # Agent Reach installation disables routed lanes, not literature search.
+            health = {}
+            health_error = str(exc)
         queries = plan_queries(question, method_family)
         hits: list[dict[str, Any]] = []
+        routed_errors: list[str] = []
         search_usable = any(is_channel_usable(health, name) for name in SEARCH_CHANNELS)
         github_usable = is_channel_usable(health, "github")
-        if not search_usable and not github_usable:
-            raise AgentReachError(
-                "no usable Agent Reach search channel (exa_search or github); "
-                "run `uv run python scripts/agent_reach_check.py` to see which "
-                "lanes are usable and why the others are not"
-            )
         pool_target = max(1, limit) * CANDIDATE_POOL_FACTOR
         per_query = max(1, limit)
         if search_usable:
             for query in queries:
-                hits.extend(self.search_exa(query, limit=per_query))
+                try:
+                    hits.extend(self.search_exa(query, limit=per_query))
+                except AgentReachError as exc:
+                    routed_errors.append(f"Exa lane failed during search: {exc}")
+                    break
                 if len(_dedupe_hits(hits)) >= pool_target:
                     break
         if github_usable and len(_dedupe_hits(hits)) < pool_target:
-            hits.extend(self.search_github(queries[0], limit=per_query))
+            try:
+                hits.extend(self.search_github(queries[0], limit=per_query))
+            except AgentReachError as exc:
+                routed_errors.append(f"GitHub lane failed during search: {exc}")
         if len(_dedupe_hits(hits)) < pool_target:
             # arXiv is a zero-account lane, so its availability is independent
             # of any Agent Reach channel's doctor status and it is not gated on
@@ -595,8 +607,15 @@ class AgentReachAdapter:
                 self.last_arxiv_error = str(exc)
         unique = _dedupe_hits(hits)[:pool_target]
         if not unique:
-            detail = ""
+            details: list[str] = []
+            if not search_usable and not github_usable:
+                routed = "no usable Agent Reach search channel (exa_search or github)"
+                if health_error:
+                    routed += f": {health_error}"
+                details.append(routed)
+            details.extend(routed_errors)
             if self.last_arxiv_error:
-                detail = f"; arXiv lane also failed: {self.last_arxiv_error}"
-            raise AgentReachError(f"Agent Reach search returned no URLs{detail}")
+                details.append(f"arXiv lane also failed: {self.last_arxiv_error}")
+            suffix = f"; {'; '.join(details)}" if details else ""
+            raise AgentReachError(f"Search returned no URLs{suffix}")
         return unique

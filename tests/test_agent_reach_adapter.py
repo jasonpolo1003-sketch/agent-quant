@@ -176,6 +176,110 @@ def test_search_fails_closed_when_no_usable_channel() -> None:
         adapter.search_for_question("overnight reversal", None, limit=2)
 
 
+@pytest.mark.parametrize(
+    "doctor_result",
+    [
+        (2, "", "doctor down"),
+        (
+            0,
+            json.dumps(
+                {
+                    "exa_search": {
+                        "status": "error",
+                        "active_backend": None,
+                        "message": "down",
+                    },
+                    "github": {
+                        "status": "error",
+                        "active_backend": None,
+                        "message": "down",
+                    },
+                }
+            ),
+            "",
+        ),
+    ],
+)
+def test_arxiv_runs_when_agent_reach_is_unavailable(doctor_result) -> None:
+    def runner(argv: list[str], timeout: int = 60) -> tuple[int, str, str]:
+        del argv, timeout
+        return doctor_result
+
+    expected = {
+        "url": "https://arxiv.org/abs/1234.5678",
+        "title": "Independent",
+        "source_type": "paper",
+    }
+    adapter = AgentReachAdapter(
+        runner=runner,
+        skip_exe_check=True,
+        arxiv_search_impl=lambda query, limit, timeout: [expected],
+    )
+
+    assert adapter.search_for_question("mean reversion exit", None, limit=1) == [expected]
+
+
+@pytest.mark.parametrize("failing_lane", ["exa", "github"])
+def test_arxiv_runs_when_a_healthy_routed_lane_fails_during_search(failing_lane) -> None:
+    health = {
+        "exa_search": {
+            "status": "ok" if failing_lane == "exa" else "error",
+            "active_backend": "exa" if failing_lane == "exa" else None,
+            "message": "ready" if failing_lane == "exa" else "down",
+        },
+        "github": {
+            "status": "ok" if failing_lane == "github" else "error",
+            "active_backend": "gh" if failing_lane == "github" else None,
+            "message": "ready" if failing_lane == "github" else "down",
+        },
+    }
+
+    def runner(argv: list[str], timeout: int = 60) -> tuple[int, str, str]:
+        del timeout
+        if "doctor" in argv:
+            return 0, json.dumps(health), ""
+        return 1, "", f"{failing_lane} runtime failure"
+
+    expected = {
+        "url": "https://arxiv.org/abs/1234.5678",
+        "title": "Independent",
+        "source_type": "paper",
+    }
+    adapter = AgentReachAdapter(
+        runner=runner,
+        skip_exe_check=True,
+        arxiv_search_impl=lambda query, limit, timeout: [expected],
+    )
+
+    assert adapter.search_for_question("mean reversion exit", None, limit=1) == [expected]
+
+
+def test_arxiv_runs_when_a_routed_executable_disappears_after_health_check() -> None:
+    calls = 0
+
+    def runner(argv: list[str], timeout: int = 60):
+        nonlocal calls
+        del timeout
+        calls += 1
+        if "doctor" in argv:
+            return 0, DOCTOR_JSON, ""
+        raise FileNotFoundError(argv[0])
+
+    expected = {
+        "url": "https://arxiv.org/abs/1234.5678",
+        "title": "Independent",
+        "source_type": "paper",
+    }
+    adapter = AgentReachAdapter(
+        runner=runner,
+        skip_exe_check=True,
+        arxiv_search_impl=lambda query, limit, timeout: [expected],
+    )
+
+    assert adapter.search_for_question("mean reversion exit", None, limit=1) == [expected]
+    assert calls >= 2
+
+
 def test_production_live_backend_discovers_without_search_fn_injection(tmp_path: Path) -> None:
     """CLI production path: adapter + fetch_impl, no Python search_fn."""
     adapter = AgentReachAdapter(

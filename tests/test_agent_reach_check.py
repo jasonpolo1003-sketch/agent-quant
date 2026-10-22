@@ -38,3 +38,20 @@ def test_the_diagnostic_does_not_crash_printing_a_non_ascii_reason():
     safe = _module()._console_safe("mcporter 已装但 Exa 未配置")
     assert isinstance(safe, str)
     assert "Exa" in safe
+
+
+def test_doctor_failure_does_not_disable_the_independent_arxiv_lane(monkeypatch, capsys):
+    from quant_brain.discovery.agent_reach import AgentReachUnavailable
+
+    module = _module()
+
+    class BrokenDoctor:
+        def check_health(self):
+            raise AgentReachUnavailable("doctor down")
+
+    monkeypatch.setattr(module, "AgentReachAdapter", BrokenDoctor)
+
+    assert module.main() == 0
+    captured = capsys.readouterr()
+    assert "arxiv" in captured.out
+    assert "independent lanes remain available" in captured.err

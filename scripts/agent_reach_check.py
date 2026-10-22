@@ -7,7 +7,7 @@ because it is unsuitable for a given topic.
 
 Exit codes:
     0  at least one search lane is usable
-    2  the doctor itself is unusable
+    2  the doctor is unusable and no independent lane is available
     3  the doctor answered, but no search lane is usable
 """
 
@@ -79,11 +79,16 @@ def lane_verdicts(health: dict[str, ChannelHealth]) -> list[dict[str, Any]]:
 
 
 def main() -> int:
+    doctor_error: str | None = None
     try:
         health = AgentReachAdapter().check_health()
     except AgentReachError as exc:
-        print(f"agent-reach check failed: {exc}", file=sys.stderr)
-        return 2
+        health = {}
+        doctor_error = str(exc)
+        print(
+            f"agent-reach routed lanes unavailable: {exc}; independent lanes remain available",
+            file=sys.stderr,
+        )
 
     rows = [
         {
@@ -105,15 +110,16 @@ def main() -> int:
 
     search_ready = any(row["usable_now"] for row in verdicts if row["channel"] in SEARCH_CHANNELS)
     github_ready = is_channel_usable(health, "github")
-    if not (search_ready or github_ready):
+    any_ready = any(row["usable_now"] for row in verdicts)
+    if not any_ready:
         print(
             "\nNO SEARCH LANE USABLE - live discovery will fail closed.",
             file=sys.stderr,
         )
-        return 3
+        return 2 if doctor_error else 3
 
     print("\nAt least one search lane is usable.")
-    if not search_ready:
+    if not (search_ready or github_ready):
         # Worth saying plainly: a usable lane is not the same as a lane that can
         # answer a given question. See scripts/gate_readiness.py.
         print(
