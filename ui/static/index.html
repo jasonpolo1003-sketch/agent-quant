@@ -17,11 +17,65 @@
     <form class="ask-bar" id="cmd-form" autocomplete="off" role="search">
       <input id="cmd" aria-label="Ask or jump" placeholder="Ask a question, or type SPY">
     </form>
+    <button type="button" class="btn" id="btn-shortcuts" style="padding:4px 9px; font-size:12px; font-weight:600; background:rgba(255,255,255,0.06); border:1px solid var(--line); border-radius:var(--radius-sm); color:var(--muted); cursor:pointer;" title="Keyboard shortcuts (?)">? Keys</button>
     <div class="live" id="status-live" title="Updates arrive automatically while this is on"><i></i><span>Connecting</span></div>
+  </div>
+  <div class="ticker-tape" id="ticker-tape" style="background:#070b12; border-top:1px solid var(--line); font-size:11.5px; font-family:var(--mono); padding:4px 20px; display:flex; gap:20px; overflow-x:auto; white-space:nowrap; color:var(--muted);">
+    <span id="tick-spy"><b style="color:#fff;">SPY</b> <span class="tick-val">Loading…</span></span>
+    <span id="tick-qqq"><b style="color:#fff;">QQQ</b> <span class="tick-val">Loading…</span></span>
+    <span id="tick-iwm"><b style="color:#fff;">IWM</b> <span class="tick-val">Loading…</span></span>
+    <span id="tick-btc"><b style="color:#fff;">BTC</b> <span class="tick-val">Waiting for Coinbase — no quote</span></span>
+    <span id="tick-eth"><b style="color:#fff;">ETH</b> <span class="tick-val">Waiting for Coinbase — no quote</span></span>
+    <span id="tick-gate" style="color:var(--faint);"><b style="color:var(--bad);">SC-0002</b> · NO EDGE SHOWN · DSR 0.896 &lt; 0.950 | <b style="color:var(--faint);">SC-0001</b> · RETIRED UNTESTED</span>
+    <span style="margin-left:auto; color:var(--faint);">PRESS <b style="color:var(--text);">?</b> FOR SHORTCUTS</span>
   </div>
 </header>
 <main id="page" tabindex="-1"></main>
 <footer class="foot"><span id="foot"></span></footer>
+
+<div class="overlay" id="shortcuts-modal" role="dialog" aria-modal="true" aria-labelledby="shortcuts-title" hidden>
+  <div class="viewer" style="max-width:540px; margin:auto; border-radius:var(--radius); background:var(--surface); border:1px solid var(--line-strong); padding:20px; box-shadow:var(--shadow-card);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3 id="shortcuts-title" style="margin:0; font-family:var(--display); font-size:17px; color:#fff;">⚡ Institutional Hotkeys & Mnemonics</h3>
+      <button class="btn" id="shortcuts-close" type="button" style="padding:2px 8px; font-size:12px;">Close (Esc)</button>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px; margin-bottom:16px;">
+      <div style="background:var(--surface-2); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--line); display:flex; justify-content:space-between;">
+        <span>Cockpit / Overview</span><b style="color:var(--accent); font-family:var(--mono);">1</b>
+      </div>
+      <div style="background:var(--surface-2); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--line); display:flex; justify-content:space-between;">
+        <span>Screener & Macro</span><b style="color:var(--accent); font-family:var(--mono);">2</b>
+      </div>
+      <div style="background:var(--surface-2); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--line); display:flex; justify-content:space-between;">
+        <span>Risk & Ruin Sim</span><b style="color:var(--accent); font-family:var(--mono);">3</b>
+      </div>
+      <div style="background:var(--surface-2); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--line); display:flex; justify-content:space-between;">
+        <span>Live Feed (Coinbase)</span><b style="color:var(--accent); font-family:var(--mono);">4</b>
+      </div>
+      <div style="background:var(--surface-2); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--line); display:flex; justify-content:space-between;">
+        <span>Superchart Replay</span><b style="color:var(--accent); font-family:var(--mono);">5</b>
+      </div>
+      <div style="background:var(--surface-2); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--line); display:flex; justify-content:space-between;">
+        <span>Activity & Events</span><b style="color:var(--accent); font-family:var(--mono);">6</b>
+      </div>
+      <div style="background:var(--surface-2); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--line); display:flex; justify-content:space-between;">
+        <span>Strategy Cards</span><b style="color:var(--accent); font-family:var(--mono);">7</b>
+      </div>
+      <div style="background:var(--surface-2); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--line); display:flex; justify-content:space-between;">
+        <span>Health Checks</span><b style="color:var(--accent); font-family:var(--mono);">8</b>
+      </div>
+      <div style="background:var(--surface-2); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--line); display:flex; justify-content:space-between;">
+        <span>Quant Tutor</span><b style="color:var(--accent); font-family:var(--mono);">9</b>
+      </div>
+      <div style="background:var(--surface-2); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--line); display:flex; justify-content:space-between;">
+        <span>Search & Jump</span><b style="color:var(--accent); font-family:var(--mono);">/</b>
+      </div>
+    </div>
+    <div style="font-size:12px; color:var(--faint); text-align:center;">
+      Press any number key outside an input to instantly jump between cockpits.
+    </div>
+  </div>
+</div>
 
 <div class="overlay" id="viewer" hidden>
   <div class="viewer" role="dialog" aria-modal="true" aria-labelledby="viewer-title">

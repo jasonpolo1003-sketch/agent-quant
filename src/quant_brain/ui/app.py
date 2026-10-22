@@ -8,6 +8,7 @@ import sys
 import threading
 import time
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,9 @@ from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import iterate_in_threadpool, run_in_threadpool
 
 from quant_brain.data.market_data import MarketDataError
+from quant_brain.market import calendar as market_cal
+from quant_brain.market import live_crypto, risk, screener
+from quant_brain.market.universe import latest_accepted, load_universe, provenance, read_frame
 from quant_brain.ui import (
     chartdata,
     jobs,
@@ -366,6 +370,142 @@ def create_app(config: TerminalConfig) -> FastAPI:
     @app.delete("/api/drawings")
     def delete_drawings(symbol: str, id: int | None = None):
         return {"deleted": store.delete_drawings(config.terminal_db, symbol, id)}
+
+    # --- risk center ----------------------------------------------------------------
+
+    @app.post("/api/risk/position-size")
+    async def risk_position_size(request: Request):
+        body = await request.json()
+        try:
+            account = float(body.get("account", 10000))
+            risk_pct = float(body.get("risk_pct", 1))
+            entry = float(body.get("entry", 100))
+            stop = float(body.get("stop", 98))
+            return risk.position_size(account, risk_pct, entry, stop)
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(422, str(exc)) from exc
+
+    @app.get("/api/risk/drawdown-table")
+    def risk_drawdown_table():
+        return {"table": risk.drawdown_table()}
+
+    @app.post("/api/risk/kelly")
+    async def risk_kelly(request: Request):
+        body = await request.json()
+        try:
+            win_rate = float(body.get("win_rate", 0.5))
+            payoff = float(body.get("payoff", 1.5))
+            return risk.kelly_fraction(win_rate, payoff)
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(422, str(exc)) from exc
+
+    @app.post("/api/risk/ruin-sim")
+    async def risk_ruin_sim(request: Request):
+        body = await request.json()
+        try:
+            win_rate = float(body.get("win_rate", 0.5))
+            payoff = float(body.get("payoff", 1.5))
+            risk_pct = float(body.get("risk_pct", 2.0))
+            trades = int(body.get("trades", 200))
+            paths = int(body.get("paths", 2000))
+            ruin_drawdown_pct = float(body.get("ruin_drawdown_pct", 50.0))
+            return await run_in_threadpool(
+                risk.simulate_paths,
+                win_rate, payoff, risk_pct,
+                trades=trades, paths=paths, ruin_drawdown_pct=ruin_drawdown_pct
+            )
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(422, str(exc)) from exc
+
+    @app.post("/api/risk/portfolio-heat")
+    async def risk_portfolio_heat(request: Request):
+        body = await request.json()
+        try:
+            account = float(body.get("account", 10000))
+            positions = list(body.get("positions", []))
+            return risk.portfolio_heat(account, positions)
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(422, str(exc)) from exc
+
+    # --- market screener & calendar -------------------------------------------------
+
+    @app.get("/api/market/snapshot")
+    def market_snapshot(universe_name: str = "starter"):
+        path = root / "data" / "processed" / "market_snapshot.json"
+        if path.is_file():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        try:
+            universe = load_universe(root, universe_name)
+            manifests = latest_accepted(root, config.brain_db)
+            rows, closes, missing = [], {}, []
+            for entry in universe.get("symbols", []):
+                manifest = manifests.get(entry["symbol"])
+                if manifest is None:
+                    missing.append(entry["symbol"])
+                    continue
+                frame = read_frame(root, manifest)
+                rows.append({**entry, **screener.screen_row(frame), "provenance": provenance(manifest)})
+                closes[entry["symbol"]] = frame.set_index("date")["adj_close"]
+            return {
+                "generated_at": datetime.now(UTC).isoformat(),
+                "universe": universe_name,
+                "survivorship_note": universe.get("survivorship_note", ""),
+                "missing": missing,
+                "rows": rows,
+                "presets": screener.presets_public(),
+                "correlation_1y": risk.correlation_matrix(closes, window=252) if closes else {},
+                "note": "End-of-day data. Nothing here is a recommendation to trade.",
+            }
+        except Exception as exc:
+            raise HTTPException(500, f"Unable to load market snapshot: {exc}") from exc
+
+    @app.get("/api/market/calendar")
+    def market_calendar():
+        path = root / "data" / "processed" / "calendar.json"
+        if path.is_file():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        fomc_events = []
+        for d in [
+            "2026-01-28", "2026-03-18", "2026-05-06", "2026-06-17",
+            "2026-07-29", "2026-09-16", "2026-10-28", "2026-12-09"
+        ]:
+            fomc_events.append({
+                "date": d,
+                "title": "FOMC Rate Decision & Press Conference",
+                "source": "Federal Reserve (Official Calendar)",
+                "why": market_cal.FOMC_WHY,
+                "importance": "high",
+            })
+        return {
+            "events": fomc_events,
+            "note": "To add FRED economic releases (CPI, Jobs, GDP) run 'python scripts/fetch_calendar.py' with FRED_API_KEY in .env.",
+        }
+
+    # --- live streaming feeds -------------------------------------------------------
+
+    @app.get("/api/live/crypto")
+    async def live_crypto_stream(request: Request, products: str = "BTC-USD,ETH-USD"):
+        product_list = [p.strip() for p in products.split(",") if p.strip()]
+        async def gen():
+            yield "retry: 3000\n\n"
+            try:
+                async for ev in live_crypto.stream(product_list):
+                    if await request.is_disconnected():
+                        break
+                    yield f"event: {ev.get('type', 'message')}\ndata: {json.dumps(ev, default=str)}\n\n"
+            except asyncio.CancelledError:
+                pass
+            except Exception as exc:
+                yield f"event: status\ndata: {json.dumps({'type': 'status', 'state': 'error', 'detail': str(exc)})}\n\n"
+
+        return StreamingResponse(gen(), media_type="text/event-stream",
+                                 headers={"Cache-Control": "no-cache"})
 
     # --- learn ----------------------------------------------------------------------
 
