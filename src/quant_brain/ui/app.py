@@ -18,7 +18,8 @@ from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import iterate_in_threadpool, run_in_threadpool
 
 from quant_brain.data.market_data import MarketDataError
-from quant_brain.market import calendar as market_cal, live_crypto, risk, screener
+from quant_brain.market import calendar as market_cal
+from quant_brain.market import live_crypto, risk, screener
 from quant_brain.market.universe import latest_accepted, load_universe, provenance, read_frame
 from quant_brain.ui import (
     chartdata,
