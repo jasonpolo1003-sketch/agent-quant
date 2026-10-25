@@ -746,4 +746,198 @@ body.wide .foot { display: none; }
     font-size: 11.5px !important;
   }
 }
+
+/* ---------- Interactive Agent Base & Visual Bots ---------- */
+.base-stage-wrap {
+  position: relative;
+  border-radius: var(--radius);
+  background:
+    radial-gradient(circle at 20% 25%, rgba(56, 189, 248, 0.08), transparent 45%),
+    radial-gradient(circle at 80% 70%, rgba(168, 85, 247, 0.08), transparent 45%),
+    linear-gradient(180deg, #090d16 0%, #0d1322 100%);
+  border: 1px solid var(--line-strong);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.base-floor-canvas {
+  position: relative;
+  width: 100%;
+  height: 330px;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.base-paths-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.base-station {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  min-width: 138px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  z-index: 2;
+}
+.base-station:hover, .base-station.active {
+  transform: translate(-50%, -53%) scale(1.03);
+  border-color: var(--accent);
+  box-shadow: 0 0 22px rgba(56, 189, 248, 0.22);
+}
+.base-station .st-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.base-station .st-sub {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-family: var(--mono);
+  margin-top: 2px;
+}
+.base-station .st-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.base-bot-sprite {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: left 0.85s cubic-bezier(0.22, 1, 0.36, 1), top 0.85s cubic-bezier(0.22, 1, 0.36, 1), transform 0.2s ease;
+}
+.base-bot-sprite:hover, .base-bot-sprite.selected {
+  transform: translate(-50%, -55%) scale(1.1);
+  z-index: 8;
+}
+.base-bot-sprite .bot-avatar-ring {
+  position: relative;
+  padding: 3px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1.5px solid rgba(56, 189, 248, 0.45);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+  animation: bot-float 3s ease-in-out infinite;
+}
+.base-bot-sprite.walking .bot-avatar-ring {
+  animation: bot-walk-bounce 0.35s ease-in-out infinite;
+}
+.base-bot-sprite.selected .bot-avatar-ring {
+  border-color: #fff;
+  box-shadow: 0 0 18px var(--accent);
+}
+.base-bot-sprite .bot-name-tag {
+  margin-top: 3px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: #f8fafc;
+  background: rgba(11, 15, 25, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 1px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.base-bot-sprite .bot-speech-pop {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.96);
+  border: 1px solid var(--accent);
+  color: #f8fafc;
+  font-size: 11px;
+  line-height: 1.35;
+  padding: 6px 10px;
+  border-radius: 8px;
+  width: max-content;
+  max-width: 220px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+  pointer-events: none;
+  z-index: 10;
+}
+
+@keyframes bot-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@keyframes bot-walk-bounce {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-6px) rotate(3deg); }
+}
+
+/* Transparency X-Ray Inspector Bar */
+.base-inspector {
+  border-top: 1px solid var(--line);
+  background: rgba(17, 24, 39, 0.95);
+  padding: 12px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Roaming Screen Companion Co-Pilot */
+.roaming-companion {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 90;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  transition: left 0.7s cubic-bezier(0.22, 1, 0.36, 1), top 0.7s cubic-bezier(0.22, 1, 0.36, 1), right 0.4s ease, bottom 0.4s ease;
+}
+.roaming-companion-card {
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  width: 310px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65);
+  font-size: 12.5px;
+}
+.roaming-companion-btn {
+  background: rgba(15, 23, 42, 0.95);
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(56, 189, 248, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.roaming-companion-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.6);
+}
 /* End responsive cockpit rules. */

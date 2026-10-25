@@ -61,3 +61,13 @@ def test_modal_and_shortcut_handlers_use_focus_stack_and_editable_guards():
     assert 'e.key === "Tab" && modal' in APP
     assert 'e.key === "Escape" && modal' in APP
     assert "if (!modal || modal.hidden) return false" in APP
+
+
+def test_interactive_base_and_roaming_companion_are_wired():
+    index_html = (REPO / "ui/static/index.html").read_text(encoding="utf-8")
+    assert '/static/base_bots.js' in index_html
+    assert 'id="roaming-companion-root"' in index_html
+    assert 'id="base-floor-canvas"' in APP
+    assert 'id="base-replay-run-btn"' in APP
+    assert "renderRoamingCompanion" in APP
+
