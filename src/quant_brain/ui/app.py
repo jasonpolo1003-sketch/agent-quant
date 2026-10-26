@@ -34,6 +34,7 @@ from quant_brain.ui import (
     tutor,
     winsched,
 )
+from quant_brain.ui import home as home_page
 from quant_brain.ui.backends import BACKENDS, BackendError, get_backend
 
 STATIC_DIR = Path(__file__).resolve().parents[3] / "ui" / "static"
@@ -407,6 +408,10 @@ def create_app(config: TerminalConfig) -> FastAPI:
             return fn(*args)
         except study.StudyError as exc:
             raise HTTPException(404, str(exc)) from exc
+
+    @app.get("/api/home-plain")
+    def home_plain():
+        return home_page.home(root)
 
     @app.get("/api/study")
     def study_overview():

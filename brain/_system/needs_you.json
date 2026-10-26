@@ -1,0 +1,10 @@
+[
+  {
+    "id": "merge-pr-14",
+    "title": "Merge pull request #14 into main",
+    "why": "main is the official copy. Everything since the cleanup (futures engine, practice run, Study page, the restored UI) is waiting in PR #14. Its tests pass.",
+    "recommendation": "Merge it on GitHub.",
+    "action": {"label": "Open PR #14", "url": "https://github.com/jasonpolo1003-sketch/agent-quant/pull/14"},
+    "added": "2026-10-26"
+  }
+]

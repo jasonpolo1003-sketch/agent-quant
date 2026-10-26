@@ -3,6 +3,7 @@
 "use strict";
 
 const PAGES = [
+  { id: "home", label: "Home" },
   { id: "chart", label: "Chart" },
   { id: "today", label: "Today" },
   { id: "activity", label: "Activity" },
@@ -84,9 +85,20 @@ function toast(text, kind = "") {
 function clearCharts() { while (charts.length) { try { charts.pop().remove(); } catch (e) { /* already gone */ } } }
 
 // ---------- navigation ----------
+// The bar shows the few pages that answer "what's going on"; the rest sit under More.
+const MAIN_TABS = ["home", "study", "chart", "learn"];
 function buildTabs() {
-  $("#tabs").innerHTML = PAGES.map((p) => `<button type="button" data-page="${p.id}">${p.label}</button>`).join("");
-  $("#tabs").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) go(b.dataset.page); });
+  const tab = (p) => `<button type="button" data-page="${p.id}">${p.label}</button>`;
+  const rest = PAGES.filter((p) => !MAIN_TABS.includes(p.id));
+  $("#tabs").innerHTML = MAIN_TABS.map((id) => tab(PAGES.find((p) => p.id === id))).join("")
+    + `<details class="tabs-more"><summary>More</summary><div class="tabs-more-menu">${rest.map(tab).join("")}</div></details>`;
+  $("#tabs").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    const menu = b.closest("details");
+    if (menu) menu.open = false;
+    go(b.dataset.page);
+  });
 }
 function paintTabs() {
   document.querySelectorAll("#tabs button").forEach((b) => {
@@ -105,7 +117,7 @@ function go(page, opts = {}) {
     state.liveTimer = null;
   }
   if (page !== "today") stopBaseReplayTimer();
-  if (!PAGES.some((p) => p.id === page)) page = "today";
+  if (!PAGES.some((p) => p.id === page)) page = "home";
   state.page = page;
   if (page === "activity") state.unseen = 0;
   paintTabs();
@@ -1619,6 +1631,36 @@ async function renderBacktests(d) {
   box.querySelectorAll("[data-show-replay]").forEach((b) => (b.onclick = () => { window.pendingReplay = b.dataset.showReplay; go("chart"); }));
 }
 
+// ---------- Home: three plain answers ----------
+RENDER.home = async (main) => {
+  const d = await api("/api/home-plain");
+  const w = d.where;
+  const need = (n) => `<article class="box need">
+      <p class="card-title">${esc(n.title)}</p>
+      ${n.why ? `<p class="muted">${esc(n.why)}</p>` : ""}
+      ${n.recommendation ? `<p><b>Recommended:</b> ${esc(n.recommendation)}</p>` : ""}
+      ${n.action ? (n.action.url
+        ? `<a class="btn primary" href="${esc(n.action.url)}" target="_blank" rel="noopener">${esc(n.action.label)}</a>`
+        : `<button class="btn primary" data-go="${esc(n.action.page)}">${esc(n.action.label)}</button>`) : ""}
+    </article>`;
+  const finding = (f) => {
+    const o = OUTCOME[f.outcome] || { word: f.outcome, cls: "" };
+    return `<article class="box finding"><div class="row"><span class="badge ${o.cls}">${esc(o.word)}</span><b>${esc(f.title)}</b></div>
+      <p>${esc(f.plain)}</p><p class="muted small">${esc(f.takeaway)}</p>
+      <button class="link small" data-go="${esc(f.page)}">See the details →</button></article>`;
+  };
+  main.innerHTML = `${head("Home", "Three questions, in plain words. Everything else is under More.")}
+    <section class="plain"><h2>Where we are</h2>
+      <article class="box"><p class="card-title">${esc(w.card)}</p><p class="muted">${esc(w.idea)}</p>
+        ${trailStrip(w.trail)}
+        <p style="margin-top:12px"><b>Now:</b> ${esc(w.now)}<br><b>Next:</b> ${esc(w.next)}</p></article></section>
+    <section class="plain"><h2>Needs you ${d.needs.length ? `<span class="count">${d.needs.length}</span>` : ""}</h2>
+      ${d.needs.length ? d.needs.map(need).join("") : `<p class="muted">Nothing is waiting on you.</p>`}</section>
+    <section class="plain"><h2>What we learned</h2>${d.learned.map(finding).join("")}
+      <p class="faint small">"Not demonstrated" means the test found no reliable edge. It is a real result, not a failure of the process.</p></section>`;
+  main.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => go(b.dataset.go)));
+};
+
 // ---------- Study: SC-FUT-0001 ----------
 const OUTCOME = {
   pass_to_execution_calibration: { word: "PASSED", cls: "good", note: "Beat random entries and cleared the $15/day floor. Next would be a small paper-trading fill study, not real money." },
@@ -2804,8 +2846,8 @@ function renderRoamingCompanion() {
 // ---------- boot ----------
 function boot() {
   buildTabs();
-  let first = "today";
-  try { const s = localStorage.getItem("qb-page"); if (PAGES.some((p) => p.id === s)) first = s; } catch (e) { /* storage blocked */ }
+  // Always open on Home (the plain-answers page) unless a link names a page.
+  let first = "home";
   const hash = location.hash.slice(1);
   if (PAGES.some((p) => p.id === hash)) first = hash;
   go(first);

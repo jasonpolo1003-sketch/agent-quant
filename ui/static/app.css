@@ -1290,3 +1290,21 @@ body.wide .foot { display: none; }
 .hist-orb { stroke: #f0a93b; stroke-width: 3; }
 .hist-label { fill: #f0a93b; font-size: 12px; font-family: var(--sans); }
 .hist-axis { fill: var(--faint); font-size: 11px; font-family: var(--sans); }
+
+/* ---------- Home (three plain answers) and the More menu ---------- */
+.tabs-more { position: relative; display: inline-block; }
+.tabs-more > summary { list-style: none; cursor: pointer; padding: 6px 12px; color: var(--muted); border-radius: var(--radius-sm); }
+.tabs-more > summary::-webkit-details-marker { display: none; }
+.tabs-more > summary::after { content: " ▾"; font-size: 11px; }
+.tabs-more[open] > summary, .tabs-more > summary:hover { color: var(--text); background: var(--surface-2); }
+.tabs-more-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 50; display: grid; min-width: 180px; padding: 6px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius); box-shadow: var(--shadow-card); }
+.tabs-more-menu button { text-align: left; }
+.plain { margin-bottom: 26px; }
+.plain h2 { display: flex; align-items: center; gap: 8px; }
+.need { border-left: 3px solid var(--warn); margin-bottom: 12px; }
+.finding { margin-bottom: 12px; }
+.finding .row b { font-size: 15px; }
+.badge.good { color: var(--good); border-color: rgba(16, 185, 129, 0.4); }
+.badge.bad { color: var(--bad); border-color: rgba(244, 63, 94, 0.4); }
+.badge.warn { color: var(--warn); border-color: rgba(245, 158, 11, 0.4); }
+.plain h2 .count { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--warn); color: #111; }

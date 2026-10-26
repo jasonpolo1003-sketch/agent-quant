@@ -3,7 +3,8 @@
 ## UI: PR #13 redesign restored as the main UI (2026-10-26)
 
 - Jason prefers the PR #13 data-terminal UI. It was merged back onto `testing` (`1e5f46b`) from tag `archive/2026-10-26/cursor-interactive-base-ui-d89c`, keeping its app.js/app.css and re-adding the Study tab. 1,004 tests pass. Serve with `.venv/Scripts/python.exe scripts/serve_terminal.py --root . --port 8765`.
-- Jason still finds the UI hard to understand. Next: a clarity redesign proposal (plain-English home: where are we, what needs me, what did we learn).
+- Jason still found the UI hard to understand, so it now opens on **Home** with three plain answers (Where we are / Needs you / What we learned). The top bar is Home · Study · Chart · Learn; everything else is under **More**. Code: `src/quant_brain/ui/home.py`, `RENDER.home`.
+- **Agents: keep `brain/_system/needs_you.json` current.** Add decisions waiting on Jason (title, why, recommendation, action) and mark them `"done": true` when settled. Ledger-derivable decisions (final exam vs close) appear automatically.
 - UI code is under `src/quant_brain`, so any held-out read now needs a fresh development re-run first (code-unchanged gate).
 
 ## SC-FUT-0001 practice run: NOT DEMONSTRATED; study page built (2026-10-26)
