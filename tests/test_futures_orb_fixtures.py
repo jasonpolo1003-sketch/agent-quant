@@ -52,7 +52,11 @@ def make_day(
     )
 
 
-LONG_ENTRY = {"08:50": (105, 112, 105, 111), "08:51": (111, 113, 111, 112), "08:52": (112, 130, 112, 130)}
+LONG_ENTRY = {
+    "08:50": (105, 112, 105, 111),
+    "08:51": (111, 113, 111, 112),
+    "08:52": (112, 130, 112, 130),
+}
 
 
 @pytest.fixture(params=IMPLEMENTATIONS, ids=["engine", "reference"])
@@ -61,7 +65,14 @@ def simulate(request):
 
 
 def summary(result):
-    return result.status, result.net_cents, [(tr.side, tr.entry_minute, tr.entry_ticks, tr.exit_minute, tr.exit_ticks, tr.net_cents) for tr in result.trades]
+    return (
+        result.status,
+        result.net_cents,
+        [
+            (tr.side, tr.entry_minute, tr.entry_ticks, tr.exit_minute, tr.exit_ticks, tr.net_cents)
+            for tr in result.trades
+        ],
+    )
 
 
 def test_f1_long_winner(simulate):
@@ -70,7 +81,11 @@ def test_f1_long_winner(simulate):
 
 
 def test_f2_short_winner(simulate):
-    r = simulate(make_day({"08:50": (105, 105, 98, 99), "08:51": (99, 99, 95, 96), "08:52": (96, 96, 80, 80)}))
+    r = simulate(
+        make_day(
+            {"08:50": (105, 105, 98, 99), "08:51": (99, 99, 95, 96), "08:52": (96, 96, 80, 80)}
+        )
+    )
     assert summary(r) == ("traded", 628, [(-1, t("08:51"), 99, t("15:07"), 80, 628)])
 
 
@@ -103,20 +118,32 @@ def test_f6_stop_on_entry_bar(simulate):
 
 
 def test_f7_gap_through_stop(simulate):
-    bars = {"08:50": (105, 112, 105, 111), "08:51": (111, 112, 111, 112), "08:52": (105, 106, 104, 105)}
+    bars = {
+        "08:50": (105, 112, 105, 111),
+        "08:51": (111, 112, 111, 112),
+        "08:52": (105, 106, 104, 105),
+    }
     r = simulate(make_day(bars))
     assert summary(r) == ("traded", -622, [(1, t("08:51"), 111, t("08:52"), 105, -622)])
 
 
 def test_f8_missing_entry_minute_consumes_side(simulate):
-    bars = {"08:50": (105, 112, 105, 111), "08:52": (106, 106, 105, 105), "08:55": (105, 112, 105, 112)}
+    bars = {
+        "08:50": (105, 112, 105, 111),
+        "08:52": (106, 106, 105, 105),
+        "08:55": (105, 112, 105, 112),
+    }
     r = simulate(make_day(bars, missing=("08:51",)))
     assert (r.status, r.net_cents, r.trades) == ("no_trade", 0, [])
     assert ("entry_missing", t("08:51")) in r.events
 
 
 def test_f9_gap_while_stop_live(simulate):
-    bars = {"08:50": (105, 112, 105, 111), "08:51": (111, 112, 111, 112), "09:01": (112, 112, 108, 110)}
+    bars = {
+        "08:50": (105, 112, 105, 111),
+        "08:51": (111, 112, 111, 112),
+        "09:01": (112, 112, 108, 110),
+    }
     r = simulate(make_day(bars, missing=("09:00",)))
     assert summary(r) == ("traded", -372, [(1, t("08:51"), 111, t("15:07"), 110, -372)])
     assert r.trades[0].gap_affected and r.trades[0].stress_exit_ticks == 107
@@ -144,7 +171,11 @@ def test_f12b_signal_after_cutoff(simulate):
 
 
 def test_f13_exit_bar_cannot_signal(simulate):
-    bars = {"08:50": (105, 112, 105, 111), "08:51": (111, 112, 111, 112), "08:55": (108, 108, 98, 99)}
+    bars = {
+        "08:50": (105, 112, 105, 111),
+        "08:51": (111, 112, 111, 112),
+        "08:55": (108, 108, 98, 99),
+    }
     r = simulate(make_day(bars))
     assert summary(r) == (
         "traded",
@@ -167,7 +198,9 @@ def test_f16_ineligible_without_atr(simulate):
     assert simulate(make_day(LONG_ENTRY, stop_ticks=None)).status == "ineligible"
 
 
-@pytest.mark.parametrize("stop_distance", [orb.stop_distance_ticks, orb_reference.stop_distance_ticks])
+@pytest.mark.parametrize(
+    "stop_distance", [orb.stop_distance_ticks, orb_reference.stop_distance_ticks]
+)
 @pytest.mark.parametrize(
     ("session", "expected"),
     [((110, 100, 105), 1), ((125, 100, 110), 3), ((124, 100, 110), 2), ((103, 100, 101), 1)],
@@ -177,7 +210,9 @@ def test_atr_stop_distance(stop_distance, session, expected):
     assert stop_distance([session] * 15) == expected
 
 
-@pytest.mark.parametrize("stop_distance", [orb.stop_distance_ticks, orb_reference.stop_distance_ticks])
+@pytest.mark.parametrize(
+    "stop_distance", [orb.stop_distance_ticks, orb_reference.stop_distance_ticks]
+)
 def test_atr_a5_gap_uses_prior_close_and_a6_missing(stop_distance):
     # 14 TRs: one gap session (H-L 10, but |H - prior close| = 320) and thirteen of TR 10.
     # Mean (320 + 130) / 14 = 32.14 -> 3.2 -> 3 ticks; ignoring the prior close would give 1.

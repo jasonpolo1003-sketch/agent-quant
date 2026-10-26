@@ -25,7 +25,7 @@ Implements the frozen spec `sc-fut-0001-spec.v1.json`. Encoded in `tests/test_fu
 | F7 gap through stop | 08:50 signal; 08:51 (111,112,111,112); 08:52 (105,106,104,105) | Open 105 ≤ stop 107 → fill at open 105: −6 ticks = **−622¢** |
 | F8 missing entry minute | 08:50 (105,112,105,111); 08:51 missing; 08:52 (106,106,105,105); 08:55 (105,112,105,112) | `entry_missing` logged @08:51; long side consumed, 08:55 does not trigger; 0 trades, **$0** |
 | F9 gap while stop live | 08:50 signal; 08:51 (111,112,111,112); 09:00 missing; 09:01 (112,112,108,110) | Primary: not stopped (108 > 107), flatten 110: −1 tick = **−372¢**; `gap_affected`; stress exit = min(107, 108) = 107 → **stress −522¢** |
-| F10 missing flatten | F1 bars with 15:07 missing | status `non_evaluable` (never a fabricated fill, never $0) |
+| F10 missing flatten | F1 bars with 15:07 missing | status `non_evaluable` (never a fabricated fill, never $0). Trades completed earlier that day stay on the record; statistics exclude the day by status. |
 | F11 early close | F1 bars; exit minute 12:12 | Flatten @12:12 open 130: **+628¢** |
 | F12a cutoff edge | first breakout 14:29 (105,112,105,111) | Entry @14:30 at 111 (allowed); flatten 111: **−322¢** |
 | F12b after cutoff | first breakout 14:30 (105,112,105,111) | Fill would be 14:31 > 14:30: 0 trades, **$0** |
