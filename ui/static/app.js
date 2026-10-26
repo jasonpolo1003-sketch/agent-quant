@@ -349,8 +349,8 @@ RENDER.today = async (main) => {
             </div>
 
             <!-- Candlestick chart canvas wrap -->
-            <div id="today-chart-wrap" style="height:360px; width:100%; border-radius:var(--radius-sm); overflow:hidden; background:#0b0f19; border:1px solid var(--line); position:relative;">
-              <div id="today-chart-canvas" style="width:100%; height:100%;"></div>
+            <div id="today-chart-wrap" style="height:360px; width:100%; min-width:0; max-width:100%; border-radius:var(--radius-sm); overflow:hidden; background:#0b0f19; border:1px solid var(--line); position:relative;">
+              <div id="today-chart-canvas" style="position:absolute; inset:0; width:100%; height:100%; overflow:hidden;"></div>
               <div id="today-chart-loading" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(11,15,25,0.7); font-family:var(--mono); font-size:12px; color:var(--muted);">Loading SPY backtest bars…</div>
             </div>
           </div>
@@ -499,7 +499,7 @@ RENDER.today = async (main) => {
       grid: { vertLines: { color: "rgba(255, 255, 255, 0.04)" }, horzLines: { color: "rgba(255, 255, 255, 0.04)" } },
       rightPriceScale: { borderColor: "rgba(255, 255, 255, 0.08)" },
       timeScale: { borderColor: "rgba(255, 255, 255, 0.08)", rightOffset: 6 },
-      autoSize: true,
+      autoSize: false,
     });
     charts.push(chart);
 
@@ -619,9 +619,11 @@ RENDER.today = async (main) => {
     const viewportPill = $("#cockpit-viewport-pill");
     const gridEl = $("#cockpit-grid");
 
-    const updateSizingTelemetry = () => {
+    const updateSizingTelemetry = (explicitWidth, explicitHeight) => {
       const w = window.innerWidth;
-      const wrapW = chartWrap ? chartWrap.clientWidth : 0;
+      const wrapRect = chartWrap ? chartWrap.getBoundingClientRect() : null;
+      const wrapW = explicitWidth || (wrapRect ? wrapRect.width : 0);
+      const wrapH = explicitHeight || (wrapRect ? wrapRect.height : 360);
       if (viewportPill) {
         if (w <= 960) {
           viewportPill.innerHTML = `Half-Screen (${w}px) · <span style="color:var(--accent); font-weight:600;">Adaptive Stack</span>`;
@@ -629,20 +631,23 @@ RENDER.today = async (main) => {
           viewportPill.innerHTML = `Full Screen (${w}px) · <span style="color:var(--good); font-weight:600;">Pro Split</span>`;
         }
       }
-      if (chart && wrapW > 0) {
-        chart.applyOptions({ width: Math.floor(wrapW) });
+      if (chart && wrapW > 10) {
+        chart.applyOptions({ width: Math.floor(wrapW), height: Math.floor(wrapH) });
       }
     };
 
     if (window.ResizeObserver && chartWrap) {
-      const ro = new ResizeObserver(() => {
-        updateSizingTelemetry();
+      const ro = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          if (entry.target === chartWrap && entry.contentRect.width > 0) {
+            updateSizingTelemetry(entry.contentRect.width, entry.contentRect.height);
+          }
+        }
       });
       ro.observe(chartWrap);
-      if (gridEl) ro.observe(gridEl);
     }
-    window.addEventListener("resize", updateSizingTelemetry);
-    setTimeout(updateSizingTelemetry, 60);
+    window.addEventListener("resize", () => updateSizingTelemetry());
+    setTimeout(() => updateSizingTelemetry(), 60);
 
     // View Switching Controls
     const btnSplit = $("#cockpit-btn-split");

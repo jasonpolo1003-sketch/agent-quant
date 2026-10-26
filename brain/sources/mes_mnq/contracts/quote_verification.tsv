@@ -1,0 +1,37 @@
+Q1	cme_mes_specs.txt	Outright:0.25 index points = $1.25
+Q2	cme_mes_specs.txt	Contract Unit$5 x S&P 500 Index
+Q3	cme_mnq_specs.txt	Outright:0.25 index points = $0.50
+Q4	cme_mnq_specs.txt	Contract Unit$2 x Nasdaq-100 Index
+Q5	cme_es_specs.txt	Outright:0.25 index points = $12.50
+Q6	cme_nq_specs.txt	Outright:0.25 index points = $5.00
+Q7	cme_mes_specs.txt	Sunday 6:00 p.m. - Friday - 5:00 p.m. ET (5:00 p.m. - 4:00 p.m. CT) with a daily maintenance period from 5:00 p.m. - 6:00 p.m. ET (4:00 p.m. - 5:00 p.m. CT)
+Q8	cme_mnq_specs.txt	Sunday 6:00 p.m. - Friday - 5:00 p.m. ET (5:00 p.m. - 4:00 p.m. CT) with a daily maintenance period from 5:00 p.m. - 6:00 p.m. ET (4:00 p.m. - 5:00 p.m. CT)
+Q9	cme_mes_specs.txt	Quarterly contracts (Mar, Jun, Sep, Dec) listed for 5 consecutive quarters
+Q10	cme_mnq_specs.txt	Quarterly contracts (Mar, Jun, Sep, Dec) listed for 5 consecutive quarters
+Q11	cme_es_specs.txt	Quarterly contracts (Mar, Jun, Sep, Dec) listed for 21 consecutive quarters
+Q12	cme_mes_specs.txt	Trading terminates at 9:30 a.m. ET on the 3rd Friday of the contract month.
+Q13	cme_mnq_specs.txt	Trading terminates at 9:30 a.m. ET on the 3rd Friday of the contract month.
+Q14	cme_mes_specs.txt	Financially Settled
+Q15	cme_mes_specs.txt	CME Globex: MESCME ClearPort: MES
+Q16	cme_mnq_specs.txt	CME Globex: MNQCME ClearPort: MNQ
+Q17	cme_month_codes.txt	March	H
+Q18	cme_month_codes.txt	June	M
+Q19	cme_month_codes.txt	September	U
+Q20	cme_month_codes.txt	December	Z
+Q21	cme_equity_rolldates.txt	Equity products roll date is the Monday prior to the third Friday of the expiration month.*
+Q22	cme_equity_rolldates.txt	CME Group Equity Index futures allow market participants to roll their futures positions from one quarterly futures contract month to the next at any time they choose.
+Q23	cme_equity_rolldates.txt	After the roll date, it is customary to identify the second nearest expiration month as the “lead month” for the equity index futures.
+Q24	cme_trading_hours_holidays.txt	Trading hours are subject to change and are in U.S. Central Time unless otherwise stated.
+Q25	cme_trading_hours_holidays.txt	Trading hours are usually finalized approximately two weeks prior to the holiday.
+Q26	cme_trading_hours_holidays.txt	Juneteenth	18 - 19 June 2026	Holiday Schedule
+Q27	cme_wiki_es_mes_settlement.txt	Daily settlement of the Micro E-mini S&P futures (MES)and  E-Nano S&P 500 (NES) are equal to the daily settlement price of the E-Mini S&P 500 futures (ES).
+Q28	cme_wiki_es_mes_settlement.txt	The volume-weighted average price (“VWAP”) of all trades executed on CME Globex between 14:59:30 and 15:00:00 CT, the settlement period, in the E-mini S&P futures will be calculated for the designated lead month and rounded to the nearest .25 index point.
+Q29	cme_wiki_es_mes_settlement.txt	E-Mini S&P 500 (ES) futures are cash settled upon expiration.
+Q30	databento_symbology.txt	The continuous contract prices returned are the original, unadjusted prices. We don't create a synthetic time series by back-adjusting the prices to remove jumps during rollovers.
+Q31	databento_symbology.txt	For futures outrights, we use the format [ROOT].[ROLL_RULE].[RANK] to refer to continuous contracts that change over time according to a roll rule and rank.
+Q32	databento_symbology.txt	Will rank the expirations by the open interest at the previous day's close.
+Q33	databento_symbology.txt	Will rank the expirations by the previous day's trading volume.
+Q34	databento_symbology.txt	We do not retroactively reassign symbols in our historical data.
+Q35	premiumdata_continuous_p2.txt	Only those prices prior to the last roll date are adjusted.
+Q36	premiumdata_continuous_p2.txt	every time a new contract is added to the series, the back-adjusted contract is re-calculated and all previous prices are adjusted.
+Q37	premiumdata_continuous_p2.txt	Traders looking for real historical prices should consult their spliced charts.

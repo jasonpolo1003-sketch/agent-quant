@@ -1,0 +1,5 @@
+id	file	quote	match
+Q1	source_files/phaseB/db_ohlcv.txt	provide open, high, low, and close prices and total volume aggregated from trades at 1-second, 1-minute, 1-hour, or 1-day intervals.	MATCH
+Q2	source_files/phaseB/db_status.txt	provides updates about the trading session, such as halts, pauses, short-selling restrictions, auction start, and other matching engine statuses.	MATCH
+Q3	source_files/phaseB/db_status.txt	Trading in the instrument has been paused.	MATCH
+Q4	source_files/phaseB/db_status.txt	Trading in the instrument has been halted.	MATCH

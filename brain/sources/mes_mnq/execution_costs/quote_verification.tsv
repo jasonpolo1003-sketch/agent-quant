@@ -1,0 +1,27 @@
+C1	costs/ibkr_futures_commissions.txt	≤ 1,000 USD 0.25/contract USD 0.25/contract
+C2	costs/ibkr_cme_fees.txt	Micro E-Mini Futures Products MES, MNQ, M2K, VOLQ USD 0.35
+C3	costs/ibkr_cme_fees.txt	All Products USD 0.01
+C4	venue/ts_commissions_fees.txt	Micro E-mini S&P 500 (MES)$1.22
+C5	venue/ts_commissions_fees.txt	Micro E-mini NASDAQ 100 (MNQ)$1.22
+C6	costs/abko_intraday_invariance_es.txt	Hence, the spread is binding and equals a single tick almost always, implying that the tick size is “large” for this liquid market.
+C7	costs/abko_intraday_invariance_es.txt	The sample period is January 4, 2008, to September 30, 2011.
+C8	costs/abko_intraday_invariance_es.txt	Market Depth 56 274 999 406 36 3597 100
+C9	costs/cme_liquidity_methodology.txt	Starting April 1st, 2024, the Bid-Ask Spread is calculated for each order book update for levels 1 to 10 of the order book.
+C10	costs/cme_equity_insights_2025_07.txt	Micro E-mini Nasdaq-100 futures (MNQ) 2025 ADV reached a record 1.8M contracts, accounting for 53% of the Micro E-mini futures suite ADV.
+C11	costs/cme_velocity_logic.txt	Velocity Logic is designed to detect market movement of a predefined number of ticks either up or down within a predefined time.
+C12	costs/cme_velocity_logic.txt	IF the lead month futures instrument belongs to an equities, metals, energy, treasury, or FX instrument group, THEN the entire group will transition into the Pre-Open state;
+C13	costs/cme_velocity_logic.txt	If the order is a Minimum Quantity, FAK or Market order, it is eliminated via an Execution Report - Order Elimination (tag 35-MsgType=8, tag 39-OrdStatus=C), and the market will remain open.
+C14	costs/cme_wiki_order_types.txt	CME Globex matches the order at all price levels between the trigger price and the protection price limits. If the order is not completely executed, the remaining quantity is then placed in the order book at the protection price limit.
+C15	costs/cme_us_equity_price_limits_faq.txt	If a contract market moves beyond +/- 3.5% within an hour, trading will be paused for two minutes.
+C16	costs/cme_us_equity_price_limits_faq.txt	This FAQ applies to all US-based Equity Index futures and options except E-mini S&P 500, Micro E-mini S&P 500, and S&P 500 futures and options.
+C17	costs/arxiv_breaking_news_es.txt	(1) Velocity logic (narrow) 1 millisecond ± 6 ticks 5 seconds (2) Velocity logic (wide) 1 second ± 18 ticks 5 seconds
+C18	venue/ts_prohibited_strategies.txt	Repeatedly exploiting the relative lack of slippage in SIM to achieve impossible stop-loss execution
+C19	venue/ts_prohibited_strategies.txt	Making hundreds of rapid trades to take advantage of preferential queue position in SIM
+C20	venue/ts_mll.txt	When liquidation fires, positions close via market orders. Slippage and price movement during execution can push your final realized balance back above the limit
+C21	venue/px_order_place.txt	The last traded price is read on the server at the moment the order is received.
+C22	providers/db_glbx_dataset.txt	90th percentile latency up to your application at 42 microseconds (cross-connect) or 590 microseconds (internet).
+C23	providers/firstrate_faq.txt	We don't include bars where no trades took place, so a missing minute means there was no trading in it.
+C24	costs/cftc_fia_vcm.txt	VLN analyzes market movements within a rolling single millisecond—should markets move more than the range of the price bands within that time, Velocity Logic triggers a brief, fivesecond trading halt.
+C25	costs/cftc_fia_vcm.txt	requires a price move of three times the price band range before triggering a five-second trading halt.
+C26	costs/cme_wiki_limits_banding.txt	A complete list of banding information for each electronically traded product is available at: GCC Price Banding .
+C27	costs/cme_wiki_velocity_logic.txt	Velocity Logic is designed to detect market movement of a predefined number of ticks either up or down within a predefined time.

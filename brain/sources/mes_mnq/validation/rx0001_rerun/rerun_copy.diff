@@ -1,0 +1,2 @@
+125a126
+> import pickle; pickle.dump({k:v for k,v in streams.items()}, open(out/'streams.pkl','wb')); pickle.dump(pbo, open(out/'pbo_orig.pkl','wb'))

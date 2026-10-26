@@ -1,0 +1,19 @@
+id	file	quote
+V1	validation/lopezdeprado_lewis2019.txt	number of effectively uncorrelated trials carried out in the context of a discovery
+V2	validation/lopezdeprado_lewis2019.txt	of independent trials 𝐾 is less or equal to the number of trials N
+V3	validation/2014_Bailey-LopezdePrado_Deflated-Sharpe-Ratio.txt	Not controlling for the number of trials involved in a particular discovery leads to
+V4	validation/2014_Bailey-LopezdePrado_Deflated-Sharpe-Ratio.txt	increases as more independent trials are attempted
+V5	validation/lo2002_sharpe_stats.txt	Sharpe ratio for a hedge fund can be overstated by as much as 65 percent
+V6	validation/lo2002_sharpe_stats.txt	monthly Sharpe ratios cannot be annualized by multiplying by 12 except
+V7	validation/white2000_reality_check.txt	Data snooping occurs when a given set of data is used more than once for purposes of
+V8	validation/hansen2005_spa.txt	more powerful and less sensitive to poor and irrelevant alternatives
+V9	validation/harvey_liu_backtesting.txt	The 50% haircut is only a rule of thumb.
+V10	validation/2016_Harvey-Liu-Zhu_Cross-Section-of-Expected-Returns.txt	a t-statistic greater than 3.0
+V11	validation/2017_Bailey-Borwein-LopezdePrado-Zhu_Probability-of-Backtest-Overfitting.txt	binatorially symmetric cross-validation (CSCV). We show that CSCV
+V12	validation/afml_eth_excerpt.txt	A Solution: Purged K-Fold CV
+V13	validation/afml_eth_excerpt.txt	Embargo
+V14	validation/minbtl_bailey2014_notices.txt	Minimum Backtest Length (MinBTL)
+V15	validation/harvey_liu_lucky_factors.txt	bootstrapping approach then follows White (20 0 0) to con-
+V16	validation/romano_wolf_2005_econometrica.txt	Compared to related single-step meth- ods, the procedure is more powerful and often will reject more false hypotheses.
+V17	validation/romano_wolf_2005_econometrica.txt	Nevertheless, the stepwise procedure still asymp- totically controls the FWE at level α; the proof is in Theorem 3.1.
+V18	validation/romano_wolf_2005_econometrica.txt	improves upon the single-step BRC of White (2000) very much in the way that the stepwise Holm method improves upon the single-step Bonferroni method.

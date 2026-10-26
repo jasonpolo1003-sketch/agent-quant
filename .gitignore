@@ -24,3 +24,12 @@ brain/00_Inbox/Failed_Runs/audit_*_tmp_*/
 # Brain Terminal (PROP-008): job logs and scheduled model output are local, untrusted
 terminal/logs/
 terminal/scheduled/
+
+# Research source copies stay local: copyrighted papers, saved web pages and raw
+# extracts must not be redistributed by this public repo (Jason, 2026-10-26).
+brain/sources/**/source_files/
+brain/sources/**/*.pdf
+brain/sources/**/*.html
+brain/sources/youtube_inbox/*.md
+!brain/sources/youtube_inbox/_INDEX.md
+!brain/sources/youtube_inbox/_reading_list.md

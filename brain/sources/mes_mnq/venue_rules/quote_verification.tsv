@@ -1,0 +1,66 @@
+V1	venue/ts_api_access.txt	The use of VPS, VPNs, and remote servers is prohibited by Topstep's Terms of Use. Running automation on a VPS can result in account suspension or removal from the program.
+V2	venue/ts_api_access.txt	The line is order transmission: your server can watch and record, but it cannot trade.
+V3	venue/ts_api_access.txt	API Access is $29/month. Topstep Traders get 50% off with code topstep — that's $14.50/month, valid every month with no end date.
+V4	venue/ts_api_access.txt	No, Live funded accounts are not allowed to trade through the ProjectX API. The API Gateway is built for the simulated environment and isn't available on Live.
+V5	venue/ts_api_access.txt	Custom automated strategies and bots are allowed via the TopstepX / ProjectX API, subject to standard platform rules and our prohibition on highfrequency trading (HFT).
+V6	venue/ts_api_access.txt	No. There is currently no sandbox environment available.To test your strategy, use a Practice account instead — same endpoints and real-time hubs, no risk to an Evaluation account.
+V7	venue/ts_api_access.txt	One subscription and one API key cover every eligible account under your ProjectX Dashboard profile.
+V8	venue/ts_api_access.txt	A rule violation is treated the same whether it originates from manual trading or third-party automation.
+V9	venue/ts_practice.txt	The Practice Account is a free 150K simulated account available to any Trader with an active Trading Combine subscription.
+V10	venue/ts_practice.txt	Yes, you can Reset a Practice Account up to 10 times per day.
+V11	venue/ts_combine_params.txt	Do not let your account balance hit or go below the Maximum Loss Limit (MLL)
+V12	venue/ts_combine_params.txt	Micros and minis count at a 10:1 ratio.
+V13	venue/ts_combine_params.txt	Yes, with conditions. Topstep won't help set up or troubleshoot automated strategies, and no exceptions are made for errant trades or malfunctions.
+V14	venue/ts_combine_params.txt	All Trading Combines, Express Funded Accounts, and Live Funded Accounts must be under 1 Topstep profile.
+V15	venue/ts_consistency.txt	Your single best day of profit must stay at or below 55% of your Profit Target. If it exceeds that, your Profit Target increases.
+V16	venue/ts_consistency.txt	Your Consistency % must be 40% or below to be Payout eligible.
+V17	venue/ts_xfa_params.txt	You can hold up to 5 active XFAs at a time.
+V18	venue/ts_xfa_params.txt	Hit 5 winning days with at least $150 profit each
+V19	venue/ts_xfa_params.txt	Trade at least 3 days with at least 1 trade per day
+V20	venue/ts_xfa_params.txt	Yes, with conditions. Topstep won't help set them up or cover malfunctions.
+V21	venue/ts_xfa_params.txt	XFAs with no trading activity for more than 30 days may be closed.
+V22	venue/ts_mll.txt	The MLL is a trailing limit. It rises as your end-of-day balance grows, but never moves down. Once it reaches your starting balance, it locks permanently.
+V23	venue/ts_mll.txt	If your balance hits it at any point during the trading day, including on unrealized P&L, your account is liquidated immediately.
+V24	venue/ts_mll.txt	When liquidation fires, positions close via market orders.
+V25	venue/ts_dll.txt	The Daily Loss Limit (DLL) is optional in the Trading Combine® and Express Funded Account® (XFA). It’s automatic in the Live Funded Account® (LFA).
+V26	venue/ts_dll.txt	Net P&L hits or exceeds the DLL during the trading day (5 PM CT – 3:10 PM CT):
+V27	venue/ts_lfa_params.txt	When the call-up comes, all Express Funded Accounts (XFA) close.
+V28	venue/ts_lfa_params.txt	Live Funded Accounts start with a Daily Loss Limit (DLL) based on account size:
+V29	venue/ts_combine_params.txt	The Micro to Mini ratio functionality is available for the Trading Combine and Express Funded Account.
+V30	venue/ts_hours_products.txt	All positions must be closed by 3:10 PM CT every weekday.
+V31	venue/ts_hours_products.txt	All open positions and pending orders begin to automatically cancel at 3:10 PM CST. Avoid opening new positions after 3:08 PM CT — Risk Managers begin flattening at that time.
+V32	venue/ts_prohibited_strategies.txt	Purposefully trading your full Maximum Position Size directly into a scheduled major news event.
+V33	venue/ts_prohibited_strategies.txt	Repeatedly exploiting the relative lack of slippage in SIM to achieve impossible stop-loss execution
+V34	venue/ts_prohibited_strategies.txt	Using tight brackets or auto-breakeven to take advantage of favorable SIM fills
+V35	venue/ts_prohibited_conduct.txt	Do not use a VPN. VPNs, proxy services, TOR, geo-location obfuscation, and other identity-masking services are not permitted at Topstep.
+V36	venue/ts_prohibited_conduct.txt	Cross-account hedging (single-user) — holding opposite positions across multiple accounts simultaneously
+V37	venue/ts_prohibited_conduct.txt	Using an external or slow data feed to trade
+V38	venue/ts_risk_adjust_hv.txt	Micros (MES, M2K, MYM, MNQ, MGC): Opening transactions limited to 1, 3, 6, 9, and 15 contracts for the $25K, $50K, $100K, $150K, and $250K account sizes, respectively, during the window
+V39	venue/ts_risk_adjust_hv.txt	Pending orders are not open positions. They will not fill during the 10-minute window, and new pending orders intended to execute during this timeframe cannot be placed.
+V40	venue/ts_risk_adjust_hv.txt	TP/SL brackets that are reducing/closing positions will be accepted during the window.
+V41	venue/ts_commissions_fees.txt	Micro E-mini S&P 500 (MES)$1.22
+V42	venue/ts_commissions_fees.txt	Micro E-mini NASDAQ 100 (MNQ)$1.22
+V43	venue/ts_pricing.txt	50K$49/month$95/month100K$99/month$149/month150K$199/month$229/month
+V44	venue/ts_pricing.txt	Standard Path — $149, charged once per XFA earned. No Activation Fee Path — $0.
+V45	venue/ts_pricing.txt	Live Funded Account® (LFA) Traders are subject to Professional Data fees.
+V46	venue/ts_market_data.txt	Level 2 (Depth of Market) is available as an upgrade for $38/month.
+V47	venue/ts_tax.txt	US citizen, $600+ in Payouts1099-NEC
+V48	venue/px_auth_apikey.txt	Logging in with an API key is the only supported way to obtain a token.
+V49	venue/px_auth_apikey.txt	It is valid for 24 hours from the time it is issued.
+V50	venue/px_auth_apikey.txt	One token works for every REST request and realtime hub connection you open.
+V51	venue/px_rate_limits.txt	POST /api/History/retrieveBars	50 requests / 30 seconds
+V52	venue/px_rate_limits.txt	All other Endpoints	200 requests / 60 seconds
+V53	venue/px_rate_limits.txt	the API will respond with an HTTP 429 Too Many Requests error.
+V54	venue/px_retrieve_bars.txt	Note: The maximum number of bars that can be retrieved in a single request is 20,000.
+V55	venue/px_retrieve_bars.txt	contractId	integer	The contract ID.
+V56	venue/px_retrieve_bars.txt	"contractId": "CON.F.US.RTY.Z24",
+V57	venue/px_order_place.txt	Position Brackets (default). Brackets are managed at the position level by the platform. stopLossBracket and takeProfitBracket are not accepted on this endpoint.
+V58	venue/px_order_place.txt	The rejected order is still created and its ID is returned in orderId.
+V59	venue/px_order_place.txt	In a fast-moving market the same trailPrice can produce a different tick distance than you expected.
+V60	venue/px_realtime.txt	.withAutomaticReconnect()
+V61	venue/px_search_contracts.txt	"id": "CON.F.US.MNQ.U25",
+V62	cme_wiki_nq_mnq_settlement.txt	are determined by CME Group staff based on trading and market activity on CME Globex.
+V63	cme_wiki_nq_mnq_settlement.txt	Daily settlement of the Micro contracts are equal to the settlement price of their associated Mini contracts.
+V64	cme_wiki_nq_mnq_settlement.txt	then the lead month settles to the volume-weighted average price (VWAP) of the trade(s) during this period.
+V65	cme_juneteenth_2026_settlement.txt	Note: Friday June 19, 2026 CME Group will not derive or disseminate settlement prices for CME,
+V66	cme_final_settlement_soq.txt	Special Opening Quotation for each index is based on the opening price of each component stock in that index on expiration Friday
