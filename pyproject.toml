@@ -25,6 +25,8 @@ dependencies = [
     "uvicorn>=0.30",
     "requests>=2.31",
     "websockets>=13",
+    "databento-dbn>=0.72.0",
+    "zstandard>=0.25.0",
 ]
 
 [project.optional-dependencies]

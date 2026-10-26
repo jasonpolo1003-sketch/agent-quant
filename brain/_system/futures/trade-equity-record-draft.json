@@ -1,0 +1,24 @@
+{
+  "schema_version": "trade-path-draft-0",
+  "status": "pre_freeze_review_only",
+  "purpose": ["one append-only path for chart markers, trade log, reconciliation and prop-eval minute equity"],
+  "units": {"price": "integer exchange ticks", "money": "integer USD cents", "time": "UTC ISO8601 plus derived America/Chicago trade_date and wall time"},
+  "key": ["run_id", "root", "dated_contract", "trade_date_ct", "trade_id", "sequence"],
+  "required_context": ["spec_sha256", "code_commit", "raw_data_manifest_sha256", "calendar_manifest_sha256", "contract_map_manifest_sha256", "seed_manifest_sha256", "instrument_id_at_event", "event_time_utc", "available_at_utc", "event_kind", "source_bar_id", "source_bar_sha256", "observation_status"],
+  "event_kinds": ["SESSION_OPEN", "BAR_CLOSED", "SIGNAL", "ORDER_REQUESTED", "ORDER_SKIPPED", "ENTRY_FILL", "STOP_TRIGGER", "EXIT_FILL", "MARK_TO_MARKET", "STRESS_BOUND", "SESSION_RECONCILIATION"],
+  "observation_status": ["observed_bar", "rule_derived_from_observed", "assumed_execution", "stress_bound_not_fill", "unknown_non_evaluable"],
+  "entry_exit_marker": ["side", "quantity", "decision_bar_close_utc", "intended_next_open_utc", "fill_time_utc", "fill_price_ticks", "fill_reason", "reference_bar_id", "cost_level", "cost_cents", "uncertainty_flag"],
+  "mark_to_market": ["bar_open_utc", "bar_close_utc", "bar_ohlc_ticks", "position_before", "position_after", "realized_cents", "unrealized_cents_at_bar_close", "equity_cents_at_bar_close", "intrabar_worst_equity_bound_cents", "intrabar_best_equity_bound_cents", "mark_price_ticks", "mark_basis"],
+  "reconciliation": ["opening_equity_cents", "sum_trade_gross_cents", "sum_fees_and_slippage_cents", "closing_realized_cents", "closing_equity_cents", "no_trade_day_zero", "missing_minute_count", "unknown_stop_interval_count", "forced_flat_status", "trade_ids", "sum_check_exact_cents"],
+  "invariants": [
+    "one event has a unique key and deterministic process order; bars become known only at close",
+    "chart marker fill prices are exact ledger prices, never extrapolated through missing minutes",
+    "reconciliation equals sum of signed tick movements minus exactly one L3 round turn per completed trade",
+    "unknown stop interval cannot be promoted to an observed fill; stress-bound event references next visible adverse extreme and stays separate",
+    "if a stop or flatten is unobserved, mark minute equity as interval/unknown rather than a single fabricated path",
+    "daily P&L alone is insufficient for intraday venue-rule simulation; if intrabar ordering is uncertain, simulator reports bound or not_estimable",
+    "one immutable manifest hashes this stream and derived chart/log/reconciliation outputs"
+  ],
+  "display_contract": {"price_chart": "OHLC + entry/exit markers + flagged unknown intervals", "trade_log": "all requested/skipped/filled orders and assumptions", "reconciliation_row": "one per eligible day including no-trade $0", "prop_eval": "same marked equity stream, with explicit intrabar uncertainty"},
+  "freeze_blockers": ["calendar and mark convention", "venue intraday drawdown sampling rule", "cost allocation for incomplete trades", "handling unknown interval in primary P&L"]
+}

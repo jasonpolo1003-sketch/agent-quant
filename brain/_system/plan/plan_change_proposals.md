@@ -340,6 +340,19 @@ This exists because the project's core design rule is *move slowly, one verified
 
 ---
 
+### PROP-011 — Single-rule futures replication: make PBO inapplicable, not passed
+- **Date:** 2026-10-25
+- **Proposed by:** Drew, following Jason's approval of the lean MNQ ORB *engineering direction*
+- **Affects:** The MES/MNQ ORB handoff's OOS > 0 / DSR >= 0.95 / PBO < 0.5 promotion rule; a new futures strategy card only. Does not retroactively change SC-0002, RX-0001, or any multi-variant experiment.
+- **Current plan says:** The MES/MNQ handoff requires all three thresholds, including PBO < 0.5 at L3. The handoff is currently an unreviewed research note under `brain/sources/mes_mnq/` in the separate `testing` worktree; the master `PLAN.md` does not yet specify a futures ORB gate.
+- **Problem:** CSCV/PBO measures the chance of overfitting a *selection* from a tested family. A single literature-derived rule frozen before local ORB P&L has no local winner-selection step and no meaningful PBO estimate. Inventing neighboring variants merely to calculate PBO would create avoidable trials; claiming `PBO < 0.5` for one rule would be false.
+- **Proposed change:** For **one predeclared, fixed MNQ ORB rule only**, record `PBO: not applicable (no local selection)` and do not treat this as a passing score. Require an approved, hashed strategy/statistics card before implementation or local ORB P&L; inventory all prior ORB looks and inherited published selection, specify an honest selection-adjustment/DSR method and its unavailable inputs, verify pre-run power/MDE for a stated economically meaningful effect, and keep L3 costs, paired random-anchor controls, one locked held-out read, positive net primary outcome, conservative fill, complete trial ledger, and no MES rescue. Define in the card the *single* decisive contrast, thresholds, uncertainty method and inconclusive rules. Concentration, roll and regime slices are reported diagnostics, not automatic independent vetoes. If a real selectable family is later approved, restore CSCV/PBO with every trial's daily returns and a separately frozen family; this amendment cannot be used to promote that family.
+- **Cost of not changing:** A single-rule test can never pass the existing gate, or a bogus PBO value will be reported; building a large variant grid solely to satisfy the metric wastes time and increases selection risk.
+- **Status:** accepted for this single-rule track on 2026-10-25; master PLAN.md narrow note applied. The eventual frozen card and power/MDE still require separate review; this is not approval of a result.
+- **Jason's decision:** explicitly selected “Approve PROP-011 as proposed” in the 2026-10-25 decision prompt. Also selected drafting Fetna's cash-open 15-minute R2 rule **for review only**, not freezing or testing it. No held-out run authorized.
+
+---
+
 ## Accepted changes log
 
 Once Jason accepts a proposal, apply it to `PLAN.md`, then record the applied change here with the date, so the plan's history stays readable.
@@ -354,3 +367,4 @@ Once Jason accepts a proposal, apply it to `PLAN.md`, then record the applied ch
 | 2026-09-28 | PROP-008 | PLAN.md §6, §10; `ui_terminal_plan.md` | Local Brain Terminal UI: reads by default, allowlisted jobs, tutor with no tools, auth only through subscription CLIs |
 | 2026-09-29 | PROP-009 | `plan_change_proposals.md` (status accepted) | FRED rate and regime series under Gate F rules; key only in the git-ignored `.env` |
 | 2026-09-29 | PROP-010 | `learning_terminal_plan.md` (status accepted); PLAN.md §10 | Beginner-first learning terminal, free tier first; lighter process for this track; safety rules kept |
+| 2026-10-25 | PROP-011 | PLAN.md §10 (narrow futures note) | Single frozen MNQ ORB rule: PBO not applicable, not passed; multi-rule selection still requires CSCV/PBO. Exact card/power and held-out run remain separately gated. |

@@ -1,0 +1,17 @@
+# SC-FUT-0001 — hand-worked simulator fixtures (synthetic only)
+
+**NOT a venue rulebook or market result.** For each fixture below, assume a toy account starting at $0, profit target **+$100**, intraday trailing floor = highest observed *marked* equity minus **$50**, hard daily loss at **-$40 from that day's opening balance**, maximum 3 eligible days, and failure wins any unorderable simultaneous target/breach. These numbers are chosen only so a human can trace the state machine. The real venue values remain unprovided and no simulator probabilities are calculated here. No raw/held-out inputs.
+
+| ID | Hand-worked synthetic sequence | Expected state and why |
+|---|---|---|
+| F1 — intraday trough despite green close | Day 1 marked equity: $0 → +$60 → -$1 → +$120. Peak +$60 ratchets floor to +$10. On the -$1 mark, floor is breached **before** the later +$120 target. | `blown_up`, day 1; reporting only +$120 daily P&L would falsely claim a pass. |
+| F2 — trailing ratchet | Day 1: $0 → +$30 (floor -$20) → +$70 (floor +$20) → +$19. | `blown_up`, day 1; floor must not reset downward after peak. |
+| F3 — daily reset | Day 1 closes +$20 without breaching. Day 2 opens +$20; marked balance falls to -$21 (a $41 loss from day's open). | `blown_up`, day 2 under toy $40 daily loss, even though cumulative balance is only -$21. |
+| F4 — unordered target and breach | One minute has a possible marked low below the trailing floor and high above +$100, but only OHLC is known. | `not_estimable`/`inconclusive` for exact pass versus breach unless tick/venue event ordering exists; never order intraminute extremes by convenience. |
+| F5 — no-trade/timeout | Days 1–3 have no orders and marked equity remains $0. | `time_out` after 3 eligible days; no-trade is $0 for the strategy but may not satisfy venue minimum *trading* days. |
+| F6 — repeated-day resampling | Synthetic paired source-day IDs A, B, C with paired (ORB, control) cents A=(100,0), B=(-50,20), C=(30,-10); one bootstrap index path is [A,B,B,C]. | ORB path cents [100,-50,-50,30]; control path [0,20,20,-10]. The repeated B and common indices are required; never independently resample controls. This tests plumbing only, not a venue outcome. |
+| F7 — unknown intraday mark | Day 1 realized close +$120, but live-stop interval lacks bars and no intraday marked-equity bound is available. | Exact venue `pass_probability` and `blow_up_probability` are `not_estimable`, not `pass`; daily close cannot reconstruct a breached loss rule. |
+| F8 — sizing and L3 costs | A synthetic single MNQ trade gains gross 100 ticks × $0.50 = $50, less **$3.22 L3** = $46.78 per contract. Same path at 5 MNQ, if size permitted, is 5 × $46.78 = $233.90; do **not** draw five independent returns. | Reconciliation: five gross contracts $250.00 less $16.10 aggregate L3 = $233.90. Not a real trade or approved size. |
+| F9 — early close | A verified early close requires flatten 3 minutes before the official close, but that minute's open is missing. | No invented exit price; `unknown_non_evaluable` with separate stress bound if possible. |
+
+**Pending approval:** exact venue stage/rule snapshot; time ordering between marked-equity and risk thresholds; equality at limit; minimum trading days; horizon; no-trade eligibility; fees; maximum micro-equivalent size. Fixtures exercise concepts, not a production simulator. Test each against a future implementation after the rulebook is versioned.

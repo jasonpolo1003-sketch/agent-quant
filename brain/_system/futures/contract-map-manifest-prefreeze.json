@@ -1,0 +1,381 @@
+{
+  "dev_and_diagnostic_roll_rows": [
+    {
+      "from_contract": "MESM9",
+      "from_expiration": "2019-06-21",
+      "roll_trade_date": "2019-06-13",
+      "root": "MES",
+      "to_contract": "MESU9",
+      "to_instrument_id": "7859"
+    },
+    {
+      "from_contract": "MESU9",
+      "from_expiration": "2019-09-20",
+      "roll_trade_date": "2019-09-12",
+      "root": "MES",
+      "to_contract": "MESZ9",
+      "to_instrument_id": "7868"
+    },
+    {
+      "from_contract": "MESZ9",
+      "from_expiration": "2019-12-20",
+      "roll_trade_date": "2019-12-12",
+      "root": "MES",
+      "to_contract": "MESH0",
+      "to_instrument_id": "8001"
+    },
+    {
+      "from_contract": "MESH0",
+      "from_expiration": "2020-03-20",
+      "roll_trade_date": "2020-03-12",
+      "root": "MES",
+      "to_contract": "MESM0",
+      "to_instrument_id": "8034"
+    },
+    {
+      "from_contract": "MESM0",
+      "from_expiration": "2020-06-19",
+      "roll_trade_date": "2020-06-11",
+      "root": "MES",
+      "to_contract": "MESU0",
+      "to_instrument_id": "20871"
+    },
+    {
+      "from_contract": "MESU0",
+      "from_expiration": "2020-09-18",
+      "roll_trade_date": "2020-09-10",
+      "root": "MES",
+      "to_contract": "MESZ0",
+      "to_instrument_id": "24948"
+    },
+    {
+      "from_contract": "MESZ0",
+      "from_expiration": "2020-12-18",
+      "roll_trade_date": "2020-12-10",
+      "root": "MES",
+      "to_contract": "MESH1",
+      "to_instrument_id": "8963"
+    },
+    {
+      "from_contract": "MESH1",
+      "from_expiration": "2021-03-19",
+      "roll_trade_date": "2021-03-11",
+      "root": "MES",
+      "to_contract": "MESM1",
+      "to_instrument_id": "18659"
+    },
+    {
+      "from_contract": "MESM1",
+      "from_expiration": "2021-06-18",
+      "roll_trade_date": "2021-06-10",
+      "root": "MES",
+      "to_contract": "MESU1",
+      "to_instrument_id": "2055"
+    },
+    {
+      "from_contract": "MESU1",
+      "from_expiration": "2021-09-17",
+      "roll_trade_date": "2021-09-09",
+      "root": "MES",
+      "to_contract": "MESZ1",
+      "to_instrument_id": "3196"
+    },
+    {
+      "from_contract": "MESZ1",
+      "from_expiration": "2021-12-17",
+      "roll_trade_date": "2021-12-09",
+      "root": "MES",
+      "to_contract": "MESH2",
+      "to_instrument_id": "11355"
+    },
+    {
+      "from_contract": "MESH2",
+      "from_expiration": "2022-03-18",
+      "roll_trade_date": "2022-03-10",
+      "root": "MES",
+      "to_contract": "MESM2",
+      "to_instrument_id": "13615"
+    },
+    {
+      "from_contract": "MESM2",
+      "from_expiration": "2022-06-17",
+      "roll_trade_date": "2022-06-09",
+      "root": "MES",
+      "to_contract": "MESU2",
+      "to_instrument_id": "10039"
+    },
+    {
+      "from_contract": "MESU2",
+      "from_expiration": "2022-09-16",
+      "roll_trade_date": "2022-09-08",
+      "root": "MES",
+      "to_contract": "MESZ2",
+      "to_instrument_id": "10299"
+    },
+    {
+      "from_contract": "MESZ2",
+      "from_expiration": "2022-12-16",
+      "roll_trade_date": "2022-12-08",
+      "root": "MES",
+      "to_contract": "MESH3",
+      "to_instrument_id": "2080"
+    },
+    {
+      "from_contract": "MESH3",
+      "from_expiration": "2023-03-17",
+      "roll_trade_date": "2023-03-09",
+      "root": "MES",
+      "to_contract": "MESM3",
+      "to_instrument_id": "9270"
+    },
+    {
+      "from_contract": "MESM3",
+      "from_expiration": "2023-06-16",
+      "roll_trade_date": "2023-06-08",
+      "root": "MES",
+      "to_contract": "MESU3",
+      "to_instrument_id": "2922"
+    },
+    {
+      "from_contract": "MESU3",
+      "from_expiration": "2023-09-15",
+      "roll_trade_date": "2023-09-07",
+      "root": "MES",
+      "to_contract": "MESZ3",
+      "to_instrument_id": "24925"
+    },
+    {
+      "from_contract": "MESZ3",
+      "from_expiration": "2023-12-15",
+      "roll_trade_date": "2023-12-07",
+      "root": "MES",
+      "to_contract": "MESH4",
+      "to_instrument_id": "763"
+    },
+    {
+      "from_contract": "MESH4",
+      "from_expiration": "2024-03-15",
+      "roll_trade_date": "2024-03-07",
+      "root": "MES",
+      "to_contract": "MESM4",
+      "to_instrument_id": "13804"
+    },
+    {
+      "from_contract": "MESM4",
+      "from_expiration": "2024-06-21",
+      "roll_trade_date": "2024-06-13",
+      "root": "MES",
+      "to_contract": "MESU4",
+      "to_instrument_id": "7114"
+    },
+    {
+      "from_contract": "MESU4",
+      "from_expiration": "2024-09-20",
+      "roll_trade_date": "2024-09-12",
+      "root": "MES",
+      "to_contract": "MESZ4",
+      "to_instrument_id": "42034014"
+    },
+    {
+      "from_contract": "MESZ4",
+      "from_expiration": "2024-12-20",
+      "roll_trade_date": "2024-12-12",
+      "root": "MES",
+      "to_contract": "MESH5",
+      "to_instrument_id": "42005347"
+    },
+    {
+      "from_contract": "MNQM9",
+      "from_expiration": "2019-06-21",
+      "roll_trade_date": "2019-06-13",
+      "root": "MNQ",
+      "to_contract": "MNQU9",
+      "to_instrument_id": "8084"
+    },
+    {
+      "from_contract": "MNQU9",
+      "from_expiration": "2019-09-20",
+      "roll_trade_date": "2019-09-12",
+      "root": "MNQ",
+      "to_contract": "MNQZ9",
+      "to_instrument_id": "8107"
+    },
+    {
+      "from_contract": "MNQZ9",
+      "from_expiration": "2019-12-20",
+      "roll_trade_date": "2019-12-12",
+      "root": "MNQ",
+      "to_contract": "MNQH0",
+      "to_instrument_id": "8196"
+    },
+    {
+      "from_contract": "MNQH0",
+      "from_expiration": "2020-03-20",
+      "roll_trade_date": "2020-03-12",
+      "root": "MNQ",
+      "to_contract": "MNQM0",
+      "to_instrument_id": "8204"
+    },
+    {
+      "from_contract": "MNQM0",
+      "from_expiration": "2020-06-19",
+      "roll_trade_date": "2020-06-11",
+      "root": "MNQ",
+      "to_contract": "MNQU0",
+      "to_instrument_id": "13081"
+    },
+    {
+      "from_contract": "MNQU0",
+      "from_expiration": "2020-09-18",
+      "roll_trade_date": "2020-09-10",
+      "root": "MNQ",
+      "to_contract": "MNQZ0",
+      "to_instrument_id": "17706"
+    },
+    {
+      "from_contract": "MNQZ0",
+      "from_expiration": "2020-12-18",
+      "roll_trade_date": "2020-12-10",
+      "root": "MNQ",
+      "to_contract": "MNQH1",
+      "to_instrument_id": "6227"
+    },
+    {
+      "from_contract": "MNQH1",
+      "from_expiration": "2021-03-19",
+      "roll_trade_date": "2021-03-11",
+      "root": "MNQ",
+      "to_contract": "MNQM1",
+      "to_instrument_id": "9485"
+    },
+    {
+      "from_contract": "MNQM1",
+      "from_expiration": "2021-06-18",
+      "roll_trade_date": "2021-06-10",
+      "root": "MNQ",
+      "to_contract": "MNQU1",
+      "to_instrument_id": "3601"
+    },
+    {
+      "from_contract": "MNQU1",
+      "from_expiration": "2021-09-17",
+      "roll_trade_date": "2021-09-09",
+      "root": "MNQ",
+      "to_contract": "MNQZ1",
+      "to_instrument_id": "1447"
+    },
+    {
+      "from_contract": "MNQZ1",
+      "from_expiration": "2021-12-17",
+      "roll_trade_date": "2021-12-09",
+      "root": "MNQ",
+      "to_contract": "MNQH2",
+      "to_instrument_id": "7575"
+    },
+    {
+      "from_contract": "MNQH2",
+      "from_expiration": "2022-03-18",
+      "roll_trade_date": "2022-03-10",
+      "root": "MNQ",
+      "to_contract": "MNQM2",
+      "to_instrument_id": "13505"
+    },
+    {
+      "from_contract": "MNQM2",
+      "from_expiration": "2022-06-17",
+      "roll_trade_date": "2022-06-09",
+      "root": "MNQ",
+      "to_contract": "MNQU2",
+      "to_instrument_id": "7688"
+    },
+    {
+      "from_contract": "MNQU2",
+      "from_expiration": "2022-09-16",
+      "roll_trade_date": "2022-09-08",
+      "root": "MNQ",
+      "to_contract": "MNQZ2",
+      "to_instrument_id": "20332"
+    },
+    {
+      "from_contract": "MNQZ2",
+      "from_expiration": "2022-12-16",
+      "roll_trade_date": "2022-12-08",
+      "root": "MNQ",
+      "to_contract": "MNQH3",
+      "to_instrument_id": "8071"
+    },
+    {
+      "from_contract": "MNQH3",
+      "from_expiration": "2023-03-17",
+      "roll_trade_date": "2023-03-09",
+      "root": "MNQ",
+      "to_contract": "MNQM3",
+      "to_instrument_id": "4973"
+    },
+    {
+      "from_contract": "MNQM3",
+      "from_expiration": "2023-06-16",
+      "roll_trade_date": "2023-06-08",
+      "root": "MNQ",
+      "to_contract": "MNQU3",
+      "to_instrument_id": "9235"
+    },
+    {
+      "from_contract": "MNQU3",
+      "from_expiration": "2023-09-15",
+      "roll_trade_date": "2023-09-07",
+      "root": "MNQ",
+      "to_contract": "MNQZ3",
+      "to_instrument_id": "34070"
+    },
+    {
+      "from_contract": "MNQZ3",
+      "from_expiration": "2023-12-15",
+      "roll_trade_date": "2023-12-07",
+      "root": "MNQ",
+      "to_contract": "MNQH4",
+      "to_instrument_id": "7101"
+    },
+    {
+      "from_contract": "MNQH4",
+      "from_expiration": "2024-03-15",
+      "roll_trade_date": "2024-03-07",
+      "root": "MNQ",
+      "to_contract": "MNQM4",
+      "to_instrument_id": "10"
+    },
+    {
+      "from_contract": "MNQM4",
+      "from_expiration": "2024-06-21",
+      "roll_trade_date": "2024-06-13",
+      "root": "MNQ",
+      "to_contract": "MNQU4",
+      "to_instrument_id": "13941"
+    },
+    {
+      "from_contract": "MNQU4",
+      "from_expiration": "2024-09-20",
+      "roll_trade_date": "2024-09-12",
+      "root": "MNQ",
+      "to_contract": "MNQZ4",
+      "to_instrument_id": "42008411"
+    },
+    {
+      "from_contract": "MNQZ4",
+      "from_expiration": "2024-12-20",
+      "roll_trade_date": "2024-12-12",
+      "root": "MNQ",
+      "to_contract": "MNQH5",
+      "to_instrument_id": "42003617"
+    }
+  ],
+  "heldout_rolls_not_included": true,
+  "limitations": [
+    "CSV from prior unreviewed research; not rederived from canonical definitions",
+    "instrument IDs may remap daily; per-date mapping not independently verified"
+  ],
+  "rule": "D-ROLL-01 already approved",
+  "source_csv": "C:\\Users\\jason\\OneDrive\\Desktop\\Quant\\quant-agent-brain\\brain\\sources\\mes_mnq\\contracts\\roll_calendar_2019_2026.csv",
+  "source_sha256": "0de7de8fa4e90849d5bb86c0db3a35c9b876c4ed7cf352608ba915ccc60de0d1",
+  "status": "provisional"
+}
