@@ -285,7 +285,7 @@ function stopBaseReplayTimer() {
 RENDER.today = async (main) => {
   stopBaseReplayTimer();
 
-  const [t, h, labData, snapData, calData, descRuns, replaysList] = await Promise.all([
+  const [t, h, labData, snapData, calData, descRuns, replaysList, datasetsList] = await Promise.all([
     api("/api/today"),
     api("/api/home").catch(() => ({ counts: {}, pipeline: [], runs: [] })),
     api("/api/lab").catch(() => ({ cards: [], backtests: [], reviews: [] })),
@@ -293,6 +293,7 @@ RENDER.today = async (main) => {
     api("/api/market/calendar").catch(() => ({ events: [] })),
     api("/api/runs/described?limit=8").catch(() => []),
     api("/api/replays").catch(() => []),
+    api("/api/datasets").catch(() => []),
   ]);
 
   const BotEngine = window.QBBots;
@@ -348,273 +349,228 @@ RENDER.today = async (main) => {
     .slice(0, 4);
   const upcomingMacro = (calData?.events || []).slice(0, 4);
 
+  const totalTrials = (labData.backtests || []).length || h.counts?.backtests || 0;
+  const totalDatasets = h.counts?.price_datasets || marketRows.length || 0;
+  const totalSources = h.counts?.sources || 0;
+
   main.innerHTML = `
-    <!-- Cockpit Header with Bot Co-Pilot Pill -->
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; flex-wrap:wrap; gap:16px;">
+    <!-- Title Row -->
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
       <div>
-        <h1 style="margin:0 0 6px;">Quant Brain Command Base</h1>
-        <p class="lead">${esc(t.headline?.title || "Deterministic algorithmic research terminal")}: ${esc(t.headline?.detail || "Held-out validation, DSR deflated Sharpe ratio, zero lookahead bias.")}</p>
+        <h1>Quant Brain Overview</h1>
+        <p class="lead">${esc(t.headline?.title || "SC-0002 finished all 5 steps")}: ${esc(t.headline?.detail || "Held-out DSR 0.896 vs 0.950 required gate. Next: " + (t.next || "backend decision"))}</p>
       </div>
       <div class="row" style="gap:8px;">
-        <button id="today-bot-pill" type="button" class="box" style="padding:8px 14px; display:inline-flex; align-items:center; gap:10px; cursor:pointer; border-color:rgba(56, 189, 248, 0.3); background:var(--surface-2); border-radius:var(--radius-sm);" title="Click to cycle Quant Agent insights" aria-label="Show the next Quant Agent insight">
-          <span style="font-size:16px;">🤖</span>
-          <span class="mono small"><strong style="color:var(--accent);">Quant Agent:</strong> <span id="today-bot-msg">SC-0002 Gate Verified · 101 In-Sample Trades Loaded</span></span>
+        <button id="today-bot-pill" type="button" class="btn small" title="Cycle Quant Agent insights" aria-label="Show the next Quant Agent insight">
+          <span class="small"><strong>Agent Insight:</strong> <span id="today-bot-msg">SC-0002 Gate Verified · 101 In-Sample Trades Loaded</span></span>
         </button>
+        <div class="seg" role="group" aria-label="Layout view mode">
+          <button id="cockpit-btn-split" type="button" aria-pressed="true">Split View</button>
+          <button id="cockpit-btn-chart" type="button" aria-pressed="false">Chart Focus</button>
+          <button id="cockpit-btn-strategy" type="button" aria-pressed="false">Base Focus</button>
+        </div>
       </div>
     </div>
 
-    <!-- Transparent Live Status Banner -->
-    <section class="box" style="margin-bottom:22px; padding:14px 18px; background:linear-gradient(90deg, rgba(17,24,39,0.95), rgba(30,41,59,0.85)); border-color:rgba(56,189,248,0.25);">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-        <div class="row" style="gap:12px;">
-          <span class="badge" style="background:rgba(56,189,248,0.15); color:var(--accent); border-color:rgba(56,189,248,0.35);">TRANSPARENCY X-RAY</span>
-          <span style="font-size:13.5px; color:#fff;"><b>What is happening right now:</b> ${esc(t.next || "All 5 research-to-review stages verified.")}</span>
-        </div>
-        <div class="row small mono" style="gap:14px; color:var(--muted);">
-          <span>Sources: <b style="color:#fff;">${esc(h.counts?.sources ?? 0)}</b></span>
-          <span>Datasets: <b style="color:#fff;">${esc(h.counts?.price_datasets ?? 0)}</b></span>
-          <span>Cards: <b style="color:#fff;">${esc(h.counts?.strategy_cards ?? 0)}</b></span>
-          <span>Trials: <b style="color:#fff;">${esc((labData.backtests || []).length || (h.counts?.backtests ?? 0))}</b></span>
-          <span>Branch: <b style="color:var(--accent);">${esc(t.git?.branch || "main")}</b> (${esc(t.git?.head || "")})</span>
-        </div>
+    <!-- Overall Summary KPI Strip (1px divided strip) -->
+    <section class="kpi-strip" aria-label="Project Summary Metrics">
+      <div class="kpi-cell">
+        <span class="kpi-label">Epistemic Stage</span>
+        <span class="kpi-val">5 / 5</span>
+        <span class="kpi-sub">Research to Review complete</span>
+      </div>
+      <div class="kpi-cell">
+        <span class="kpi-label">Active Strategy Verdict</span>
+        <span class="kpi-val bad">${esc((activeReview?.verdict || "Reject").toUpperCase())}</span>
+        <span class="kpi-sub">SC-0002 · DSR 0.896 vs 0.950</span>
+      </div>
+      <div class="kpi-cell">
+        <span class="kpi-label">Backtest Trial Ledger</span>
+        <span class="kpi-val">${esc(totalTrials)}</span>
+        <span class="kpi-sub">101 in-sample · 91 held-out trades</span>
+      </div>
+      <div class="kpi-cell">
+        <span class="kpi-label">Verified Market Data</span>
+        <span class="kpi-val">${esc(totalDatasets)}</span>
+        <span class="kpi-sub">${esc(totalSources)} curated sources · ${esc(t.git?.branch || "main")}</span>
+      </div>
+      <div class="kpi-cell">
+        <span class="kpi-label">Live Coinbase BTC-USD</span>
+        <span class="kpi-val" id="today-btc-val">Price unavailable</span>
+        <span class="kpi-sub"><span class="live" id="today-coinbase-status" style="padding:1px 6px; font-size:11px;"><i></i><span>WAITING</span></span></span>
       </div>
     </section>
 
-    <!-- Interactive Visual Agent Base Map -->
-    <section style="margin-bottom:26px;" id="base-map-section">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
-        <div>
-          <h2 style="margin:0; font-size:15px; color:#fff;">Interactive Agent Operations Base</h2>
-          <p class="muted small" style="margin:2px 0 0;">Click any bot or room to inspect what it does, see its real database state, or watch the bots act out a run.</p>
-        </div>
-        <div class="row" style="gap:8px;">
-          <div class="seg" role="group" aria-label="Bot visual style">
-            <button type="button" class="bot-style-btn" data-bot-style="droid" aria-pressed="${currentBotStyle === "droid"}">Sci-Fi Droids</button>
-            <button type="button" class="bot-style-btn" data-bot-style="pixel" aria-pressed="${currentBotStyle === "pixel"}">Pixel Arcade</button>
-            <button type="button" class="bot-style-btn" data-bot-style="geometric" aria-pressed="${currentBotStyle === "geometric"}">Geometric</button>
+    <!-- Primary Above-the-Fold Grid: Left = Backtest Chart & Verdict | Right = Interactive Agent Base -->
+    <div class="overview-grid" id="cockpit-grid">
+      <!-- Left Column: Backtest Replay Chart & Strategy Metrics -->
+      <section class="box" id="cockpit-col-chart">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+          <div class="row" style="gap:8px;">
+            <h2 style="margin:0;">SPY · Connors RSI(2) Backtest Replay</h2>
+            <span id="today-replay-badge" class="badge small">In-Sample (101 trades)</span>
           </div>
-          <button class="btn small primary" id="base-replay-run-btn" type="button">▶ Replay Latest Run</button>
-          <button class="btn small" id="base-reset-bots-btn" type="button">Reset Positions</button>
+          <div class="row" style="gap:6px;">
+            ${replaysList.length > 1 ? `<select id="today-replay-select" aria-label="Select backtest replay" style="padding:4px 8px; font-size:12px;">
+              ${replaysList.map((r) => `<option value="${esc(r.id)}">${esc(r.card_id)} Rule ${esc(r.rule_id)} · ${esc(r.symbol)} (${esc(r.phase === "held_out" ? "Held-Out" : "In-Sample")})</option>`).join("")}
+            </select>` : ""}
+            <button class="btn small" id="today-toggle-replay" type="button">Switch to Held-Out (91)</button>
+            <button class="btn small" data-go="chart" type="button">Full Chart</button>
+          </div>
         </div>
-      </div>
 
-      <div class="base-stage-wrap">
-        <div class="base-floor-canvas" id="base-floor-canvas">
-          <svg class="base-paths-svg" viewBox="0 0 100 100" preserveAspectRatio="none" id="base-paths-svg"></svg>
-          <div id="base-stations-layer"></div>
-          <div id="base-bots-layer"></div>
+        <div id="today-chart-wrap" style="height:210px; flex:1; min-height:200px; width:100%; border-radius:var(--radius-sm); overflow:hidden; background:var(--bg); border:1px solid var(--line); position:relative;">
+          <div id="today-chart-canvas" style="width:100%; height:100%;"></div>
+          <div id="today-chart-loading" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:var(--surface); font-size:12px; color:var(--muted);">Loading SPY backtest bars…</div>
         </div>
-        <div class="base-inspector" id="base-inspector">
-          <div>
-            <div class="row" style="gap:8px;">
-              <span class="badge" id="insp-badge" style="color:var(--accent); border-color:var(--accent);">COMMAND BASE</span>
-              <b id="insp-title" style="color:#fff; font-size:14px;">Click any Bot or Workstation on the floorplan</b>
+
+        <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:12px;">
+          <div class="row" style="gap:6px;">
+            <button class="btn small" id="today-prev-trade" type="button">Prev Trade</button>
+            <button class="btn small" id="today-next-trade" type="button">Next Trade</button>
+            <span id="today-trade-info" class="muted">Viewing Trade 1 of 101</span>
+          </div>
+          <div class="row small muted" style="gap:12px;">
+            <span>Return: <b class="good" id="today-stat-return">${isBt ? esc(pct(isBt.total_return, 1)) : "+40.2%"}</b></span>
+            <span>Win Rate: <b id="today-stat-win">${isBt && isBt.win_rate != null ? esc(pct(isBt.win_rate, 1).replace("+", "")) : "71.3%"}</b></span>
+            <span>Sharpe: <b id="today-stat-sharpe">${isBt ? esc(fmt(isBt.sharpe, 2)) : "0.41"}</b> (vs ${isBh ? esc(fmt(isBh.sharpe, 2)) : "0.29"} B&amp;H)</span>
+            <span>Max DD: <b id="today-stat-dd">${isBt ? esc(pct(isBt.max_drawdown, 1)) : "-15.1%"}</b></span>
+          </div>
+        </div>
+
+        <div class="box-foot" style="margin-top:10px;">
+          <div class="row" style="justify-content:space-between;">
+            <span class="small muted"><b>Why rejected:</b> ${esc(activeReview?.verdict_text || "Held-out DSR 0.896 < 0.950 required gate; random-entry 94.9% < 95%.")}</span>
+            <div class="row" style="gap:10px;">
+              <button class="link small" data-go="strategies">All ${esc(totalTrials)} Trials</button>
+              <button class="link small" data-go="risk">Risk Simulators</button>
             </div>
-            <p id="insp-desc" class="muted small" style="margin:4px 0 0;">Every bot represents a real module in the harness. Watch them walk between stations when tasks run or click "Replay Latest Run".</p>
-          </div>
-          <div class="row" id="insp-actions" style="gap:8px;">
-            <button class="btn small" id="insp-ask-tutor" type="button">Ask Tutor About This</button>
-            <button class="btn small" id="insp-open-page" type="button" data-go="activity">Open Activity Log →</button>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- 5-Step Epistemic Research Pipeline -->
-    <section style="margin-bottom:24px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <h2 style="margin:0; font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Epistemic Research Pipeline</h2>
-        <span class="mono faint small">5 Phase Verification Gate</span>
+      <!-- Right Column: Interactive Visual Agent Base Map -->
+      <section class="box" id="cockpit-col-strategy" style="padding:16px;">
+        <div id="base-map-section" style="display:flex; flex-direction:column; height:100%;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+            <div>
+              <h2 style="margin:0;">Interactive Agent Base</h2>
+              <p class="muted small" style="margin:2px 0 0;">Click any bot or workstation to inspect state, or replay the latest run.</p>
+            </div>
+            <div class="row" style="gap:6px;">
+              <div class="seg" role="group" aria-label="Bot visual style">
+                <button type="button" class="bot-style-btn" data-bot-style="droid" aria-pressed="${currentBotStyle === "droid"}">Droids</button>
+                <button type="button" class="bot-style-btn" data-bot-style="pixel" aria-pressed="${currentBotStyle === "pixel"}">Pixel</button>
+                <button type="button" class="bot-style-btn" data-bot-style="geometric" aria-pressed="${currentBotStyle === "geometric"}">Geo</button>
+              </div>
+              <button class="btn small primary" id="base-replay-run-btn" type="button">Replay Run</button>
+              <button class="btn small" id="base-reset-bots-btn" type="button">Reset</button>
+            </div>
+          </div>
+
+          <div class="base-stage-wrap">
+            <div class="base-floor-canvas" id="base-floor-canvas">
+              <svg class="base-paths-svg" viewBox="0 0 100 100" preserveAspectRatio="none" id="base-paths-svg"></svg>
+              <div id="base-stations-layer"></div>
+              <div id="base-bots-layer"></div>
+            </div>
+            <div class="base-inspector" id="base-inspector">
+              <div class="grow">
+                <div class="row" style="gap:8px;">
+                  <span class="badge small" id="insp-badge">BASE</span>
+                  <b id="insp-title" style="font-size:13px;">Click any Bot or Workstation</b>
+                </div>
+                <p id="insp-desc" class="muted small" style="margin:3px 0 0;">Each bot represents a verified harness module. Watch them move when tasks run.</p>
+              </div>
+              <div class="row" id="insp-actions" style="gap:6px;">
+                <button class="btn small" id="insp-ask-tutor" type="button">Ask Tutor</button>
+                <button class="btn small" id="insp-open-page" type="button" data-go="activity">Activity</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Lower Summary Deck: 3 Balanced Columns (What's New | Market Pulse | Macro & System Health) -->
+    <div class="overview-lower-grid">
+      <section class="box">
+        <div class="row" style="margin-bottom:10px;">
+          <h2 style="margin:0;" class="grow">What's New: Runs &amp; Commits</h2>
+          <button class="link small" data-go="activity">View all</button>
+        </div>
+        ${t.timeline.length ? `<ul class="feed">${t.timeline.slice(0, 4).map((i) => `<li>
+          <span class="when">${esc(ago(i.when))}</span>
+          <div><div class="who">${esc(i.who)} ${i.status ? status(i.status) : ""}</div>
+          <div class="what">${esc(clip(i.text, 90))} ${i.kind === "run" ? `<button class="link small" data-open-run="${esc(i.ref)}">Details</button>` : ""}</div></div></li>`).join("")}</ul>`
+        : `<p class="muted">Nothing has happened yet.</p>`}
+        <div class="box-foot">
+          <div class="row" style="justify-content:space-between;">
+            <span class="small muted">${esc(t.timeline.length)} recent events</span>
+            <button class="link small" data-go="activity">Activity Log</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="box">
+        <div class="row" style="margin-bottom:10px;">
+          <h2 style="margin:0;" class="grow">Market Pulse &amp; Datasets</h2>
+          <button class="link small" data-go="market">Open Screener</button>
+        </div>
+        ${topMovers.length ? `<div class="table-wrap"><table>
+          <thead><tr><th>Symbol</th><th class="num">Close</th><th class="num">1D</th><th class="num">RSI(2)</th></tr></thead>
+          <tbody>${topMovers.map((r) => `<tr class="click" data-jump-sym="${esc(r.symbol)}">
+            <td><b>${esc(r.symbol)}</b></td>
+            <td class="num">${esc(UIState.formatPrice(r.close))}</td>
+            <td class="num ${UIState.directionClass(r.change_1d_pct)}">${esc(UIState.formatPercentPoints(r.change_1d_pct, 1))}</td>
+            <td class="num">${esc(fmt(r.rsi_2, 1))}</td>
+          </tr>`).join("")}</tbody>
+        </table></div>` : `<div class="table-wrap"><table>
+          <thead><tr><th>Symbol</th><th>Range</th><th class="num">Rows</th><th>Status</th></tr></thead>
+          <tbody>${(datasetsList || []).slice(0, 7).map((ds) => `<tr class="click" data-jump-sym="${esc(ds.symbol || "SPY")}">
+            <td><b>${esc(ds.symbol || ds.dataset_id.split("-")[0])}</b></td>
+            <td class="small muted">${esc(ds.first_date || "")} to ${esc(ds.last_date || "")}</td>
+            <td class="num">${esc(fmt(ds.rows, 0))}</td>
+            <td>${status(ds.state || "unverified")}</td>
+          </tr>`).join("") || `<tr><td colspan="4" class="muted">No datasets registered.</td></tr>`}</tbody>
+        </table></div>`}
+        <div class="box-foot">
+          <div class="row" style="justify-content:space-between;">
+            <span class="small muted">${esc(totalDatasets)} EOD datasets verified</span>
+            <button class="link small" data-go="chart">Open Chart</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="box">
+        <div class="row" style="margin-bottom:10px;">
+          <h2 style="margin:0;" class="grow">Macro Calendar &amp; System</h2>
+          <button class="link small" data-go="market">Calendar</button>
+        </div>
+        ${upcomingMacro.length ? `<ul class="feed">${upcomingMacro.slice(0, 3).map((ev) => `<li>
+          <span class="when">${esc(ev.date)}</span>
+          <div>
+            <div class="who">${esc(ev.title)}</div>
+            <div class="what small">${esc(clip(ev.why || ev.source || "", 70))}</div>
+          </div>
+        </li>`).join("")}</ul>` : `<p class="muted small">No upcoming calendar events listed.</p>`}
+        <div class="box-foot">
+          <div class="row" style="justify-content:space-between;">
+            <span class="small muted">Handoff: ${esc(clip(t.next || "Up to date", 50))}</span>
+            <button class="link small" data-go="setup">Setup &amp; Checks</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- 5-Step Epistemic Pipeline -->
+    <section>
+      <div class="row" style="justify-content:space-between; margin-bottom:10px;">
+        <h2 style="margin:0;">5-Stage Epistemic Research Pipeline</h2>
+        <span class="faint small">Branch ${esc(t.git?.branch || "main")} (${esc(t.git?.head || "")}) · ${plural(t.git?.uncommitted || 0, "unsaved file")}</span>
       </div>
       <ol class="steps">${steps}</ol>
     </section>
-
-    <!-- Half-Screen Ergonomic View Controller -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
-      <div class="row" style="gap:6px; background:var(--surface-2); padding:3px 6px; border-radius:var(--radius-sm); border:1px solid var(--line);">
-        <button class="btn small" id="cockpit-btn-split" type="button" aria-pressed="true" style="font-size:12px; font-weight:600; background:rgba(56,189,248,0.18); color:var(--accent);">⊞ Split / Adaptive</button>
-        <button class="btn small" id="cockpit-btn-chart" type="button" aria-pressed="false" style="font-size:12px; font-weight:600; background:none; color:var(--muted);">📈 Chart Max</button>
-        <button class="btn small" id="cockpit-btn-strategy" type="button" aria-pressed="false" style="font-size:12px; font-weight:600; background:none; color:var(--muted);">🎯 Strategy &amp; Risk Deck</button>
-      </div>
-      <div class="row" style="gap:8px; font-size:11.5px; color:var(--muted); font-family:var(--mono);">
-        <span id="cockpit-viewport-pill" style="padding:3px 8px; border-radius:10px; background:rgba(255,255,255,0.05); border:1px solid var(--line);">Adaptive Sizing Active</span>
-      </div>
-    </div>
-
-    <!-- Standard Pro Split: Left 65% Superchart Replay | Right 35% Executive Deck -->
-    <section style="margin-bottom:32px;">
-      <div class="cockpit-split" id="cockpit-grid">
-        <!-- Left 65%: Embedded TradingView Lightweight Chart -->
-        <div id="cockpit-col-chart" class="box" style="padding:18px; display:flex; flex-direction:column; justify-content:space-between; min-width:0;">
-          <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-              <div class="row" style="gap:8px;">
-                <b style="font-size:15px; color:#fff;">SPY</b>
-                <span style="font-size:12px; color:var(--muted);">S&amp;P 500 ETF · Connors RSI(2) Replay</span>
-                <span id="today-replay-badge" style="font-size:11px; padding:2px 8px; border-radius:10px; background:rgba(56,189,248,0.12); color:var(--accent); font-weight:600;">In-Sample (101 trades)</span>
-              </div>
-              <div class="row" style="gap:8px;">
-                ${replaysList.length > 1 ? `<select id="today-replay-select" aria-label="Select backtest replay" style="padding:4px 8px; font-size:12px;">
-                  ${replaysList.map((r) => `<option value="${esc(r.id)}">${esc(r.card_id)} Rule ${esc(r.rule_id)} · ${esc(r.symbol)} (${esc(r.phase === "held_out" ? "Held-Out" : "In-Sample")})</option>`).join("")}
-                </select>` : ""}
-                <button class="btn small" id="today-toggle-replay" type="button" style="font-size:12px;">Toggle Held-Out (91 trades)</button>
-                <button class="btn small" data-go="chart" type="button" style="font-size:12px;">Open Full Lab ↗</button>
-              </div>
-            </div>
-
-            <!-- Candlestick chart canvas wrap -->
-            <div id="today-chart-wrap" style="height:360px; width:100%; border-radius:var(--radius-sm); overflow:hidden; background:#0b0f19; border:1px solid var(--line); position:relative;">
-              <div id="today-chart-canvas" style="width:100%; height:100%;"></div>
-              <div id="today-chart-loading" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(11,15,25,0.7); font-family:var(--mono); font-size:12px; color:var(--muted);">Loading SPY backtest bars…</div>
-            </div>
-          </div>
-
-          <!-- Trade Step-Through Controls Bar -->
-          <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-family:var(--mono); font-size:12px;">
-            <div class="row" style="gap:8px;">
-              <button class="btn small" id="today-prev-trade" type="button">◀ Prev Trade</button>
-              <button class="btn small" id="today-next-trade" type="button">Next Trade ▶</button>
-              <span id="today-trade-info" style="color:var(--muted);">Viewing Trade 1 of 101</span>
-            </div>
-            <div class="row" style="gap:12px; font-size:11.5px; color:var(--muted);">
-              <span><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--good); margin-right:4px;"></span>Long Entry (RSI &lt; 10)</span>
-              <span><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--bad); margin-right:4px;"></span>Exit (SMA 5)</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right 35%: Executive Strategy Verdict & Risk Deck -->
-        <div id="cockpit-col-strategy" class="stack" style="gap:16px; min-width:0;">
-          <!-- Strategy Performance Card -->
-          <div class="box" style="padding:18px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Strategy Performance</span>
-              <span style="font-size:11px; padding:2px 8px; border-radius:10px; background:rgba(244,63,94,0.15); color:var(--bad); font-weight:600;">${esc((activeReview?.verdict || "REJECTED").toUpperCase())}</span>
-            </div>
-            <h3 style="margin:0 0 10px; color:#fff; font-size:14.5px;">${esc(activeCard ? `${activeCard.strategy_id} · ${activeCard.title}` : "SC-0002 · Connors RSI(2) on SPY")}</h3>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; font-family:var(--mono);">
-              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
-                <span style="font-size:11px; color:var(--muted); display:block;">In-Sample Return</span>
-                <span id="today-stat-return" style="font-size:16px; font-weight:700; color:var(--good);">${isBt ? esc(pct(isBt.total_return, 1)) : "+40.2%"}</span>
-                <span id="today-stat-cagr" style="font-size:10px; color:var(--faint); display:block;">${isBt ? `${esc(pct(isBt.cagr, 1))} ann. (2000-2015)` : "2.1% ann. (2000-2015)"}</span>
-              </div>
-              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
-                <span style="font-size:11px; color:var(--muted); display:block;">Win Rate</span>
-                <span id="today-stat-win" style="font-size:16px; font-weight:700; color:#fff;">${isBt && isBt.win_rate != null ? esc(pct(isBt.win_rate, 1).replace("+", "")) : "71.3%"}</span>
-                <span id="today-stat-trades" style="font-size:10px; color:var(--faint); display:block;">${isBt ? `${esc(fmt(isBt.number_of_trades, 0))} trades` : "101 trades"}</span>
-              </div>
-              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
-                <span style="font-size:11px; color:var(--muted); display:block;">Sharpe Ratio</span>
-                <span id="today-stat-sharpe" style="font-size:16px; font-weight:700; color:#fff;">${isBt ? esc(fmt(isBt.sharpe, 2)) : "0.41"}</span>
-                <span id="today-stat-bh-sharpe" style="font-size:10px; color:var(--faint); display:block;">vs ${isBh ? esc(fmt(isBh.sharpe, 2)) : "0.29"} Buy &amp; Hold</span>
-              </div>
-              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
-                <span style="font-size:11px; color:var(--muted); display:block;">Max Drawdown</span>
-                <span id="today-stat-dd" style="font-size:16px; font-weight:700; color:var(--good);">${isBt ? esc(pct(isBt.max_drawdown, 1)) : "-15.1%"}</span>
-                <span id="today-stat-bh-dd" style="font-size:10px; color:var(--faint); display:block;">vs ${isBh ? esc(pct(isBh.max_drawdown, 1)) : "-55.2%"} Buy &amp; Hold</span>
-              </div>
-            </div>
-            <p style="font-size:12px; color:var(--muted); line-height:1.45; margin:0 0 10px;">
-              <strong style="color:#fff;">Why rejected?</strong> ${esc(activeReview?.verdict_text || "No edge shown out-of-sample (2016–2026). DSR scored 0.896 against the required 0.950 gate.")}
-            </p>
-            <div class="row" style="gap:10px;">
-              <button class="link small" data-go="strategies" style="font-weight:600;">Compare All ${(labData.backtests || []).length || 73} Trials →</button>
-              ${activeReview?.note_path ? fileLink(activeReview.note_path, "Read Review Note") : ""}
-            </div>
-          </div>
-
-          <!-- Risk Center Telemetry -->
-          <div class="box" style="padding:18px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Risk Center Telemetry</span>
-              <span style="font-size:11px; padding:2px 8px; border-radius:10px; background:rgba(16,185,129,0.15); color:var(--good); font-weight:600;">Paper Guard Active</span>
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-family:var(--mono); margin-bottom:10px;">
-              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
-                <span style="font-size:11px; color:var(--muted); display:block;">Risk of Ruin</span>
-                <span style="font-size:16px; font-weight:700; color:var(--good);">0.02%</span>
-                <span style="font-size:10px; color:var(--faint); display:block;">2,000-trader MC</span>
-              </div>
-              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
-                <span style="font-size:11px; color:var(--muted); display:block;">Half-Kelly Sizing</span>
-                <span style="font-size:16px; font-weight:700; color:var(--accent);">4.2%</span>
-                <span style="font-size:10px; color:var(--faint); display:block;">Safe leverage scalar</span>
-              </div>
-            </div>
-            <button class="link small" data-go="risk" style="font-weight:600;">Open Risk Simulators →</button>
-          </div>
-
-          <!-- Live Coinbase Stream Widget -->
-          <div class="box" style="padding:18px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Coinbase Upstream</span>
-              <div class="live" id="today-coinbase-status" style="margin:0;"><i></i><span>WAITING</span></div>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:var(--surface-2); border-radius:var(--radius-sm); border:1px solid var(--line); font-family:var(--mono); font-size:12.5px;">
-              <span style="font-weight:700; color:#fff;">BTC-USD</span>
-              <span id="today-btc-val" style="font-weight:700;">Price unavailable</span>
-            </div>
-            <div style="margin-top:8px;">
-              <button class="link small" data-go="live" style="font-weight:600;">Open Live Depth &amp; Tape →</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- What's New Hub: Market Movers, Macro Calendar & Live Brain Timeline -->
-    <div class="cols" style="margin-bottom:28px;">
-      <section class="box">
-        <div class="row" style="margin-bottom:12px;">
-          <h2 style="margin:0;" class="grow">What's New: Agent Runs, Code &amp; Automations</h2>
-          <button class="link small" data-go="activity">Full Activity →</button>
-        </div>
-        ${feed}
-      </section>
-
-      <div class="stack">
-        <section class="box">
-          <div class="row" style="margin-bottom:10px;">
-            <h2 style="margin:0;" class="grow">Market Pulse &amp; Signals</h2>
-            <button class="link small" data-go="market">Open Screener →</button>
-          </div>
-          <p class="muted small" style="margin:0 0 10px;">
-            ${oversoldRows.length
-              ? `<b class="good">${oversoldRows.length} ETF/Stock(s)</b> currently match Oversold Uptrend (RSI(2) &lt; 10 above SMA200): <b>${esc(oversoldRows.map((r) => r.symbol).join(", "))}</b>.`
-              : `No symbols in the starter universe currently have RSI(2) &lt; 10 above SMA200.`}
-          </p>
-          ${topMovers.length ? `<div class="table-wrap"><table>
-            <thead><tr><th>Symbol</th><th class="num">Close</th><th class="num">1D</th><th class="num">RSI(2)</th></tr></thead>
-            <tbody>${topMovers.map((r) => `<tr class="click" data-jump-sym="${esc(r.symbol)}">
-              <td><b class="mono" style="color:var(--accent)">${esc(r.symbol)}</b></td>
-              <td class="mono num">${esc(UIState.formatPrice(r.close))}</td>
-              <td class="mono num ${UIState.directionClass(r.change_1d_pct)}">${esc(UIState.formatPercentPoints(r.change_1d_pct, 1))}</td>
-              <td class="mono num">${esc(fmt(r.rsi_2, 1))}</td>
-            </tr>`).join("")}</tbody>
-          </table></div>` : `<p class="faint small">Market snapshot not loaded yet.</p>`}
-        </section>
-
-        <section class="box">
-          <div class="row" style="margin-bottom:8px;">
-            <h2 style="margin:0;" class="grow">Upcoming Macro &amp; FOMC News</h2>
-            <button class="link small" data-go="market">Calendar →</button>
-          </div>
-          ${upcomingMacro.length ? `<ul class="feed">${upcomingMacro.map((ev) => `<li>
-            <span class="when mono">${esc(ev.date)}</span>
-            <div>
-              <div class="who">${esc(ev.title)}</div>
-              <div class="what small">${esc(clip(ev.why || ev.source || "", 110))}</div>
-            </div>
-          </li>`).join("")}</ul>` : `<p class="muted small">No upcoming calendar events listed.</p>`}
-        </section>
-
-        <section class="box">
-          <h2>System Health &amp; Git Integrity</h2>
-          ${health}
-          <p class="muted small" style="margin-top:8px;">Branch <span class="mono">${esc(t.git.branch)}</span>, ${plural(t.git.uncommitted, "file")} changed. Connected to read-only SQLite brain.</p>
-        </section>
-      </div>
-    </div>
   `;
 
   main.querySelectorAll("[data-open-run]").forEach((b) => (b.onclick = () => { state.openRun = b.dataset.openRun; go("activity"); }));
@@ -641,7 +597,7 @@ RENDER.today = async (main) => {
       pathsSvg.innerHTML = BotEngine.PATH_EDGES.map(([aId, bId]) => {
         const a = BotEngine.stationById(aId);
         const b = BotEngine.stationById(bId);
-        return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="rgba(56, 189, 248, 0.18)" stroke-width="0.6" stroke-dasharray="1.5 1.5"/>`;
+        return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#2e2e32" stroke-width="0.6" stroke-dasharray="1.5 1.5"/>`;
       }).join("");
     }
 
@@ -649,7 +605,7 @@ RENDER.today = async (main) => {
     if (stationsLayer) {
       stationsLayer.innerHTML = BotEngine.STATIONS.map((st) => `
         <div class="base-station" data-station-id="${esc(st.id)}" style="left:${st.x}%; top:${st.y}%;" role="button" tabindex="0" aria-label="${esc(st.label)} workstation">
-          <div class="st-title"><span class="st-dot" style="background:${esc(st.color)}; box-shadow:0 0 8px ${esc(st.color)};"></span>${esc(st.label)}</div>
+          <div class="st-title"><span class="st-dot" style="background:${esc(st.color)};"></span>${esc(st.label)}</div>
           <div class="st-sub">${esc(st.sub)}</div>
         </div>
       `).join("");
@@ -846,20 +802,20 @@ RENDER.today = async (main) => {
     let currentTradeIdx = 0;
 
     const chart = LightweightCharts.createChart(chartCanvas, {
-      layout: { background: { color: "#0b0f19" }, textColor: "#94a3b8", fontSize: 12 },
-      grid: { vertLines: { color: "rgba(255, 255, 255, 0.04)" }, horzLines: { color: "rgba(255, 255, 255, 0.04)" } },
-      rightPriceScale: { borderColor: "rgba(255, 255, 255, 0.08)" },
-      timeScale: { borderColor: "rgba(255, 255, 255, 0.08)", rightOffset: 6 },
+      layout: { background: { color: "#171719" }, textColor: "#b4b4b4", fontSize: 12 },
+      grid: { vertLines: { color: "#222224" }, horzLines: { color: "#222224" } },
+      rightPriceScale: { borderColor: "#222224" },
+      timeScale: { borderColor: "#222224", rightOffset: 6 },
       autoSize: true,
     });
     charts.push(chart);
 
     const candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
-      upColor: "#10b981", downColor: "#f43f5e", borderVisible: false,
-      wickUpColor: "#10b981", wickDownColor: "#f43f5e"
+      upColor: "#44a282", downColor: "#e5566f", borderVisible: false,
+      wickUpColor: "#44a282", wickDownColor: "#e5566f"
     });
     const smaSeries = chart.addSeries(LightweightCharts.LineSeries, {
-      color: "#f59e0b", lineWidth: 1.5, title: "SMA 200"
+      color: "#d9a441", lineWidth: 1.5, title: "SMA 200"
     });
 
     async function loadReplay(replayId) {
@@ -890,7 +846,7 @@ RENDER.today = async (main) => {
             markers.push({
               time: t.entry_date,
               position: "belowBar",
-              color: "#10b981",
+              color: "#44a282",
               shape: "arrowUp",
               text: "#" + t.number
             });
@@ -899,7 +855,7 @@ RENDER.today = async (main) => {
             markers.push({
               time: t.exit_date,
               position: "aboveBar",
-              color: "#f43f5e",
+              color: "#e5566f",
               shape: "arrowDown",
               text: "Exit"
             });
@@ -1011,37 +967,22 @@ RENDER.today = async (main) => {
       if (!chartCol || !stratCol) return;
       const selected = mode === "chart" || mode === "strategy" ? mode : "split";
       [["split", btnSplit], ["chart", btnChart], ["strategy", btnStrat]].forEach(([name, btn]) => {
-        btn.setAttribute("aria-pressed", String(name === selected));
+        if (btn) btn.setAttribute("aria-pressed", String(name === selected));
       });
       if (mode === "chart") {
         chartCol.style.display = "flex";
         stratCol.style.display = "none";
-        if (chartWrap) chartWrap.style.height = "520px";
-        btnChart.style.background = "rgba(56,189,248,0.18)";
-        btnChart.style.color = "var(--accent)";
-        btnSplit.style.background = "none";
-        btnSplit.style.color = "var(--muted)";
-        btnStrat.style.background = "none";
-        btnStrat.style.color = "var(--muted)";
+        if (gridEl) gridEl.style.gridTemplateColumns = "1fr";
+        if (chartWrap) chartWrap.style.height = "460px";
       } else if (mode === "strategy") {
         chartCol.style.display = "none";
-        stratCol.style.display = "grid";
-        btnStrat.style.background = "rgba(56,189,248,0.18)";
-        btnStrat.style.color = "var(--accent)";
-        btnSplit.style.background = "none";
-        btnSplit.style.color = "var(--muted)";
-        btnChart.style.background = "none";
-        btnChart.style.color = "var(--muted)";
+        stratCol.style.display = "flex";
+        if (gridEl) gridEl.style.gridTemplateColumns = "1fr";
       } else {
         chartCol.style.display = "flex";
-        stratCol.style.display = "grid";
-        if (chartWrap) chartWrap.style.height = "360px";
-        btnSplit.style.background = "rgba(56,189,248,0.18)";
-        btnSplit.style.color = "var(--accent)";
-        btnChart.style.background = "none";
-        btnChart.style.color = "var(--muted)";
-        btnStrat.style.background = "none";
-        btnStrat.style.color = "var(--muted)";
+        stratCol.style.display = "flex";
+        if (gridEl) gridEl.style.gridTemplateColumns = "";
+        if (chartWrap) chartWrap.style.height = "260px";
       }
       setTimeout(updateSizingTelemetry, 40);
     };
@@ -1506,7 +1447,7 @@ RENDER.risk = async (main) => {
         </section>
 
         <section class="box">
-          <h2>Kelly Criterion & Leverage</h2>
+          <h2>Kelly Criterion &amp; Position Scaling</h2>
           <p class="muted small">The mathematical formula for maximum compounding growth. Notice how aggressive full-Kelly is compared to realistic sizing.</p>
           <div class="stats compact" id="kelly-stats"></div>
           <div class="box" id="kelly-explain" style="background:var(--surface-2);font-size:13px;color:var(--muted)"></div>
@@ -2098,6 +2039,8 @@ function connectTickerLive() {
 // ---------- Roaming Screen Companion Co-Pilot ----------
 let companionOpen = false;
 let companionCustomText = null;
+let companionCoords = null;
+let patrolIdx = 0;
 
 const PAGE_COMPANION_GUIDE = {
   today: {
@@ -2155,25 +2098,29 @@ function renderRoamingCompanion() {
   })();
   const guide = PAGE_COMPANION_GUIDE[state.page] || PAGE_COMPANION_GUIDE.today;
   const bodyText = companionCustomText || guide.text;
+  const posStyle = companionCoords
+    ? `left:${companionCoords.left}px; top:${companionCoords.top}px; right:auto; bottom:auto;`
+    : "";
 
   root.innerHTML = `
-    <div class="roaming-companion" id="roaming-companion">
+    <div class="roaming-companion" id="roaming-companion" style="${posStyle}">
       ${companionOpen ? `
         <div class="roaming-companion-card" role="region" aria-label="Quant Co-Pilot Assistant">
           <div class="row" style="margin-bottom:6px;">
             <b style="color:var(--accent); font-size:12.5px;">${esc(guide.title)}</b>
             <span class="grow"></span>
-            <button type="button" class="link small" id="comp-close" aria-label="Minimize Co-Pilot">✕</button>
+            ${companionCoords ? `<button type="button" class="link small" id="comp-dock" style="margin-right:6px;">Dock</button>` : ""}
+            <button type="button" class="link small" id="comp-close" aria-label="Minimize Co-Pilot">Close</button>
           </div>
           <p style="margin:0 0 10px; color:var(--text); line-height:1.45;">${esc(bodyText)}</p>
           <div class="row" style="gap:6px;">
             <button type="button" class="btn small primary" id="comp-ask-btn">Explain This Screen</button>
-            ${state.page !== "today" ? `<button type="button" class="btn small" id="comp-home-btn">Return to Base</button>` : `<button type="button" class="btn small" id="comp-patrol-btn">Patrol Screen</button>`}
+            ${state.page !== "today" ? `<button type="button" class="btn small" id="comp-home-btn">Return to Base</button>` : `<button type="button" class="btn small" id="comp-patrol-btn">Walk to Next Panel</button>`}
           </div>
         </div>
       ` : ""}
       <button type="button" class="roaming-companion-btn" id="comp-toggle-btn" title="Quant Co-Pilot Bot (Click to interact)" aria-expanded="${companionOpen}">
-        ${window.QBBots.botAvatarSvg(styleMode, "#38bdf8", companionOpen ? "happy" : "idle")}
+        ${window.QBBots.botAvatarSvg(styleMode, "#4a8ad6", companionOpen ? "happy" : "idle")}
       </button>
     </div>
   `;
@@ -2185,24 +2132,46 @@ function renderRoamingCompanion() {
   });
   $("#comp-close")?.addEventListener("click", () => {
     companionOpen = false;
+    companionCoords = null;
+    document.querySelectorAll(".roam-target-highlight").forEach((el) => el.classList.remove("roam-target-highlight"));
+    renderRoamingCompanion();
+  });
+  $("#comp-dock")?.addEventListener("click", () => {
+    companionCoords = null;
+    document.querySelectorAll(".roam-target-highlight").forEach((el) => el.classList.remove("roam-target-highlight"));
     renderRoamingCompanion();
   });
   $("#comp-ask-btn")?.addEventListener("click", () => {
     companionOpen = false;
+    companionCoords = null;
     go("learn", { question: guide.question });
   });
   $("#comp-home-btn")?.addEventListener("click", () => {
+    companionCoords = null;
     go("today");
   });
   $("#comp-patrol-btn")?.addEventListener("click", () => {
     const targets = [
-      { sel: "#base-map-section", msg: "Inspecting Agent Operations Base: all 5 specialist bots are online at their workstations." },
-      { sel: "#cockpit-col-chart", msg: "Checking SPY Replay Chart: 101 in-sample trades and 91 held-out trades ready to step through." },
-      { sel: "#cockpit-col-strategy", msg: "Auditing Strategy Verdict: SC-0002 was honestly rejected because out-of-sample DSR (0.896) missed the 0.950 gate." },
+      { sel: ".kpi-strip", msg: "KPI Strip: 5/5 stages complete, 72 trials recorded in the ledger, and 48 verified EOD datasets." },
+      { sel: "#cockpit-col-chart", msg: "SPY Backtest Replay: Step through 101 in-sample or 91 held-out trades with next-bar execution." },
+      { sel: "#cockpit-col-strategy", msg: "Agent Operations Base: 5 specialist bots mapped to their workstations. Click Replay Run to animate." },
+      { sel: ".overview-lower-grid", msg: "What's New & Market Pulse: Recent commits, verified datasets, and upcoming FOMC rate decisions." },
     ];
-    const pick = targets[Math.floor(Math.random() * targets.length)];
+    const pick = targets[patrolIdx % targets.length];
+    patrolIdx += 1;
+    document.querySelectorAll(".roam-target-highlight").forEach((el) => el.classList.remove("roam-target-highlight"));
     const el = $(pick.sel);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (el) {
+      el.classList.add("roam-target-highlight");
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      const rect = el.getBoundingClientRect();
+      const maxLeft = Math.max(20, window.innerWidth - 380);
+      const maxTop = Math.max(20, window.innerHeight - 170);
+      companionCoords = {
+        left: Math.min(maxLeft, Math.max(20, Math.round(rect.right - 340))),
+        top: Math.min(maxTop, Math.max(60, Math.round(rect.top + 16))),
+      };
+    }
     companionCustomText = pick.msg;
     renderRoamingCompanion();
   });

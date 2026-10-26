@@ -231,6 +231,90 @@ def bars(project_root: Path, db_path: str | Path, dataset_id: str) -> list[dict[
 
 # --- backtest lab ---------------------------------------------------------------------
 
+def _file_backed_cards(project_root: Path) -> list[dict[str, Any]]:
+    ledger_path = project_root / "brain/03_Strategy_Cards/freeze_ledger.json"
+    if not ledger_path.is_file():
+        return []
+    ledger = _json(ledger_path.read_text(encoding="utf-8"), {})
+    superseded = {s.get("card_id") for s in ledger.get("superseded", []) if isinstance(s, dict)}
+    out = []
+    for entry in reversed(ledger.get("frozen", [])):
+        if not isinstance(entry, dict) or not entry.get("card_id"):
+            continue
+        cid = entry["card_id"]
+        rel = entry.get("card_path") or f"brain/03_Strategy_Cards/{cid}.md"
+        cpath = project_root / rel
+        title, hypothesis, markets = cid, "", []
+        if cpath.is_file():
+            try:
+                post = frontmatter.load(cpath)
+                m = re.search(r"^#\s+(.+)$", post.content, re.M)
+                if m:
+                    title = m.group(1).strip()
+                jm = re.search(r"```json\s*(\{.*?\})\s*```", post.content, re.S)
+                if jm:
+                    spec = _json(jm.group(1), {})
+                    title = spec.get("title") or title
+                    hypothesis = spec.get("hypothesis") or ""
+                    markets = spec.get("universe") or []
+            except Exception:
+                pass
+        out.append({
+            "strategy_id": cid,
+            "title": title,
+            "status": "superseded" if cid in superseded else "frozen",
+            "hypothesis": hypothesis,
+            "markets": markets,
+            "source_ids": [],
+            "backtest_ids": [],
+            "review_status": "not_reviewed",
+            "note_path": rel,
+            "created_at": entry.get("frozen_at") or "",
+        })
+    return out
+
+
+def _file_backed_trials(project_root: Path) -> list[dict[str, Any]]:
+    out = []
+    for tpath in sorted((project_root / "brain/04_Backtest_Reports").glob("*.trials.jsonl")):
+        try:
+            lines = tpath.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            continue
+        for line in lines:
+            row = _json(line, None)
+            if not isinstance(row, dict) or not row.get("trial_id"):
+                continue
+            metrics = row.get("metrics") or {}
+            out.append({
+                "backtest_id": row["trial_id"],
+                "strategy_id": row.get("card_id"),
+                "created_at": row.get("at") or "",
+                "total_return": metrics.get("total_return"),
+                "benchmark_return": None,
+                "cagr": metrics.get("cagr"),
+                "sharpe": metrics.get("sharpe"),
+                "sortino": None,
+                "max_drawdown": metrics.get("max_drawdown"),
+                "volatility": None,
+                "exposure": metrics.get("exposure"),
+                "win_rate": metrics.get("win_rate"),
+                "profit_factor": metrics.get("profit_factor"),
+                "number_of_trades": metrics.get("trades"),
+                "fees": row.get("cost_bps"),
+                "config": {
+                    "phase": row.get("phase"),
+                    "symbol": row.get("symbol"),
+                    "cost_bps": row.get("cost_bps"),
+                    "kind": row.get("kind"),
+                    "rule": row.get("rule"),
+                    "period": row.get("period"),
+                },
+                "equity_available": False,
+            })
+    return out
+
+
 def lab(project_root: Path, db_path: str | Path) -> dict[str, Any]:
     """Whatever PROP-007 steps 4-6 wrote. The terminal adapts; it never defines this schema."""
     cards = _rows(db_path, "SELECT * FROM strategy_cards ORDER BY created_at DESC")
@@ -254,6 +338,10 @@ def lab(project_root: Path, db_path: str | Path) -> dict[str, Any]:
     for card in cards:
         for key in ("markets_json", "source_ids_json", "backtest_ids_json"):
             card[key.removesuffix("_json")] = _json(card.pop(key, None), [])
+    if not cards:
+        cards = _file_backed_cards(project_root)
+    if not tests:
+        tests = _file_backed_trials(project_root)
     return {"cards": cards, "backtests": tests, "reviews": reviews}
 
 
@@ -334,9 +422,17 @@ def review_notes(project_root: Path) -> list[dict[str, Any]]:
 
 
 def effective_counts(project_root: Path, db_path: str | Path) -> dict[str, int]:
-    """Database counts, with reviews that exist only as notes included."""
+    """Database counts, with reviews and file-backed artifacts included when present."""
     counts = brain_counts(db_path)
     counts["reviews"] = max(counts.get("reviews", 0), len(review_notes(project_root)))
+    if not counts.get("sources") and (project_root / "brain/01_Sources").is_dir():
+        counts["sources"] = len(list((project_root / "brain/01_Sources").rglob("*.md")))
+    if not counts.get("price_datasets") and (project_root / MANIFEST_DIR).is_dir():
+        counts["price_datasets"] = len(list((project_root / MANIFEST_DIR).glob("*.json")))
+    if not counts.get("strategy_cards"):
+        counts["strategy_cards"] = len(_file_backed_cards(project_root))
+    if not counts.get("backtests"):
+        counts["backtests"] = len(_file_backed_trials(project_root))
     return counts
 
 

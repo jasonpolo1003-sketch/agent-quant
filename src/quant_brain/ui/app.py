@@ -138,7 +138,7 @@ def create_app(config: TerminalConfig) -> FastAPI:
 
     @app.get("/api/home")
     def home() -> dict[str, Any]:
-        counts = readers.brain_counts(config.brain_db)
+        counts = readers.effective_counts(root, config.brain_db)
         git = readers.git_activity(root, 8)
         health = store.list_runs(config.terminal_db, limit=200)
         last_health = next((r for r in health if r["kind"] == "health_check"

@@ -1,5 +1,5 @@
 /* Quant Brain — Interactive Visual Agent Base & Roaming Co-Pilot Engine.
-   Dependency-free state logic + browser SVG/DOM renderer. */
+   Built to taste-skill data-terminal rules: no violet/indigo, no gradients, no emojis. */
 "use strict";
 
 (function initBaseBots(root, factory) {
@@ -13,9 +13,9 @@
       id: "scout_desk",
       label: "Scout Desk",
       sub: "Agent Reach & Discovery",
-      x: 11,
-      y: 34,
-      color: "#38bdf8",
+      x: 16,
+      y: 28,
+      color: "#4a8ad6",
       stageKeys: ["dispatch", "discovery", "fetch", "research_run"],
       page: "activity",
       description: "Searches primary academic and practitioner sources, classifies credibility tiers, and saves immutable snapshots before any model sees them.",
@@ -24,9 +24,9 @@
       id: "validator_gate",
       label: "Validator Gate",
       sub: "Qwen 14B/27B + 5 Gates",
-      x: 30,
-      y: 24,
-      color: "#a855f7",
+      x: 50,
+      y: 22,
+      color: "#d9a441",
       stageKeys: ["qwen_validation", "evidence_extraction"],
       page: "activity",
       description: "Runs local Qwen 14B (with one repair and 27B escalation) and checks 5 deterministic gates: schema, source-ID, polarity, invented-rule, and slop.",
@@ -35,9 +35,9 @@
       id: "library_rag",
       label: "Library & RAG",
       sub: "Curator & Embeddings",
-      x: 50,
-      y: 34,
-      color: "#10b981",
+      x: 84,
+      y: 28,
+      color: "#44a282",
       stageKeys: ["curation"],
       page: "learn",
       description: "Promotes verified claims into brain/01_Sources/ and embeds chunks with nomic-embed-text so retrieval is grounded.",
@@ -46,9 +46,9 @@
       id: "strategy_forge",
       label: "Strategy Forge",
       sub: "Frozen Rules & Hash",
-      x: 69,
-      y: 24,
-      color: "#f59e0b",
+      x: 22,
+      y: 72,
+      color: "#d9a441",
       stageKeys: ["strategy", "card"],
       page: "strategies",
       description: "Locks exact entry/exit rules and cost assumptions into a SHA-256 frozen Strategy Card before any backtest is allowed to run.",
@@ -57,9 +57,9 @@
       id: "backtest_pit",
       label: "Backtest Pit",
       sub: "In-Sample & Held-Out",
-      x: 86,
-      y: 36,
-      color: "#ec4899",
+      x: 54,
+      y: 74,
+      color: "#4a8ad6",
       stageKeys: ["backtest", "data_refresh", "health_check"],
       page: "strategies",
       description: "Executes next-bar signals with trading costs against Buy & Hold and Random Entry benchmarks, logging every trial to the immutable ledger.",
@@ -68,9 +68,9 @@
       id: "review_tribunal",
       label: "Review Tribunal",
       sub: "Adversarial DSR Gate",
-      x: 50,
-      y: 74,
-      color: "#f43f5e",
+      x: 84,
+      y: 72,
+      color: "#e5566f",
       stageKeys: ["review", "agent_prompt"],
       page: "strategies",
       description: "Tries hard to disprove the backtest using Deflated Sharpe Ratio (DSR >= 0.95) across all trials. Rejects strategies that show no out-of-sample edge.",
@@ -84,7 +84,6 @@
     ["strategy_forge", "backtest_pit"],
     ["backtest_pit", "review_tribunal"],
     ["validator_gate", "review_tribunal"],
-    ["library_rag", "review_tribunal"],
   ];
 
   const BOTS = [
@@ -93,7 +92,7 @@
       name: "Scout Bot",
       role: "research_scout",
       badge: "DSC-01",
-      color: "#38bdf8",
+      color: "#4a8ad6",
       homeStation: "scout_desk",
       defaultMood: "idle",
       bio: "Routes discovery through Agent Reach, checks source quality tiers, and snapshots upstream evidence.",
@@ -103,7 +102,7 @@
       name: "Gatekeeper Qwen",
       role: "qwen_validator",
       badge: "VAL-14B",
-      color: "#a855f7",
+      color: "#d9a441",
       homeStation: "validator_gate",
       defaultMood: "thinking",
       bio: "Enforces strict extractive grounding. Escalates from 14B to 27B and fails closed if any quote or number is invented.",
@@ -113,7 +112,7 @@
       name: "Curator Bot",
       role: "knowledge_curator",
       badge: "RAG-02",
-      color: "#10b981",
+      color: "#44a282",
       homeStation: "library_rag",
       defaultMood: "happy",
       bio: "Guards brain/01_Sources/ and maintains semantic vector chunks for the NotebookLM-style Tutor.",
@@ -123,7 +122,7 @@
       name: "Sim Engine Bot",
       role: "backtest_runner",
       badge: "SIM-04",
-      color: "#f59e0b",
+      color: "#4a8ad6",
       homeStation: "backtest_pit",
       defaultMood: "working",
       bio: "Runs two-phase backtests with next-bar execution and 5-10 bps slippage on verified Gate F datasets.",
@@ -133,10 +132,10 @@
       name: "Arbiter Bot",
       role: "adversarial_reviewer",
       badge: "REV-05",
-      color: "#f43f5e",
+      color: "#e5566f",
       homeStation: "review_tribunal",
       defaultMood: "alert",
-      bio: "Audits every trial in the ledger and upholds 'Reject' when out-of-sample DSR or random-entry gates fail.",
+      bio: "Audits every trial in the ledger and upholds Reject when out-of-sample DSR or random-entry gates fail.",
     },
   ];
 
@@ -216,10 +215,10 @@
           : "All model outputs cleared the 5 deterministic validation gates.";
       }
     } else {
-      states.scout.speech = `${counts.sources || 0} curated sources & ${counts.research_questions || 0} research questions tracked.`;
+      states.scout.speech = `${counts.sources || 0} curated sources and ${counts.research_questions || 0} research questions tracked.`;
     }
 
-    states.curator.speech = `Indexing ${counts.sources || 7} verified sources & ${counts.notes || 0} brain notes.`;
+    states.curator.speech = `Indexing ${counts.sources || 7} verified sources and ${counts.notes || 0} brain notes.`;
     states.curator.detail = `Price datasets verified: ${counts.price_datasets || 0}. Ready for context retrieval.`;
 
     if (backtests.length > 0) {
@@ -227,10 +226,10 @@
       states.backtester.mood = "happy";
       states.backtester.speech = `${backtests.length} ledger rows recorded (${heldOut.length} held-out rule trials).`;
       states.backtester.detail = latestCard
-        ? `Card ${latestCard.strategy_id} (${latestCard.status}): tested across SPY, QQQ, IWM with 5 & 10 bps costs.`
+        ? `Card ${latestCard.strategy_id} (${latestCard.status}): tested across SPY, QQQ, IWM with 5 and 10 bps costs.`
         : "Backtest ledger loaded with Buy & Hold and Random Entry baselines.";
     } else if (latestCard) {
-      states.backtester.StationId = "strategy_forge";
+      states.backtester.stationId = "strategy_forge";
       const forge = stationById("strategy_forge");
       states.backtester.x = forge.x;
       states.backtester.y = forge.y;
@@ -264,7 +263,7 @@
           botId: "validator",
           stationId: "validator_gate",
           mood: "thinking",
-          speech: "Running Qwen 14B/27B extraction & 5 deterministic validation gates...",
+          speech: "Running Qwen 14B/27B extraction and 5 deterministic validation gates...",
           stage: "qwen_validation",
           status: "running",
         },
@@ -272,7 +271,7 @@
           botId: "curator",
           stationId: "library_rag",
           mood: "happy",
-          speech: "Curating verified evidence into brain/01_Sources/ & RAG chunks...",
+          speech: "Curating verified evidence into brain/01_Sources/ and RAG chunks...",
           stage: "curation",
           status: "completed",
         },
@@ -288,7 +287,7 @@
           botId: "backtester",
           stationId: "backtest_pit",
           mood: "working",
-          speech: "Simulating 101 in-sample & 91 held-out trades with next-bar execution...",
+          speech: "Simulating 101 in-sample and 91 held-out trades with next-bar execution...",
           stage: "backtest",
           status: "completed",
         },
@@ -323,49 +322,36 @@
     });
   }
 
-  function botAvatarSvg(styleMode = "droid", color = "#38bdf8", mood = "idle") {
-    const eyeColor = mood === "alert" ? "#f43f5e" : mood === "happy" ? "#10b981" : mood === "working" ? "#f59e0b" : "#f8fafc";
+  function botAvatarSvg(styleMode = "droid", color = "#4a8ad6", mood = "idle") {
+    const eyeColor = mood === "alert" ? "#e5566f" : mood === "happy" ? "#44a282" : mood === "working" ? "#d9a441" : "#ffffff";
     if (styleMode === "pixel") {
-      return `<svg viewBox="0 0 32 32" width="34" height="34" class="bot-svg pixel" aria-hidden="true">
+      return `<svg viewBox="0 0 32 32" width="28" height="28" class="bot-svg pixel" aria-hidden="true">
         <rect x="14" y="2" width="4" height="4" fill="${color}"/>
-        <rect x="8" y="6" width="16" height="14" rx="2" fill="#0f172a" stroke="${color}" stroke-width="2"/>
+        <rect x="8" y="6" width="16" height="14" rx="2" fill="#131217" stroke="${color}" stroke-width="2"/>
         <rect x="11" y="10" width="4" height="4" fill="${eyeColor}"/>
         <rect x="17" y="10" width="4" height="4" fill="${eyeColor}"/>
         <rect x="12" y="16" width="8" height="2" fill="${color}"/>
-        <rect x="10" y="21" width="12" height="7" fill="#1e293b" stroke="${color}" stroke-width="1.5"/>
-        <rect x="6" y="22" width="3" height="5" fill="${color}"/>
-        <rect x="23" y="22" width="3" height="5" fill="${color}"/>
-        <rect x="11" y="28" width="3" height="3" fill="${color}"/>
-        <rect x="18" y="28" width="3" height="3" fill="${color}"/>
+        <rect x="10" y="21" width="12" height="7" fill="#212023" stroke="${color}" stroke-width="1.5"/>
       </svg>`;
     }
     if (styleMode === "geometric") {
-      return `<svg viewBox="0 0 36 36" width="34" height="34" class="bot-svg geo" aria-hidden="true">
-        <polygon points="18,3 31,11 31,25 18,33 5,25 5,11" fill="#0f172a" stroke="${color}" stroke-width="2"/>
-        <circle cx="18" cy="18" r="7" fill="none" stroke="${color}" stroke-width="1.5" stroke-dasharray="3 2"/>
+      return `<svg viewBox="0 0 36 36" width="28" height="28" class="bot-svg geo" aria-hidden="true">
+        <polygon points="18,3 31,11 31,25 18,33 5,25 5,11" fill="#131217" stroke="${color}" stroke-width="2"/>
+        <circle cx="18" cy="18" r="7" fill="none" stroke="${color}" stroke-width="1.5"/>
         <circle cx="15" cy="16" r="2" fill="${eyeColor}"/>
         <circle cx="21" cy="16" r="2" fill="${eyeColor}"/>
         <path d="${mood === "alert" ? "M14 22 L22 22" : "M14 21 Q18 24 22 21"}" stroke="${eyeColor}" stroke-width="1.8" fill="none" stroke-linecap="round"/>
       </svg>`;
     }
-    // Default: Sleek Sci-Fi / Cyberpunk Droid
-    return `<svg viewBox="0 0 40 40" width="36" height="36" class="bot-svg droid" aria-hidden="true">
-      <defs>
-        <radialGradient id="glow-${color.replace("#", "")}" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="${color}" stop-opacity="0.45"/>
-          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
-        </radialGradient>
-      </defs>
-      <circle cx="20" cy="20" r="18" fill="url(#glow-${color.replace("#", "")})"/>
+    return `<svg viewBox="0 0 40 40" width="28" height="28" class="bot-svg droid" aria-hidden="true">
       <line x1="20" y1="4" x2="20" y2="9" stroke="${color}" stroke-width="2" stroke-linecap="round"/>
       <circle cx="20" cy="3.5" r="2.2" fill="${eyeColor}"/>
-      <rect x="8" y="9" width="24" height="17" rx="7" fill="#0f172a" stroke="${color}" stroke-width="2"/>
-      <rect x="11" y="12" width="18" height="9" rx="4" fill="#020617" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+      <rect x="8" y="9" width="24" height="17" rx="6" fill="#131217" stroke="${color}" stroke-width="2"/>
+      <rect x="11" y="12" width="18" height="9" rx="3" fill="#171719" stroke="#222224" stroke-width="1"/>
       <circle cx="15.5" cy="16.5" r="2.2" fill="${eyeColor}"/>
       <circle cx="24.5" cy="16.5" r="2.2" fill="${eyeColor}"/>
       <path d="${mood === "alert" ? "M16 23 L24 23" : mood === "happy" ? "M15 22 Q20 25 25 22" : "M16 22.5 L24 22.5"}" stroke="${color}" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-      <path d="M13 27 L27 27 L25 34 L15 34 Z" fill="#1e293b" stroke="${color}" stroke-width="1.5"/>
-      <circle cx="20" cy="30.5" r="1.8" fill="${eyeColor}"/>
+      <path d="M13 27 L27 27 L25 34 L15 34 Z" fill="#212023" stroke="${color}" stroke-width="1.5"/>
     </svg>`;
   }
 
