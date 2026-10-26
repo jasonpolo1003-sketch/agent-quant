@@ -50,7 +50,9 @@ def paired_one_sided_bootstrap(
     null_centered = [x - observed for x in differences]
     exceedances = 0
     for i in range(replicates):
-        indices = stationary_indices(len(differences), len(differences), mean_block=mean_block, seed=seed + i)
+        indices = stationary_indices(
+            len(differences), len(differences), mean_block=mean_block, seed=seed + i
+        )
         mean = math.fsum(null_centered[j] for j in indices) / len(indices)
         exceedances += mean >= observed - 1e-12
     p_value = (exceedances + 1) / (replicates + 1)

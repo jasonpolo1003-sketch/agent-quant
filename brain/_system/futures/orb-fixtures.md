@@ -33,6 +33,10 @@ Implements the frozen spec `sc-fut-0001-spec.v1.json`. Encoded in `tests/test_fu
 | F14 one entry per side | F5 bars to 08:55 (long stopped); 09:10 (106,112,106,112), then flat 112 | Second long ignored; 1 trade, **−522¢** |
 | F15 MES costs | F1 bars, root MES | +19 ticks × 125 = 2,375 − 622 = **+1,753¢** |
 | F16 ineligible | stop distance unavailable (ATR history incomplete) | status `ineligible` |
+| F17 gap to flatten (added after independent review) | F1 long entry; every bar 09:00–15:06 missing | no visible bar between the gap and the flatten → `non_evaluable` |
+| F18 no cash-window bars (review) | no bars at all, valid stop | `ineligible` (data only), never a $0 day |
+| F19 stress never kinder (review) | F9 bars, then 09:30 (100,101,99,100) | primary gap-stop at open 100 (−11 ticks = −872¢); stress bound = min(107, 100) = 100, so stress −872¢ = primary |
+| Control pairing (review) | F6 stop on entry bar, 15:07 missing | ORB evaluable, but some control draws cannot flatten → the whole day is non-evaluable (no averaging over surviving draws) |
 
 ## ATR fixtures (`stop_distance_ticks`, 15 prior sessions `(high, low, close)` oldest first)
 - **A1:** every session (110, 100, 105) → each TR = 10 ticks; 0.10 × 10 = 1.0 → **1 tick**.

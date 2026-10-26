@@ -133,12 +133,13 @@ def run_trade(
             break
     if exit_at is None:
         flatten_bar = bars.get(exit_minute)
-        if flatten_bar is None:
+        # Missing flatten, or a gap with no visible bar before the flatten: non-evaluable.
+        if flatten_bar is None or (gap_seen and stress_exit is None):
             return None
-        if gap_seen and stress_exit is None:
-            adverse = flatten_bar[2] if side > 0 else flatten_bar[1]
-            stress_exit = min(stop, adverse) if side > 0 else max(stop, adverse)
         exit_at, exit_px = exit_minute, flatten_bar[0]
+    if stress_exit is not None:
+        # The bound is never less adverse than the observed primary exit.
+        stress_exit = min(stress_exit, exit_px) if side > 0 else max(stress_exit, exit_px)
     gross, net = _net(root, side, entry, exit_px)
     stress_net = _net(root, side, entry, stress_exit)[1] if stress_exit is not None else net
     return Trade(
@@ -172,8 +173,8 @@ def simulate_day(day: DayInput) -> DayResult:
             events=list(events),
         )
 
-    if day.stop_ticks is None:
-        return result("ineligible")
+    if day.stop_ticks is None or not day.bars:
+        return result("ineligible")  # no ATR history, or no bars in the cash window
     range_minutes = minute_span(RANGE_START, add_minutes(RANGE_START, RANGE_BARS - 1))
     if any(m not in day.bars for m in range_minutes):
         return result("void_range")

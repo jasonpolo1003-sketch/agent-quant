@@ -49,7 +49,11 @@ class _Open:
 
 def _close(root, position, minute, price, reason) -> Trade:
     gross = (price - position.entry) * position.side * _TICK[root]
-    stress_price = position.stress if position.stress is not None else price
+    stress = position.stress
+    if stress is not None:
+        # A stress bound is never kinder than what was observed.
+        stress = min(stress, price) if position.side == 1 else max(stress, price)
+    stress_price = stress if stress is not None else price
     return Trade(
         side=position.side,
         signal_minute=position.signal,
@@ -63,7 +67,7 @@ def _close(root, position, minute, price, reason) -> Trade:
         net_cents=gross - _COST[root],
         entry_bar_stop=minute == position.entry_minute,
         gap_affected=position.gap,
-        stress_exit_ticks=position.stress,
+        stress_exit_ticks=stress,
         stress_net_cents=(stress_price - position.entry) * position.side * _TICK[root]
         - _COST[root],
     )
@@ -71,7 +75,7 @@ def _close(root, position, minute, price, reason) -> Trade:
 
 def simulate_day(day: DayInput) -> DayResult:
     root = day.root
-    if day.stop_ticks is None:
+    if day.stop_ticks is None or len(day.bars) == 0:
         return DayResult(day.trade_date, root, "ineligible", 0, 0, [], [])
 
     anchor = datetime(2000, 1, 1, 8, 30)
@@ -105,7 +109,8 @@ def simulate_day(day: DayInput) -> DayResult:
 
         if now == last:
             if position is not None:
-                if bar is None:
+                if bar is None or (position.gap and position.stress is None):
+                    # No flatten bar, or nothing visible between a gap and the flatten.
                     # Completed trades stay on the record; the day itself is excluded by status.
                     return DayResult(
                         day.trade_date,
@@ -115,13 +120,6 @@ def simulate_day(day: DayInput) -> DayResult:
                         sum(tr.stress_net_cents for tr in trades),
                         trades,
                         events,
-                    )
-                if position.gap and position.stress is None:
-                    adverse = bar[2] if position.side == 1 else bar[1]
-                    position.stress = (
-                        min(position.stop, adverse)
-                        if position.side == 1
-                        else max(position.stop, adverse)
                     )
                 trades.append(_close(root, position, minute, bar[0], "flatten"))
             break

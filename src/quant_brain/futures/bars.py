@@ -76,7 +76,7 @@ def read_tick_bars(path: Path, instruments: set[int]) -> pd.DataFrame:
     minute = pd.to_datetime(records["ts_event"].astype("int64"), utc=True).tz_convert(CHICAGO)
     # Bars from 17:00 CT belong to the next Globex trade date.
     trade_date = (minute + pd.Timedelta(hours=7)).date
-    return pd.DataFrame(
+    frame = pd.DataFrame(
         {
             "instrument_id": records["instrument_id"],
             "minute": minute,
@@ -87,6 +87,10 @@ def read_tick_bars(path: Path, instruments: set[int]) -> pd.DataFrame:
             "close": ticks[:, 3],
         }
     )
+    if frame.duplicated(["instrument_id", "minute"]).any():
+        raise ValueError(f"{path.name}: duplicate minute bars for one instrument")
+    # Session closes take the last bar, so order explicitly rather than trusting the file.
+    return frame.sort_values(["instrument_id", "minute"], kind="stable", ignore_index=True)
 
 
 @dataclass(frozen=True)

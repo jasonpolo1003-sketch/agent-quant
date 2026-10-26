@@ -29,7 +29,12 @@ def repo(tmp_path):
     dev, raw = tmp_path / "dev", tmp_path / "raw"
     for d in (dev, raw):
         d.mkdir()
-    (dev / "manifest.json").write_text('{"status": "development_only_partition"}', encoding="utf-8")
+    (dev / runner.DEV_BARS).write_bytes(b"dev bars")
+    manifest = {
+        "status": "development_only_partition",
+        "ohlcv": [{"output": runner.DEV_BARS, "output_sha256": _sha(dev / runner.DEV_BARS)}],
+    }
+    (dev / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     (raw / runner.RAW_BARS).write_bytes(b"synthetic")
     (raw / "SHA256SUMS").write_text(
         f"{_sha(raw / runner.RAW_BARS)}  {runner.RAW_BARS}\n", encoding="utf-8"
@@ -191,3 +196,10 @@ def test_tampered_raw_file_is_refused(repo):
 def test_dates_cover_frozen_partitions():
     assert runner.PERIODS["held_out"] == (date(2025, 1, 1), date(2026, 10, 21))
     assert runner.PERIODS["development"][1] < runner.PERIODS["diagnostics"][0]
+
+
+def test_replaced_dev_bars_file_is_refused(repo):
+    root, dev, _ = repo
+    assert not any("minute-bar" in p for p in runner.gate_problems(root, "development", dev))
+    (dev / runner.DEV_BARS).write_bytes(b"swapped")
+    assert any("minute-bar" in p for p in runner.gate_problems(root, "development", dev))

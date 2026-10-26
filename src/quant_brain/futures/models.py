@@ -79,8 +79,10 @@ class ReplayEvent:
             raise ValueError("source must be a non-empty string")
         if type(self.source_sequence) is not int or self.source_sequence < 0:
             raise ValueError("source_sequence must be non-negative")
-        if type(self.payload_sha256) is not str or len(self.payload_sha256) != 64 or any(
-            character not in "0123456789abcdef" for character in self.payload_sha256
+        if (
+            type(self.payload_sha256) is not str
+            or len(self.payload_sha256) != 64
+            or any(character not in "0123456789abcdef" for character in self.payload_sha256)
         ):
             raise ValueError("payload_sha256 must be 64 lowercase hexadecimal characters")
         for name, value in (("event_time", self.event_time), ("available_at", self.available_at)):

@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from quant_brain.backtest.stats import deflated_sharpe_n, sharpe_per_period
-from quant_brain.futures.controls import ControlResult
+from quant_brain.futures.controls import DRAWS, ControlResult
 from quant_brain.futures.orb import DayResult
 
 BOOTSTRAP_DRAWS = 9_999
@@ -44,7 +44,9 @@ class DayRecord:
 
 
 def day_record(result: DayResult, control: ControlResult) -> DayRecord:
-    evaluable = result.status in EVALUABLE and (control.k == 0 or control.evaluable_draws > 0)
+    # Any non-evaluable control draw makes the day non-pairable: averaging only the
+    # surviving draws (e.g. stopped-out losers when the flatten bar is missing) is biased.
+    evaluable = result.status in EVALUABLE and control.non_evaluable_draws == 0
     return DayRecord(
         orb_cents=result.net_cents,
         orb_stress_cents=result.stress_net_cents,
@@ -151,9 +153,10 @@ def power_check(
 
 def dsr_diagnostic(records: Sequence[DayRecord]) -> dict[str, dict]:
     orb = [r.orb_cents for r in records]
-    draws = np.array([r.control_draw_cents for r in records if r.control_draw_cents])
+    # Days with no ORB trade have a $0 control: every draw contributes 0 that day.
+    draws = np.array([r.control_draw_cents or (0,) * DRAWS for r in records])
     variance = 0.0
-    if draws.size and draws.shape[0] == len(records):
+    if draws.ndim == 2 and draws.shape == (len(records), DRAWS):
         variance = float(np.var([sharpe_per_period(col) for col in draws.T], ddof=1))
     return {f"N={n}": deflated_sharpe_n(orb, n, variance) for n in DSR_TRIALS}
 

@@ -145,3 +145,50 @@ def test_loader_matches_outcome_blind_audit_counts():
     )
     loader_ok = sum(d.stop_ticks is not None for d in days if d.trade_date.year < 2024)
     assert audit_ok - 2 <= loader_ok <= audit_ok  # 15 closes required vs the audit's 14 sessions
+
+
+def _dbn(path, timestamps):
+    import databento_dbn as dbn
+    import zstandard
+
+    metadata = dbn.Metadata(
+        dataset="GLBX.MDP3",
+        schema=dbn.Schema.OHLCV_1M,
+        start=0,
+        end=10**19 - 1,
+        stype_in=dbn.SType.PARENT,
+        stype_out=dbn.SType.INSTRUMENT_ID,
+        symbols=["MNQ.FUT"],
+        partial=[],
+        not_found=[],
+        mappings=[],
+    )
+    payload = bytearray(metadata.encode())
+    px = 4_000 * 250_000_000
+    for ts in timestamps:
+        payload += bytes(
+            dbn.OHLCVMsg(
+                rtype=0x21,
+                publisher_id=1,
+                instrument_id=7,
+                ts_event=ts,
+                open=px,
+                high=px,
+                low=px,
+                close=px,
+                volume=1,
+            )
+        )
+    path.write_bytes(zstandard.ZstdCompressor().compress(bytes(payload)))
+
+
+def test_reader_sorts_bars_and_rejects_duplicate_minutes(tmp_path):
+    from quant_brain.futures.bars import read_tick_bars
+
+    base = 1_600_000_020 * 10**9
+    _dbn(tmp_path / "unordered.dbn.zst", [base + 120 * 10**9, base, base + 60 * 10**9])
+    frame = read_tick_bars(tmp_path / "unordered.dbn.zst", {7})
+    assert frame["minute"].is_monotonic_increasing and int(frame["open"].iloc[0]) == 4_000
+    _dbn(tmp_path / "dupes.dbn.zst", [base, base])
+    with pytest.raises(ValueError, match="duplicate"):
+        read_tick_bars(tmp_path / "dupes.dbn.zst", {7})

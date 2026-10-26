@@ -148,6 +148,12 @@ def gate_problems(root: Path, phase: str, data_dir: Path) -> list[str]:
             or sha256(manifest) != spec["data_partitions"]["source_data_manifest_sha256"]
         ):
             problems.append("dev partition manifest does not match the frozen spec")
+            return problems
+        listed = json.loads(manifest.read_text(encoding="utf-8")).get("ohlcv", [])
+        expected = next((r["output_sha256"] for r in listed if r.get("output") == DEV_BARS), None)
+        bars = data_dir / DEV_BARS
+        if expected is None or not bars.exists() or sha256(bars) != expected:
+            problems.append("dev minute-bar file does not match the partition manifest")
         return problems
 
     dev_done = _last_index(events, {"development_completed"})

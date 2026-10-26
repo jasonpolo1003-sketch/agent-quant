@@ -109,3 +109,24 @@ def test_power_is_high_at_20_with_100_dollar_daily_sd():
     assert power["paired_power"] > 0.8 and power["joint_power"] == pytest.approx(
         min(power["paired_power"], power["absolute_power"]), abs=0.1
     )
+
+
+def test_dsr_variance_uses_zero_controls_on_no_trade_days():
+    from quant_brain.futures.inference import dsr_diagnostic
+
+    rng = np.random.default_rng(5)
+    recs = [
+        DayRecord(
+            int(rng.normal(0, 1000)),
+            0,
+            0.0,
+            0.0,
+            "traded",
+            1,
+            control_draw_cents=tuple(rng.normal(0, 1000, 500).astype(int)),
+        )
+        for _ in range(50)
+    ]
+    recs.append(DayRecord(0, 0, 0.0, 0.0, "no_trade"))
+    dsr = dsr_diagnostic(recs)
+    assert dsr["N=25"]["variance"] > 0 and dsr["N=25"]["sr_star"] > dsr["N=1"]["sr_star"]

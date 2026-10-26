@@ -50,3 +50,19 @@ def test_c5_rejection_lands_on_only_available_minute():
     result = daily_control(make_day(missing=missing), 1)
     assert {d.trades[0].entry_minute for d in result.draws} == {time(10, 0)}
     assert result.rejections > 0 and result.evaluable_draws == 500
+
+
+def test_day_with_missing_flatten_is_not_paired_on_surviving_draws():
+    from quant_brain.futures.inference import day_record
+    from quant_brain.futures.orb import simulate_day
+
+    # ORB is stopped on its entry bar (evaluable) but the 15:07 bar is missing, so
+    # control draws that run to the flatten cannot be evaluated.
+    day = make_day(
+        {"08:50": (105, 112, 105, 111), "08:51": (111, 111, 106, 108)}, missing=("15:07",)
+    )
+    result = simulate_day(day)
+    assert result.status == "traded"
+    control = daily_control(day, len(result.trades))
+    assert 0 < control.non_evaluable_draws < 500
+    assert day_record(result, control).status == "non_evaluable"

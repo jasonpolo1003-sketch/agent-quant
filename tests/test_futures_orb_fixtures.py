@@ -179,3 +179,28 @@ def test_atr_a5_gap_uses_prior_close_and_a6_missing(stop_distance):
     assert stop_distance(sessions) == 3
     assert stop_distance([*sessions[:7], None, *sessions[8:]]) is None
     assert stop_distance(sessions[:14]) is None
+
+
+def test_f17_gap_running_to_flatten_is_non_evaluable(simulate):
+    gone = tuple(f"{h:02d}:{m:02d}" for h in range(9, 16) for m in range(60) if (h, m) < (15, 7))
+    r = simulate(make_day(LONG_ENTRY, missing=gone))
+    assert r.status == "non_evaluable"
+
+
+def test_f18_no_bars_in_cash_window_is_ineligible(simulate):
+    day = make_day()
+    empty = type(day)(day.trade_date, day.root, {}, day.exit_minute, day.stop_ticks)
+    assert simulate(empty).status == "ineligible"
+
+
+def test_f19_stress_bound_never_kinder_than_primary(simulate):
+    bars = {
+        "08:50": (105, 112, 105, 111),
+        "08:51": (111, 112, 111, 112),
+        "09:01": (112, 112, 108, 110),
+        "09:30": (100, 101, 99, 100),
+    }
+    r = simulate(make_day(bars, missing=("09:00",)))
+    trade = r.trades[0]
+    assert (trade.exit_reason, trade.exit_ticks) == ("gap_stop", 100)
+    assert trade.stress_exit_ticks == 100 and r.stress_net_cents == r.net_cents == -872

@@ -157,10 +157,14 @@ def test_futures_pnl_uses_exact_integer_ticks_and_minor_currency_units():
         (lambda: TickPrice(-1), "ticks"),
         (lambda: TickPrice(1.0), "ticks"),
         (lambda: MinorMoney(1.5), "units"),
-        (lambda: futures_pnl(TickPrice(1), TickPrice(2), position=0, tick_value_minor=125),
-         "position"),
-        (lambda: futures_pnl(TickPrice(1), TickPrice(2), position=1, tick_value_minor=0),
-         "tick_value_minor"),
+        (
+            lambda: futures_pnl(TickPrice(1), TickPrice(2), position=0, tick_value_minor=125),
+            "position",
+        ),
+        (
+            lambda: futures_pnl(TickPrice(1), TickPrice(2), position=1, tick_value_minor=0),
+            "tick_value_minor",
+        ),
     ],
 )
 def test_exact_numeric_contract_rejects_invalid_values(operation, message):

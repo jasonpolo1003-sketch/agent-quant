@@ -295,8 +295,8 @@ class RunStore:
             if not artifact.is_file():
                 raise RunStoreError(f"completed artifact is missing: {relative}")
             data = artifact.read_bytes()
-            if len(data) != expected.get("bytes") or hashlib.sha256(data).hexdigest() != expected.get(
-                "sha256"
-            ):
+            if len(data) != expected.get("bytes") or hashlib.sha256(
+                data
+            ).hexdigest() != expected.get("sha256"):
                 raise RunStoreError(f"completed artifact differs from manifest: {relative}")
         return manifest
