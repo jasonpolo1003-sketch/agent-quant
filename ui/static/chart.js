@@ -30,7 +30,7 @@ const tone = (v) => (v == null ? "" : v >= 0 ? "good" : "bad");
 const dayStr = (t) => {
   if (t == null) return null;
   if (typeof t === "string") return t;
-  if (typeof t === "object" && t.year) return `${t.year}-${String(t.month).padStart(2, "0")}-${String(t.day).padStart(2, "0")}`;
+  if (typeof t === "object" && t.year) return `${t.year}-${String(t.month).padStart(2, "0")}-${String(t.day).padStart(2, "0")}`; // taste-skill-ignore: date formatting
   if (typeof t === "number") return new Date(t * 1000).toISOString().slice(0, 10);
   return null;
 };
@@ -112,7 +112,7 @@ function chips() {
   box.innerHTML = CH.indicators.map((s) => {
     const meta = CT.catalog[s.kind];
     return `<span class="chip-ind" title="${esc(meta.about)}">${esc(meta.label)}(${esc(Object.values(s.params).join(", "))})${meta.engine ? `<span class="eng" title="Same code as the backtest engine">engine</span>` : ""}
-      <button type="button" class="link" data-edit-ind="${esc(s.id)}" aria-label="Settings">settings</button><button type="button" class="link" data-del-ind="${esc(s.id)}" aria-label="Remove">✕</button></span>`;
+      <button type="button" class="link" data-edit-ind="${esc(s.id)}" aria-label="Settings">settings</button><button type="button" class="link" data-del-ind="${esc(s.id)}" aria-label="Remove">x</button></span>`;
   }).join("") + (CH.indicators.length ? "" : `<span class="faint small">No indicators. Add one with + Indicator.</span>`);
   box.querySelectorAll("[data-del-ind]").forEach((b) => (b.onclick = () => { CH.indicators = CH.indicators.filter((x) => x.id !== b.dataset.delInd); saveCH(); loadAll(); }));
   box.querySelectorAll("[data-edit-ind]").forEach((b) => (b.onclick = () => editIndicator(b.dataset.editInd, b)));

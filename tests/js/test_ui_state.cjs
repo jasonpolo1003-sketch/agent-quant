@@ -3,6 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const UIState = require("../../ui/static/state.js");
+const QBBots = require("../../ui/static/base_bots.js");
 
 test("strictFiniteNumber accepts only finite numbers and non-blank numeric strings", () => {
   assert.equal(UIState.strictFiniteNumber(0), 0);
@@ -187,4 +188,40 @@ test("modal helpers select the topmost visible dialog and wrap focus", () => {
   assert.equal(UIState.nextTrapIndex(0, 3, true), 2);
   assert.equal(UIState.nextTrapIndex(2, 3, false), 0);
   assert.equal(UIState.nextTrapIndex(1, 3, false), 2);
+});
+
+test("visual bot engine maps stages to stations and derives honest bot states", () => {
+  assert.equal(QBBots.mapStageToStation("qwen_validation", "research_scout"), "validator_gate");
+  assert.equal(QBBots.mapStageToStation("curation", "knowledge_curator"), "library_rag");
+  assert.equal(QBBots.mapStageToStation("backtest", "runner"), "backtest_pit");
+  assert.equal(QBBots.mapStageToStation("review", "reviewer"), "review_tribunal");
+
+  const states = QBBots.deriveInitialBotStates({
+    counts: { sources: 7, price_datasets: 3, strategy_cards: 2, backtests: 73 },
+    runs: [{ run_id: "RUN-1", title: "Research run", status: "failed", outcome: "Stopped.", reason: "validation", phases: [{ stage: "qwen_validation", ok: 1, failed: 2 }] }],
+    lab: {
+      cards: [{ strategy_id: "SC-0002", status: "frozen" }],
+      backtests: [{ config: { phase: "held_out", kind: "rule" } }],
+      reviews: [{ strategy_id: "SC-0002", verdict: "reject", verdict_text: "reject: no edge" }],
+    },
+  });
+
+  assert.equal(states.scout.mood, "alert");
+  assert.equal(states.validator.mood, "alert");
+  assert.equal(states.backtester.mood, "happy");
+  assert.equal(states.reviewer.mood, "alert");
+
+  const steps = QBBots.buildReplayStepsFromEvents([
+    { event_id: 1, run_id: "RUN-1", agent_role: "research_scout", stage: "discovery", status: "running", event_type: "start", message: "Starting discovery" },
+    { event_id: 2, run_id: "RUN-1", agent_role: "research_scout", stage: "qwen_validation", status: "failed", event_type: "fail", message: "Validation failed" },
+  ]);
+  assert.equal(steps.length, 2);
+  assert.equal(steps[0].botId, "scout");
+  assert.equal(steps[1].botId, "validator");
+  assert.equal(steps[1].stationId, "validator_gate");
+
+  for (const style of ["droid", "pixel", "geometric"]) {
+    const svg = QBBots.botAvatarSvg(style, "#38bdf8", "happy");
+    assert.ok(svg.includes("<svg"), style);
+  }
 });

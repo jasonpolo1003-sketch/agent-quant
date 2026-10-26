@@ -635,3 +635,21 @@ def test_market_snapshot_fails_closed_on_invalid_cache(client, payload):
 
     assert response.status_code == 503
     assert response.json()["detail"].startswith("Invalid cached market snapshot:")
+
+
+def test_unified_master_feed_combines_decisions_runs_and_macro_read_only(client):
+    c, cfg = client
+    before = sha(cfg.brain_db)
+
+    today_res = c.get("/api/today")
+    feed_res = c.get("/api/feed")
+
+    assert today_res.status_code == 200
+    assert feed_res.status_code == 200
+    feed = feed_res.json()
+    assert isinstance(feed, list) and len(feed) >= 3
+    categories = {item["category"] for item in feed}
+    assert {"decision", "market", "code"} <= categories
+    assert today_res.json()["feed"]
+    assert sha(cfg.brain_db) == before
+
