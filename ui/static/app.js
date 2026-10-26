@@ -7,6 +7,7 @@ const PAGES = [
   { id: "today", label: "Today" },
   { id: "activity", label: "Activity" },
   { id: "strategies", label: "Lab" },
+  { id: "study", label: "Study" },
   { id: "risk", label: "Risk Center" },
   { id: "market", label: "Screener" },
   { id: "live", label: "Live Feed" },
@@ -868,6 +869,175 @@ async function renderBacktests(d) {
     renderBacktests(d);
   }));
   box.querySelectorAll("[data-show-replay]").forEach((b) => (b.onclick = () => { window.pendingReplay = b.dataset.showReplay; go("chart"); }));
+}
+
+// ---------- Study: SC-FUT-0001 ----------
+const OUTCOME = {
+  pass_to_execution_calibration: { word: "PASSED", cls: "good", note: "Beat random entries and cleared the $15/day floor. Next would be a small paper-trading fill study, not real money." },
+  not_demonstrated: { word: "NOT DEMONSTRATED", cls: "bad", note: "No edge shown: it either didn't beat random entries convincingly, or didn't clear $15/day after costs." },
+  inconclusive: { word: "INCONCLUSIVE", cls: "warn", note: "The data can't settle it (too many gaps, too few trades, or the verdict flips under the worst-case check)." },
+};
+const WINDOW_WORD = { development: "Practice 2019–2023", diagnostics: "2024 check", held_out: "Final exam 2025–2026" };
+const money = (n, d = 2) => (n == null ? "-" : `${n < 0 ? "−" : ""}$${fmt(Math.abs(n), d)}`);
+
+// A horizontal meter with a pass line. `good` says which side of the line passes.
+function meter({ label, value, text, min, max, line, lineLabel, good }) {
+  const at = (v) => Math.max(0, Math.min(100, ((v - min) / (max - min)) * 100));
+  const passed = good === "below" ? value < line : value >= line;
+  return `<div class="meter"><div class="row"><b>${label}</b><span class="grow"></span><span class="${passed ? "good" : "bad"}">${text}</span></div>
+    <div class="meter-track" role="img" aria-label="${esc(`${label}: ${text}; pass line ${lineLabel}`)}">
+      <i class="meter-fill ${passed ? "good" : "bad"}" style="left:${Math.min(at(value), at(line))}%;width:${Math.abs(at(value) - at(line))}%"></i>
+      <i class="meter-line" style="left:${at(line)}%"></i><i class="meter-dot ${passed ? "good" : "bad"}" style="left:${at(value)}%"></i></div>
+    <div class="row faint small"><span>${esc(String(min))}</span><span class="grow"></span><span>pass line: ${esc(lineLabel)}</span><span class="grow"></span><span>${esc(String(max))}</span></div></div>`;
+}
+
+function chip(ok, text) { return `<span class="chip ${ok ? "good" : "bad"}">${ok ? "✓" : "!"} ${esc(text)}</span>`; }
+
+function verdictCard(key, entry) {
+  const v = entry.verdict, o = OUTCOME[v.outcome] || { word: v.outcome, cls: "", note: "" };
+  const [market, window] = key.split("/");
+  const p = v.p_value, abs = v.absolute_mean_cents == null ? null : v.absolute_mean_cents / 100;
+  const paired = v.observed_paired_cents == null ? null : v.observed_paired_cents / 100;
+  const power = entry.power;
+  return `<article class="box verdict">
+    <div class="row"><span class="mono faint">${esc(market)} · ${esc(WINDOW_WORD[window] || window)}</span><span class="grow"></span><span class="faint small">${fmt(v.evaluable_days, 0)} days · ${fmt(v.trades, 0)} trades</span></div>
+    <p class="verdict-word ${o.cls}">${o.word}</p><p class="muted" style="margin-top:0">${esc(o.note)}</p>
+    ${p == null ? "" : meter({ label: "Better than random entries?", value: p, text: `p = ${fmt(p, 3)} · ${money(paired)}/day better`, min: 0, max: 1, line: 0.05, lineLabel: "p < 0.05", good: "below" })}
+    ${abs == null ? "" : meter({ label: "Profit per day after costs", value: abs, text: `${money(abs)}/day`, min: -30, max: 30, line: 15, lineLabel: "$15/day", good: "above" })}
+    <div class="row" style="margin-top:12px">
+      ${chip(v.missing_session_share <= 0.01, `data gaps ${fmt(v.missing_session_share * 100, 1)}% (limit 1%)`)}
+      ${v.ambiguity_share == null ? "" : chip(v.ambiguity_share <= 0.1, `same-minute stops ${fmt(v.ambiguity_share * 100, 1)}% (limit 10%)`)}
+      ${power ? chip(power.joint_power >= 0.8, `power ${fmt(power.joint_power * 100, 0)}% to catch a real $20/day edge (target 80%)`) : ""}
+      ${v.stress_outcome ? chip(v.stress_outcome === v.outcome || v.outcome === "inconclusive", `worst-case check: ${v.stress_outcome === v.outcome ? "same verdict" : "different"}`) : ""}
+    </div></article>`;
+}
+
+function trailStrip(trail) {
+  return `<ol class="trail">${trail.map((s) => `<li class="${s.done ? "done" : "todo"}" title="${esc(s.about)}">
+    <b>${s.done ? "✓" : "🔒"} ${esc(s.label)}</b><span class="faint small">${s.at ? esc(s.at.slice(0, 10)) : "not yet"}</span>
+    ${s.detail ? `<span class="mono faint small">${esc(String(s.detail).slice(0, 10))}…</span>` : ""}</li>`).join("")}</ol>`;
+}
+
+function histogramSvg(h) {
+  const W = 640, H = 170, pad = 24, n = h.counts.length, top = Math.max(...h.counts, 1);
+  const lo = h.edges[0], hi = h.edges[n], x = (v) => pad + ((v - lo) / (hi - lo || 1)) * (W - 2 * pad);
+  const bars = h.counts.map((c, i) => { const x0 = x(h.edges[i]), x1 = x(h.edges[i + 1]); const bh = (c / top) * (H - 2 * pad); return `<rect x="${x0 + 1}" y="${H - pad - bh}" width="${Math.max(1, x1 - x0 - 2)}" height="${bh}" class="hist-bar"/>`; }).join("");
+  const ox = Math.max(pad, Math.min(W - pad, x(h.orb_total)));
+  return `<svg viewBox="0 0 ${W} ${H}" class="hist" role="img" aria-label="${esc(`Totals of 500 random-entry versions; the strategy's total ${money(h.orb_total, 0)} beat ${Math.round(h.share_of_draws_beaten * 100)}% of them`)}">
+    ${bars}<line x1="${ox}" x2="${ox}" y1="${pad / 2}" y2="${H - pad}" class="hist-orb"/>
+    <text x="${ox + 4}" y="${pad}" class="hist-label">strategy ${esc(money(h.orb_total, 0))}</text>
+    <text x="${pad}" y="${H - 6}" class="hist-axis">${esc(money(lo, 0))}</text><text x="${W - pad}" y="${H - 6}" text-anchor="end" class="hist-axis">${esc(money(hi, 0))}</text></svg>`;
+}
+
+function yearTable(diag) {
+  if (!diag || !diag.by_year) return "";
+  const years = Object.entries(diag.by_year), ladder = Object.entries(diag.cost_ladder || {});
+  return `<div class="study-grid">
+    <div class="box"><h3>By year</h3><p class="faint small">Does any edge come from one lucky year?</p><div class="table-wrap"><table><tr><th>Year</th><th class="num">Days</th><th class="num">Per day</th><th class="num">vs random</th></tr>
+      ${years.map(([y, r]) => `<tr><td>${esc(y)}</td><td class="num">${fmt(r.days, 0)}</td><td class="num ${r.absolute_mean_cents >= 0 ? "good" : "bad"}">${money(r.absolute_mean_cents / 100)}</td><td class="num ${r.paired_mean_cents >= 0 ? "good" : "bad"}">${money(r.paired_mean_cents / 100)}</td></tr>`).join("")}</table></div></div>
+    <div class="box"><h3>Cost ladder</h3><p class="faint small">Per-day profit as trading costs rise. L3 is the official level.</p><div class="table-wrap"><table><tr><th>Cost level</th><th class="num">Per day</th><th class="num">vs random</th></tr>
+      ${ladder.map(([l, r]) => `<tr${l === "L3" ? ' class="bench"' : ""}><td>${esc(l)}${l === "L3" ? " (official)" : ""}</td><td class="num ${r.absolute_mean_cents >= 0 ? "good" : "bad"}">${money(r.absolute_mean_cents / 100)}</td><td class="num ${r.paired_mean_cents >= 0 ? "good" : "bad"}">${money(r.paired_mean_cents / 100)}</td></tr>`).join("")}</table></div></div></div>`;
+}
+
+RENDER.study = async (main) => {
+  const d = await api("/api/study");
+  const S = (state.study = state.study || { phase: "development", market: "MNQ", window: "development", day: null });
+  const report = d.phases[S.phase];
+  const lead = "One strategy, tested honestly: rules frozen first, compared with 500 random entries every day, and a locked final exam that can be opened only once.";
+  if (!report) {
+    main.innerHTML = `${head("Study: SC-FUT-0001", lead)}${trailStrip(d.trail)}<div class="empty"><h3>No results yet</h3>The practice run hasn't finished. This page fills in from its report.</div>`;
+    return;
+  }
+  const keys = Object.keys(report);
+  const windows = [...new Set(keys.map((k) => k.split("/")[1]))];
+  if (!windows.includes(S.window)) S.window = windows[0];
+  const key = `${S.market}/${S.window}`, entry = report[key];
+  const seg = (name, values, word) => `<div class="seg" role="group" aria-label="${name}">${values.map((v) => `<button type="button" data-study-${name}="${esc(v)}" aria-pressed="${S[name] === v}">${esc(word(v))}</button>`).join("")}</div>`;
+  const phases = Object.keys(d.phases);
+  main.innerHTML = `${head("Study: SC-FUT-0001", lead)}
+    <section>${trailStrip(d.trail)}</section>
+    <div class="row" style="margin:14px 0">${phases.length > 1 ? seg("phase", phases, (v) => (v === "held_out" ? "Final exam" : "Practice")) : ""}${seg("market", ["MNQ", "MES"], (v) => (v === "MNQ" ? "MNQ (main)" : "MES (comparison only)"))}${seg("window", windows, (v) => WINDOW_WORD[v] || v)}</div>
+    <section>${entry ? verdictCard(key, entry) : `<p class="muted">No result for ${esc(key)}.</p>`}</section>
+    <section><h2>Strategy vs luck</h2>
+      <p class="muted">The bold line is the strategy's running profit after costs. The grey band is where 90% of 500 random-entry versions ended up on the same days, with the same stop and costs. Inside the band means you can't tell it from luck.</p>
+      <div class="legend"><span><i style="background:#f0a93b"></i>strategy</span><span><i style="background:#94a3b8"></i>random entries: average</span><span><i style="background:#475569"></i>random entries: 5%–95% band</span></div>
+      <div class="study-chart" id="study-equity"></div>
+      <div id="study-hist"></div></section>
+    <section><h2>Where the money goes</h2>${yearTable(entry && entry.diagnostics)}</section>
+    <section><h2>Replay a day</h2>
+      <p class="muted">Pick a day to see the 1-minute candles, the opening-range box, the breakout, the stop and the exit. Faint dots are where random entries went in that day.</p>
+      <div class="row"><label class="small">Day <select id="study-day"></select></label><button class="btn" id="study-best">Best day</button><button class="btn" id="study-worst">Worst day</button></div>
+      <div id="study-replay-info" class="small muted" style="margin:8px 0"></div><div class="study-chart tall" id="study-replay"></div></section>`;
+  main.querySelectorAll("[data-study-phase],[data-study-market],[data-study-window]").forEach((b) => (b.onclick = () => {
+    if (b.dataset.studyPhase) { S.phase = b.dataset.studyPhase; S.window = S.phase === "held_out" ? "held_out" : "development"; }
+    if (b.dataset.studyMarket) S.market = b.dataset.studyMarket;
+    if (b.dataset.studyWindow) S.window = b.dataset.studyWindow;
+    S.day = null;
+    go("study");
+  }));
+  const fileKey = `${S.market}.${S.window}`;
+  const sp = `phase=${encodeURIComponent(S.phase)}&key=${encodeURIComponent(fileKey)}`;
+  const [series, days] = await Promise.all([api(`/api/study/series?${sp}`), api(`/api/study/days?${sp}`)]);
+  drawEquity(series);
+  $("#study-hist").innerHTML = series.histogram
+    ? `<h3>Where would luck have put you?</h3><p class="muted">Each bar counts random-entry versions by their total profit. The line is the strategy: it beat ${Math.round(series.histogram.share_of_draws_beaten * 100)}% of them. To count as an edge it needs to beat about 95%.</p>${histogramSvg(series.histogram)}`
+    : `<p class="faint small">The luck band and histogram need the per-entry file from a newer practice run.</p>`;
+  const traded = days.filter((x) => x.trades > 0);
+  $("#study-day").innerHTML = traded.map((x) => `<option value="${esc(x.date)}">${esc(x.date)} · ${money(x.orb)} · ${x.trades} trade${x.trades > 1 ? "s" : ""}</option>`).join("");
+  const show = (day) => { S.day = day; $("#study-day").value = day; drawReplay(S.market, day); };
+  $("#study-day").onchange = (e) => show(e.target.value);
+  $("#study-best").onclick = () => show(traded.reduce((a, b) => (b.orb > a.orb ? b : a)).date);
+  $("#study-worst").onclick = () => show(traded.reduce((a, b) => (b.orb < a.orb ? b : a)).date);
+  if (traded.length && S.window !== "held_out") show(S.day && traded.some((x) => x.date === S.day) ? S.day : traded[0].date);
+};
+
+function drawEquity(s) {
+  const box = $("#study-equity");
+  const chart = LightweightCharts.createChart(box, { ...CHART_OPTS(), autoSize: true });
+  charts.push(chart);
+  const pts = (arr) => s.dates.map((t, i) => ({ time: t, value: arr[i] }));
+  if (s.band_low) {
+    chart.addSeries(LightweightCharts.LineSeries, { color: "#475569", lineWidth: 1, lineStyle: 2, priceLineVisible: false, lastValueVisible: false }).setData(pts(s.band_low));
+    chart.addSeries(LightweightCharts.LineSeries, { color: "#475569", lineWidth: 1, lineStyle: 2, priceLineVisible: false, lastValueVisible: false }).setData(pts(s.band_high));
+  }
+  chart.addSeries(LightweightCharts.LineSeries, { color: "#94a3b8", lineWidth: 1, priceLineVisible: false }).setData(pts(s.control_mean));
+  const orb = chart.addSeries(LightweightCharts.LineSeries, { color: "#f0a93b", lineWidth: 3 });
+  orb.setData(pts(s.orb));
+  orb.createPriceLine({ price: 0, color: "#64748b", lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
+  chart.timeScale().fitContent();
+}
+
+async function drawReplay(market, day) {
+  const info = $("#study-replay-info"), box = $("#study-replay");
+  info.textContent = "Loading the day's minute bars…";
+  let r;
+  try { r = await api(`/api/study/replay?market=${encodeURIComponent(market)}&day=${encodeURIComponent(day)}`); }
+  catch (e) { info.innerHTML = `<span class="error">${esc(e.message)}</span>`; return; }
+  while (charts.length > 1) { try { charts.pop().remove(); } catch (e) { /* gone */ } }
+  box.innerHTML = "";
+  const chart = LightweightCharts.createChart(box, { ...CHART_OPTS(), autoSize: true, timeScale: { timeVisible: true, secondsVisible: false, borderColor: "#27302b" } });
+  charts.push(chart);
+  const candles = chart.addSeries(LightweightCharts.CandlestickSeries, { upColor: "#5cc98f", downColor: "#ef6b6b", borderVisible: false, wickUpColor: "#5cc98f", wickDownColor: "#ef6b6b" });
+  candles.setData(r.candles);
+  if (r.range.high != null) {
+    candles.createPriceLine({ price: r.range.high, color: "#38bdf8", lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: "range high" });
+    candles.createPriceLine({ price: r.range.low, color: "#38bdf8", lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: "range low" });
+  }
+  const markers = [];
+  r.trades.forEach((t, i) => {
+    const long = t.side === "long";
+    if (t.signal) markers.push({ time: t.signal, position: long ? "aboveBar" : "belowBar", color: "#38bdf8", shape: "circle", text: "breakout" });
+    markers.push({ time: t.entry_time, position: long ? "belowBar" : "aboveBar", color: "#f0a93b", shape: long ? "arrowUp" : "arrowDown", text: `${long ? "buy" : "sell"} ${fmt(t.entry)}` });
+    markers.push({ time: t.exit_time, position: long ? "aboveBar" : "belowBar", color: t.net >= 0 ? "#10b981" : "#f43f5e", shape: "square", text: `${t.reason === "flatten" ? "exit" : "stopped"} ${money(t.net)}` });
+    candles.createPriceLine({ price: t.stop, color: "#f43f5e", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: `stop ${i + 1}` });
+  });
+  r.gaps.forEach((g) => markers.push({ time: g, position: "inBar", color: "#f59e0b", shape: "square", text: "gap" }));
+  if (r.control) r.control.entries.forEach((c) => markers.push({ time: c.time, position: "inBar", color: "rgba(148,163,184,0.35)", shape: "circle", size: 0.4 }));
+  markers.sort((a, b) => a.time - b.time);
+  LightweightCharts.createSeriesMarkers(candles, markers);
+  chart.timeScale().fitContent();
+  const t = r.trades.map((x) => `${x.side} at ${fmt(x.entry)} → ${x.reason === "flatten" ? "closed at the 3:07 exit" : "stopped"} at ${fmt(x.exit)} (${money(x.net)})${x.gap_affected ? ", data gap while open" : ""}`).join("; ");
+  info.innerHTML = `${esc(r.date)} · ${esc(market)} · stop distance ${fmt(r.stop_points)} pts · day ${money(r.net)}${r.control ? ` · random entries averaged ${money(r.control.mean)}` : ""}<br>${esc(t)}`;
 }
 
 // ---------- Learn ----------

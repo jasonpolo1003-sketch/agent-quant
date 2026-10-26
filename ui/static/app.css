@@ -747,3 +747,33 @@ body.wide .foot { display: none; }
   }
 }
 /* End responsive cockpit rules. */
+/* ---------- Study page (SC-FUT-0001) ---------- */
+.verdict { margin-bottom: 14px; }
+.verdict-word { font-family: var(--display); font-size: 28px; font-weight: 700; letter-spacing: 0.02em; margin: 10px 0 4px; }
+.verdict-word.good { color: var(--good); }
+.verdict-word.bad { color: var(--bad); }
+.verdict-word.warn { color: var(--warn); }
+.meter { margin: 14px 0 6px; }
+.meter-track { position: relative; height: 10px; border-radius: 5px; background: var(--surface-2); margin: 8px 0 4px; }
+.meter-fill { position: absolute; top: 0; bottom: 0; border-radius: 5px; opacity: 0.45; }
+.meter-fill.good, .meter-dot.good { background: var(--good); }
+.meter-fill.bad, .meter-dot.bad { background: var(--bad); }
+.meter-line { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--text); }
+.meter-dot { position: absolute; top: -3px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; box-shadow: 0 0 0 3px var(--surface); }
+.chip { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line-strong); }
+.chip.good { color: var(--good); border-color: rgba(16, 185, 129, 0.4); }
+.chip.bad { color: var(--bad); border-color: rgba(244, 63, 94, 0.4); }
+.trail { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; padding: 0; margin: 0; }
+.trail li { display: grid; gap: 2px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface); border: 1px solid var(--line); }
+.trail li.done { border-color: rgba(16, 185, 129, 0.35); }
+.trail li.todo { opacity: 0.7; }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; color: var(--muted); margin: 8px 0; }
+.legend i { display: inline-block; width: 14px; height: 3px; margin-right: 6px; vertical-align: middle; border-radius: 2px; }
+.study-chart { height: 340px; min-width: 0; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--line); }
+.study-chart.tall { height: 460px; }
+.study-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.hist { width: 100%; max-width: 760px; height: auto; display: block; }
+.hist-bar { fill: #475569; }
+.hist-orb { stroke: #f0a93b; stroke-width: 3; }
+.hist-label { fill: #f0a93b; font-size: 12px; font-family: var(--sans); }
+.hist-axis { fill: var(--faint); font-size: 11px; font-family: var(--sans); }

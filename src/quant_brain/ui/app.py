@@ -29,6 +29,7 @@ from quant_brain.ui import (
     sessions,
     skills,
     store,
+    study,
     summary,
     tutor,
     winsched,
@@ -349,6 +350,30 @@ def create_app(config: TerminalConfig) -> FastAPI:
         if not found:
             raise HTTPException(404, "no such backtest")
         return readers.equity_series(root, found[0])
+
+    # --- SC-FUT-0001 study ----------------------------------------------------------
+
+    def _study(fn, *args):
+        try:
+            return fn(*args)
+        except study.StudyError as exc:
+            raise HTTPException(404, str(exc)) from exc
+
+    @app.get("/api/study")
+    def study_overview():
+        return study.overview(root)
+
+    @app.get("/api/study/series")
+    def study_series(phase: str = "development", key: str = "MNQ.development"):
+        return _study(study.series, root, phase, key)
+
+    @app.get("/api/study/days")
+    def study_days(phase: str = "development", key: str = "MNQ.development"):
+        return study.day_list(root, phase, key)
+
+    @app.get("/api/study/replay")
+    def study_replay(day: str, market: str = "MNQ"):
+        return _study(study.replay, root, market, day)
 
     # --- chart workspace ------------------------------------------------------------
 

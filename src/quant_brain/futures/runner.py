@@ -26,7 +26,7 @@ from typing import Any
 import numpy as np
 
 from quant_brain.futures import inference
-from quant_brain.futures.controls import daily_control
+from quant_brain.futures.controls import DRAWS, daily_control
 from quant_brain.futures.orb import L3_ROUND_TRIP_CENTS, DayInput, simulate_day
 
 CARD_ID = "SC-FUT-0001"
@@ -340,6 +340,16 @@ def _execute(root: Path, phase: str, load: Loader, replicates: int) -> dict[str,
                 )
             results[f"{root_name}/{window}"] = entry
             outputs |= _write_outputs(out, f"{root_name}.{window}", daily, trades)
+            # Every control draw's daily net (rows align with the daily CSV; $0 when k = 0),
+            # so the study page can show the spread of luck, not just its mean.
+            draws_path = out / f"{root_name}.{window}.draws.npy"
+            np.save(
+                draws_path,
+                np.array(
+                    [r.control_draw_cents or (0,) * DRAWS for r in records], dtype=np.int64
+                ).reshape(-1, DRAWS),
+            )
+            outputs[draws_path.name] = sha256(draws_path)
     primary_key = "MNQ/development" if phase == "development" else "MNQ/held_out"
     primary = results[primary_key]
     (out / "report.json").write_text(
