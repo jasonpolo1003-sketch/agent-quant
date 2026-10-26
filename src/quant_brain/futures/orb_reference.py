@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
+from itertools import pairwise
 
 from quant_brain.futures.orb import DayInput, DayResult, Trade
 
@@ -21,7 +22,7 @@ def stop_distance_ticks(sessions):
     if len(sessions) != 15 or None in sessions:
         return None
     ranges = []
-    for previous, current in zip(sessions, sessions[1:], strict=False):
+    for previous, current in pairwise(sessions):
         prior_close = previous[2]
         ranges.append(
             max(
