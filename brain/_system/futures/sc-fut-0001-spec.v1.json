@@ -143,7 +143,7 @@
     "scope": "outside this freeze; requires a frozen-rule development replay and a selected venue/rulebook; never a strategy gate or purchase authorization"
   },
   "decision_records": {
-    "prefreeze_defaults": {"file": "brain/05_Reviews/SC-FUT-0001-prefreeze-defaults.md", "sha256": "3488f4eb454eacff7b792e6d68e7671cb4b041ac77dc0df26d483eab918957c0"},
+    "prefreeze_defaults": {"file": "brain/05_Reviews/SC-FUT-0001-prefreeze-defaults.md", "sha256": "85a795da7fd456f00b5aa02c886185f85ff8492f18ae942b50ec84b7ff77ef65"},
     "session_audit_decisions": {"file": "brain/05_Reviews/SC-FUT-0001-session-audit.md", "sha256": "bd42f117c7201e67ac57c61837d9414f7262ba3b8873843296a20edd90923595"}
   },
   "provenance": {

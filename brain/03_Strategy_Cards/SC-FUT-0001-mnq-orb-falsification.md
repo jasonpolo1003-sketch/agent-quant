@@ -4,7 +4,7 @@ status: frozen
 frozen: true
 frozen_at: 2026-10-26
 frozen_spec: brain/_system/futures/sc-fut-0001-spec.v1.json
-frozen_spec_sha256: 9e77ef0c0522e9e0759e7cccb8f1f85cf5f746e2b7d65e4bd7f8a8e113ab9634
+frozen_spec_sha256: e19f190733245181312ee56a6d21cab1b1bd594ee8d8ec9298b07c6c52f730fb
 created: 2026-10-25
 method_family: opening_range_breakout
 primary: MNQ
