@@ -73,4 +73,7 @@ def test_interactive_base_and_roaming_companion_are_wired():
     assert 'id="master-feed-section"' in APP
     assert 'id="master-feed-list"' in APP
     assert 'id="master-feed-tabs"' in APP
+    assert 'id="hub-cards-section"' in APP
+    assert 'id="main-inline-stage"' in APP
+    assert "openInlineVaultNote" in APP
 

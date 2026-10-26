@@ -402,8 +402,119 @@ RENDER.today = async (main) => {
       </div>
     </section>
 
-    <!-- Primary Above-the-Fold Workspace: Left = Unified Everything Feed | Right = Interactive Agent Base + Backtest Replay Chart -->
-    <div class="overview-grid" id="cockpit-grid">
+    <!-- Simplified Obsidian & Plan Summary Hub (6 Plain-English Doors that open inline on this page) -->
+    <section id="hub-cards-section" aria-label="Simplified Project Summary Hub">
+      <div class="row" style="justify-content:space-between; margin-bottom:10px;">
+        <div>
+          <h2 style="margin:0;">Executive Summary &amp; Obsidian Brain Map</h2>
+          <p class="muted small" style="margin:2px 0 0;">Everything summed up in plain words. Click any button below to open that note or tool right here on the Main Page.</p>
+        </div>
+        <span class="badge small">Click any card to inspect inline</span>
+      </div>
+
+      <div class="hub-cards-grid">
+        <article class="hub-card" data-hub-card="plan">
+          <div class="hub-card-head">
+            <h3 class="hub-card-title">1. Master Plan &amp; Handoff</h3>
+            <span class="status done">5 / 5 Stages</span>
+          </div>
+          <p class="hub-card-summary">We built a 5-stage quant research harness. Phases 0-5, Gate C, Gate F (48 datasets), Strategy Card SC-0002, the 72-trial backtest, and the Adversarial Review are complete. Next: ${esc(clip(t.next || "PROP-010 Learning Terminal", 95))}</p>
+          <div class="hub-card-links">
+            <button type="button" class="btn small" data-inline-note="PLAN.md">Read PLAN.md</button>
+            <button type="button" class="btn small" data-inline-note="SESSION_HANDOFF.md">Read Handoff</button>
+            <button type="button" class="btn small" data-inline-note="brain/_system/plan/learning_terminal_plan.md">Learning Plan</button>
+          </div>
+        </article>
+
+        <article class="hub-card" data-hub-card="strategies">
+          <div class="hub-card-head">
+            <h3 class="hub-card-title">2. Strategy &amp; Backtest Lab</h3>
+            <span class="status failed">SC-0002 Rejected</span>
+          </div>
+          <p class="hub-card-summary">Connors RSI(2) &lt; 10 above 200-day SMA on SPY/QQQ/IWM. Earned +40.2% in-sample (101 trades) and +36.4% held-out (91 trades), which missed our 0.950 Deflated Sharpe gate (0.896) and Buy &amp; Hold (0.46 vs 0.89).</p>
+          <div class="hub-card-links">
+            <button type="button" class="btn small primary" data-inline-page="strategies">Open Lab Inline</button>
+            <button type="button" class="btn small" data-inline-note="brain/05_Reviews/SC-0002-adversarial-review.md">Review Note</button>
+            <button type="button" class="btn small" data-inline-note="brain/04_Backtest_Reports/SC-0002-held-out.md">Held-Out Report</button>
+            <button type="button" class="btn small" data-inline-note="brain/03_Strategy_Cards/SC-0002-rsi2-connors-spy.md">SC-0002 Card</button>
+          </div>
+        </article>
+
+        <article class="hub-card" data-hub-card="vault">
+          <div class="hub-card-head">
+            <h3 class="hub-card-title">3. Obsidian Vault &amp; Research</h3>
+            <span class="status accepted">${esc(totalSources)} Sources</span>
+          </div>
+          <p class="hub-card-summary">${esc(totalSources)} curated sources in 01_Sources (StockCharts RSI, TA-Lib, QuantConnect Look-Ahead &amp; Survivorship Bias) embedded in RAG. Scout RUN-871299ea31 validated all 5 sources across 15 windows.</p>
+          <div class="hub-card-links">
+            <button type="button" class="btn small primary" data-inline-note="brain/01_Sources/docs/SRC-1ea110cb46-stockcharts-chartschool-relative-strength-index-rsi.md">Browse Vault Notes</button>
+            <button type="button" class="btn small" data-inline-note="brain/01_Sources/docs/SRC-2830f8cd41-quantconnect-glossary-look-ahead-bias.md">Look-Ahead Note</button>
+            <button type="button" class="btn small" data-inline-note="brain/00_Inbox/Failed_Runs/RUN-871299ea31.md">RUN-871299ea31</button>
+          </div>
+        </article>
+
+        <article class="hub-card" data-hub-card="market">
+          <div class="hub-card-head">
+            <h3 class="hub-card-title">4. Market Screener &amp; Macro</h3>
+            <span class="status accepted">${esc(totalDatasets)} Datasets</span>
+          </div>
+          <p class="hub-card-summary">${esc(totalDatasets)} Gate F daily EOD datasets (2000-2026) with 5 quant screener presets (Oversold Uptrend, Near 52W High, Calm Volatility), official Federal Reserve FOMC dates, and live Coinbase BTC/ETH.</p>
+          <div class="hub-card-links">
+            <button type="button" class="btn small primary" data-inline-page="market">Open Screener &amp; FOMC Inline</button>
+            <button type="button" class="btn small" data-inline-page="live">Live Crypto Inline</button>
+            <button type="button" class="btn small" data-go="chart">Full Superchart</button>
+          </div>
+        </article>
+
+        <article class="hub-card" data-hub-card="risk">
+          <div class="hub-card-head">
+            <h3 class="hub-card-title">5. Risk Simulators &amp; Decisions</h3>
+            <span class="status completed">Paper Guard</span>
+          </div>
+          <p class="hub-card-summary">Calculate share size from stop-loss distance, compare Full vs Half-Kelly sizing, and run 2,000 Monte Carlo paths to see probability of ruin, plus read all PROP-001..010 and DEC-* decisions.</p>
+          <div class="hub-card-links">
+            <button type="button" class="btn small primary" data-inline-page="risk">Open Risk Center Inline</button>
+            <button type="button" class="btn small" data-inline-note="brain/_system/plan/plan_change_proposals.md">Proposals (PROP-001..010)</button>
+          </div>
+        </article>
+
+        <article class="hub-card" data-hub-card="learn">
+          <div class="hub-card-head">
+            <h3 class="hub-card-title">6. Agents, Automations &amp; Tutor</h3>
+            <span class="status completed">5 Agents</span>
+          </div>
+          <p class="hub-card-summary">5 specialist bots enforced by the harness, scheduled health/data jobs, and a NotebookLM-style AI Tutor that reads ticked vault files and cites exact [file:line] numbers.</p>
+          <div class="hub-card-links">
+            <button type="button" class="btn small primary" data-inline-page="learn">Open AI Tutor Inline</button>
+            <button type="button" class="btn small" data-inline-page="activity">Activity Inline</button>
+            <button type="button" class="btn small" data-inline-page="setup">Setup Inline</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Inline Main-Page Stage Switcher: Open any page or Obsidian note right here on the Main Page -->
+    <section class="box" id="main-inline-stage" style="margin-bottom:20px;">
+      <div class="inline-stage-bar">
+        <div class="seg" id="inline-stage-tabs" role="group" aria-label="Main page workspace view">
+          <button type="button" data-stage-tab="overview" aria-pressed="true">Feed, Base &amp; Replay Chart</button>
+          <button type="button" data-stage-tab="vault" aria-pressed="false">Obsidian Vault Reader</button>
+          <button type="button" data-stage-tab="strategies" aria-pressed="false">Strategy Lab</button>
+          <button type="button" data-stage-tab="market" aria-pressed="false">Screener &amp; FOMC</button>
+          <button type="button" data-stage-tab="risk" aria-pressed="false">Risk Center</button>
+          <button type="button" data-stage-tab="live" aria-pressed="false">Live Crypto</button>
+          <button type="button" data-stage-tab="activity" aria-pressed="false">Activity &amp; Runs</button>
+          <button type="button" data-stage-tab="learn" aria-pressed="false">AI Tutor</button>
+          <button type="button" data-stage-tab="setup" aria-pressed="false">Setup</button>
+        </div>
+        <span class="faint small" id="inline-stage-status">Viewing Main Feed, Agent Base &amp; Chart</span>
+      </div>
+
+      <!-- Mounted Inline Tool or Obsidian Vault Reader -->
+      <div id="inline-stage-mount" hidden></div>
+
+      <!-- Default Overview Workspace: Left = Unified Everything Feed | Right = Interactive Agent Base + Backtest Replay Chart -->
+      <div class="overview-grid" id="cockpit-grid" style="margin-bottom:0;">
       <!-- Left Column: Unified Master Feed (One Stream for Everything) -->
       <section class="box" id="master-feed-section">
         <div class="master-feed-controls">
@@ -518,14 +629,15 @@ RENDER.today = async (main) => {
             <div class="row" style="justify-content:space-between;">
               <span class="small muted"><b>Why rejected:</b> ${esc(activeReview?.verdict_text || "Held-out DSR 0.896 < 0.950 required gate; random-entry 94.9% < 95%.")}</span>
               <div class="row" style="gap:10px;">
-                <button class="link small" data-go="strategies">All ${esc(totalTrials)} Trials</button>
-                <button class="link small" data-go="risk">Risk Simulators</button>
+                <button class="link small" data-inline-page="strategies">All ${esc(totalTrials)} Trials</button>
+                <button class="link small" data-inline-page="risk">Risk Simulators</button>
               </div>
             </div>
           </div>
         </section>
       </div>
     </div>
+    </section>
 
     <!-- 5-Step Epistemic Pipeline -->
     <section>
@@ -1112,7 +1224,7 @@ RENDER.today = async (main) => {
         <div class="master-feed-actions">
           ${item.replay_id ? `<button type="button" class="btn small" data-feed-replay="${esc(item.replay_id)}">Replay on Chart</button>` : ""}
           ${item.symbol ? `<button type="button" class="btn small" data-feed-sym="${esc(item.symbol)}">Open ${esc(item.symbol)}</button>` : ""}
-          ${item.file_path ? `<button type="button" class="btn small" data-file="${esc(item.file_path)}">Read Note</button>` : ""}
+          ${item.file_path ? `<button type="button" class="btn small" data-feed-note="${esc(item.file_path)}">Read Note</button>` : ""}
           ${item.run_id ? `<button type="button" class="btn small" data-open-run="${esc(item.run_id)}">Inspect Run</button>` : ""}
           <button type="button" class="btn small" data-feed-base="${i}">Show on Base</button>
           <button type="button" class="link small" data-feed-tutor="${i}">Ask Tutor</button>
@@ -1125,6 +1237,11 @@ RENDER.today = async (main) => {
         if (loadReplayFromFeed) loadReplayFromFeed(btn.dataset.feedReplay);
       };
     });
+    feedListEl.querySelectorAll("[data-feed-note]").forEach((btn) => {
+      btn.onclick = () => {
+        openInlineVaultNote(btn.dataset.feedNote);
+      };
+    });
     feedListEl.querySelectorAll("[data-feed-sym]").forEach((btn) => {
       btn.onclick = () => {
         if (window.CH) { CH.symbol = btn.dataset.feedSym; CH.formula = ""; saveCH(); }
@@ -1134,7 +1251,7 @@ RENDER.today = async (main) => {
     feedListEl.querySelectorAll("[data-open-run]").forEach((btn) => {
       btn.onclick = () => {
         state.openRun = btn.dataset.openRun;
-        go("activity");
+        openInlineStage("activity");
       };
     });
     feedListEl.querySelectorAll("[data-feed-base]").forEach((btn) => {
@@ -1149,7 +1266,7 @@ RENDER.today = async (main) => {
         if (!item) return;
         if (item.file_path) state.learn.selected.add(item.file_path);
         if (item.run_id) state.learn.selected.add(`run:${item.run_id}`);
-        go("learn", { question: `Explain "${item.title}" in plain words: what happened, what evidence or numbers it produced, and how it fits into the project.` });
+        openInlineStage("learn", { question: `Explain "${item.title}" in plain words: what happened, what evidence or numbers it produced, and how it fits into the project.` });
       };
     });
   };
@@ -1182,6 +1299,152 @@ RENDER.today = async (main) => {
   }
 
   renderMasterFeed();
+
+  // Inline Main-Page Stage & Obsidian Vault Note Reader
+  const stageTabsEl = $("#inline-stage-tabs");
+  const stageStatusEl = $("#inline-stage-status");
+  const stageMountEl = $("#inline-stage-mount");
+  const overviewGridEl = $("#cockpit-grid");
+  let currentVaultNote = "PLAN.md";
+  let vaultRawMode = false;
+
+  async function renderInlineVaultReader(notePath) {
+    if (!stageMountEl) return;
+    currentVaultNote = notePath || currentVaultNote || "PLAN.md";
+    stageMountEl.hidden = false;
+    if (overviewGridEl) overviewGridEl.hidden = true;
+    stageMountEl.innerHTML = `<p class="muted">Loading Obsidian vault &amp; ${esc(currentVaultNote)}…</p>`;
+
+    try {
+      const [sourcesGroups, fileData] = await Promise.all([
+        state.learn.sources ? Promise.resolve(state.learn.sources) : api("/api/learn/sources"),
+        api(`/api/file?path=${encodeURIComponent(currentVaultNote)}`),
+      ]);
+      state.learn.sources = sourcesGroups;
+
+      const navHtml = (sourcesGroups || []).map((g) => `
+        <details class="src-group" ${g.items.some((i) => i.path === currentVaultNote) || g.group === "Plan & rules" || g.group === "Strategy & results" ? "open" : ""}>
+          <summary>${esc(g.group)} (${g.items.length})</summary>
+          <div style="display:grid; gap:2px; margin-top:4px;">
+            ${g.items.map((i) => `<button type="button" class="vault-note-btn" data-vault-note="${esc(i.path)}" aria-current="${i.path === currentVaultNote}">
+              ${esc(i.path.split("/").pop())}
+            </button>`).join("")}
+          </div>
+        </details>
+      `).join("");
+
+      const rawText = String(fileData?.text || "");
+      const bodyHtml = vaultRawMode
+        ? `<pre class="pre" style="max-height:none; margin:0;">${esc(rawText)}</pre>`
+        : `<div class="md">${renderMarkdown(rawText)}</div>`;
+
+      stageMountEl.innerHTML = `
+        <div class="inline-vault-grid">
+          <aside class="box" style="padding:12px;">
+            <div class="row" style="justify-content:space-between; margin-bottom:8px;">
+              <b style="font-size:13px;">Obsidian Vault &amp; Plan</b>
+              <span class="faint small">${(sourcesGroups || []).reduce((acc, g) => acc + g.items.length, 0)} files</span>
+            </div>
+            <input type="text" id="inline-vault-filter" placeholder="Filter vault notes…" style="width:100%; margin-bottom:8px;">
+            <div class="vault-nav-list" id="inline-vault-nav">${navHtml}</div>
+          </aside>
+
+          <div class="box" style="padding:16px;">
+            <div class="row" style="justify-content:space-between; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--line);">
+              <div>
+                <span class="badge small">OBSIDIAN NOTE</span>
+                <b style="margin-left:8px; font-size:14px;">${esc(currentVaultNote)}</b>
+              </div>
+              <div class="row" style="gap:6px;">
+                <button type="button" class="btn small" id="vault-toggle-raw">${vaultRawMode ? "Formatted View" : "Raw Source"}</button>
+                <button type="button" class="btn small primary" id="vault-ask-tutor">Ask Tutor About This Note</button>
+                <button type="button" class="btn small" id="vault-back-overview">Back to Feed &amp; Base</button>
+              </div>
+            </div>
+            <div class="vault-note-body">${bodyHtml}</div>
+          </div>
+        </div>
+      `;
+
+      stageMountEl.querySelectorAll("[data-vault-note]").forEach((btn) => {
+        btn.onclick = () => renderInlineVaultReader(btn.dataset.vaultNote);
+      });
+      $("#vault-toggle-raw")?.addEventListener("click", () => {
+        vaultRawMode = !vaultRawMode;
+        renderInlineVaultReader(currentVaultNote);
+      });
+      $("#vault-ask-tutor")?.addEventListener("click", () => {
+        state.learn.selected.add(currentVaultNote);
+        openInlineStage("learn", { question: `Summarize ${currentVaultNote} in plain words and explain how it fits into the Quant Brain plan.` });
+      });
+      $("#vault-back-overview")?.addEventListener("click", () => {
+        openInlineStage("overview");
+      });
+      $("#inline-vault-filter")?.addEventListener("input", (e) => {
+        const q = e.target.value.trim().toLowerCase();
+        stageMountEl.querySelectorAll("[data-vault-note]").forEach((b) => {
+          b.hidden = Boolean(q && !b.dataset.vaultNote.toLowerCase().includes(q));
+        });
+        if (q) stageMountEl.querySelectorAll(".src-group").forEach((d) => { d.open = true; });
+      });
+    } catch (err) {
+      stageMountEl.innerHTML = `<p class="error">${esc(err.message)}</p>`;
+    }
+  }
+
+  async function openInlineStage(tabId, opts = {}) {
+    if (state.liveSource && tabId !== "live") {
+      try { state.liveSource.close(); } catch (_) {}
+      state.liveSource = null;
+    }
+    if (state.liveTimer && tabId !== "live") {
+      clearInterval(state.liveTimer);
+      state.liveTimer = null;
+    }
+
+    stageTabsEl?.querySelectorAll("[data-stage-tab]").forEach((btn) => {
+      btn.setAttribute("aria-pressed", String(btn.dataset.stageTab === tabId));
+    });
+
+    if (tabId === "overview") {
+      if (stageMountEl) { stageMountEl.hidden = true; stageMountEl.innerHTML = ""; }
+      if (overviewGridEl) overviewGridEl.hidden = false;
+      if (stageStatusEl) stageStatusEl.textContent = "Viewing Main Feed, Agent Base & Chart";
+      return;
+    }
+
+    if (tabId === "vault") {
+      if (stageStatusEl) stageStatusEl.textContent = `Reading Obsidian Note: ${opts.note || currentVaultNote}`;
+      await renderInlineVaultReader(opts.note || currentVaultNote);
+      $("#main-inline-stage")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      return;
+    }
+
+    if (RENDER[tabId] && stageMountEl) {
+      if (overviewGridEl) overviewGridEl.hidden = true;
+      stageMountEl.hidden = false;
+      const pageLabel = PAGES.find((p) => p.id === tabId)?.label || tabId;
+      if (stageStatusEl) stageStatusEl.textContent = `Inline Tool: ${pageLabel}`;
+      stageMountEl.innerHTML = `<p class="muted">Loading ${esc(pageLabel)}…</p>`;
+      await RENDER[tabId](stageMountEl, opts);
+      $("#main-inline-stage")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+
+  function openInlineVaultNote(notePath) {
+    currentVaultNote = notePath || "PLAN.md";
+    openInlineStage("vault", { note: currentVaultNote });
+  }
+
+  stageTabsEl?.querySelectorAll("[data-stage-tab]").forEach((btn) => {
+    btn.onclick = () => openInlineStage(btn.dataset.stageTab);
+  });
+  main.querySelectorAll("[data-inline-page]").forEach((btn) => {
+    btn.onclick = () => openInlineStage(btn.dataset.inlinePage);
+  });
+  main.querySelectorAll("[data-inline-note]").forEach((btn) => {
+    btn.onclick = () => openInlineVaultNote(btn.dataset.inlineNote);
+  });
 };
 
 // ---------- Activity ----------
