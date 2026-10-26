@@ -8,7 +8,7 @@ Implements the frozen spec `sc-fut-0001-spec.v1.json`. Encoded in `tests/test_fu
 - Any minute not listed (08:30 through the exit minute) is a **flat bar at the previous bar's close**. "Missing" means no bar.
 - Stop distance **4 ticks** unless stated. Normal flatten 15:07; entry fill cutoff 14:30.
 
-## Interpretation recorded at fixture time (Jason to confirm)
+## Interpretations (confirmed by Jason 2026-10-26, with the Step 3 authorization)
 - **Missing entry minute consumes that side.** The rule trades the *first* close beyond the range; if its next-minute open is missing, that side is skipped for the day (logged `entry_missing`), and a later close beyond the same side does not re-arm it. This follows "first close" literally and never chases.
 - **Primary P&L with a missing minute while a stop is live** continues on the visible bars (a gap carries no information). The trade is flagged, and its stress exit is the worse of the stop and the next visible bar's adverse extreme.
 
