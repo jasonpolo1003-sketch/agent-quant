@@ -3,7 +3,7 @@
 ## SC-FUT-0001 FROZEN (2026-10-26; Step 1 of the approved plan)
 
 - Jason approved the 5-step plan, the three audit decisions (12:15 CT early close / 12:12 exit; void range = $0 no-trade day for ORB and control; ATR window uses NYSE sessions only), DSR at N=1/25 as a diagnostic, and keeping prop-eval deferred. Recorded in `brain/05_Reviews/SC-FUT-0001-session-audit.md`.
-- Frozen spec: `brain/_system/futures/sc-fut-0001-spec.v1.json`, SHA-256 `9e77ef0c…9634` (also in `.sha256`, the card frontmatter, and `brain/04_Backtest_Reports/SC-FUT-0001.trials.jsonl`, freeze commit `bb71d2f`). No nulls and no blockers; `execution_allowed: false`. Seeds: controls 20261026; bootstrap B=9999, seed 20261027.
+- Frozen spec: `brain/_system/futures/sc-fut-0001-spec.v1.json`, SHA-256 `e19f1907…30fb` after a same-day provenance-hash correction logged in `brain/04_Backtest_Reports/SC-FUT-0001.trials.jsonl` (freeze commit `bb71d2f`, correction `73d3571`; no rule changed). No nulls and no blockers; `execution_allowed: false`. Seeds: controls 20261026; bootstrap B=9999, seed 20261027.
 - Pinned inputs: dev partition manifest, `session-calendar.v1.csv` (1,880 NYSE sessions 2019-05-01..2026-10-21, with the 12:15 override), roll calendar, cost levels, `sc-fut-0001-prior-looks.md`, decision records, `uv.lock`. `.gitattributes` marks them `-text` so the hashes survive checkout. `tests/test_futures_frozen_spec.py` fails on any edit.
 - Not added to `brain/03_Strategy_Cards/freeze_ledger.json`: that ledger is the SC-0002 markdown-card schema, and its tests expect only SC-0001/0002.
 - Verification: 907 passed, 2 skipped; Ruff clean. No P&L computed.
