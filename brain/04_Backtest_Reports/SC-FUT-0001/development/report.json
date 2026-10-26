@@ -1,0 +1,332 @@
+{
+  "MNQ/development": {
+    "verdict": {
+      "outcome": "not_demonstrated",
+      "reasons": [
+        "p >= 0.05"
+      ],
+      "evaluable_days": 1157,
+      "non_evaluable_days": 1,
+      "trades": 1664,
+      "observed_paired_cents": 527.6310734658601,
+      "absolute_mean_cents": 311.27225583405357,
+      "p_value": 0.1142,
+      "stress_outcome": "not_demonstrated",
+      "missing_session_share": 0.0017271157167530224,
+      "missing_trade_share": 0.0006009615384615385,
+      "ambiguity_share": 0.016826923076923076,
+      "review_required": false,
+      "extras": {}
+    },
+    "diagnostics": {
+      "cost_ladder": {
+        "L1": {
+          "absolute_mean_cents": 527.0025929127053,
+          "paired_mean_cents": 552.721911840968
+        },
+        "L2": {
+          "absolute_mean_cents": 455.0924805531547,
+          "paired_mean_cents": 544.3582990492653
+        },
+        "L3": {
+          "absolute_mean_cents": 311.27225583405357,
+          "paired_mean_cents": 527.6310734658601
+        },
+        "L4": {
+          "absolute_mean_cents": 23.63180639585134,
+          "paired_mean_cents": 494.1766222990494
+        }
+      },
+      "by_year": {
+        "2019": {
+          "days": 151,
+          "absolute_mean_cents": -144.80794701986756,
+          "paired_mean_cents": 183.85536423841066
+        },
+        "2020": {
+          "days": 253,
+          "absolute_mean_cents": 47.58102766798419,
+          "paired_mean_cents": 168.51448221343875
+        },
+        "2021": {
+          "days": 252,
+          "absolute_mean_cents": 194.64285714285714,
+          "paired_mean_cents": 357.3800634920636
+        },
+        "2022": {
+          "days": 251,
+          "absolute_mean_cents": 987.1155378486055,
+          "paired_mean_cents": 981.8371792828694
+        },
+        "2023": {
+          "days": 250,
+          "absolute_mean_cents": 292.616,
+          "paired_mean_cents": 814.2876799999998
+        }
+      },
+      "top_5pct_days_share_of_paired_total": 4.379321686020264,
+      "politis_white_block_length": 3.219120885985964,
+      "dsr": {
+        "N=1": {
+          "dsr": 0.7366024035529019,
+          "sr": 0.01826822191893708,
+          "sr_star": 0.0,
+          "variance": 0.0007159751708277368,
+          "n_trials": 1,
+          "t": 1157,
+          "skew": 2.054152569077123,
+          "kurtosis": 8.524327835767739
+        },
+        "N=25": {
+          "dsr": 0.11151636857928604,
+          "sr": 0.01826822191893708,
+          "sr_star": 0.05343916223189615,
+          "variance": 0.0007159751708277368,
+          "n_trials": 25,
+          "t": 1157,
+          "skew": 2.054152569077123,
+          "kurtosis": 8.524327835767739
+        }
+      }
+    },
+    "power": {
+      "paired_power": 0.997999799979998,
+      "absolute_power": 0.8641864186418642,
+      "joint_power": 0.8641864186418642,
+      "paired_se_cents": 442.59060237638613
+    }
+  },
+  "MNQ/diagnostics": {
+    "verdict": {
+      "outcome": "not_demonstrated",
+      "reasons": [
+        "p >= 0.05"
+      ],
+      "evaluable_days": 252,
+      "non_evaluable_days": 0,
+      "trades": 373,
+      "observed_paired_cents": 190.3448253968253,
+      "absolute_mean_cents": 198.5873015873016,
+      "p_value": 0.4255,
+      "stress_outcome": "not_demonstrated",
+      "missing_session_share": 0.003968253968253968,
+      "missing_trade_share": 0.002680965147453083,
+      "ambiguity_share": 0.005361930294906166,
+      "review_required": false,
+      "extras": {}
+    },
+    "diagnostics": {
+      "cost_ladder": {
+        "L1": {
+          "absolute_mean_cents": 420.6111111111111,
+          "paired_mean_cents": 218.81625396825407
+        },
+        "L2": {
+          "absolute_mean_cents": 346.6031746031746,
+          "paired_mean_cents": 209.32577777777786
+        },
+        "L3": {
+          "absolute_mean_cents": 198.5873015873016,
+          "paired_mean_cents": 190.3448253968253
+        },
+        "L4": {
+          "absolute_mean_cents": -97.44444444444444,
+          "paired_mean_cents": 152.38292063492045
+        }
+      },
+      "by_year": {
+        "2024": {
+          "days": 252,
+          "absolute_mean_cents": 198.5873015873016,
+          "paired_mean_cents": 190.34482539682557
+        }
+      },
+      "top_5pct_days_share_of_paired_total": 14.409370579242761,
+      "politis_white_block_length": 3.9247828988831084,
+      "dsr": {
+        "N=1": {
+          "dsr": 0.5591775641949293,
+          "sr": 0.009272187928661763,
+          "sr_star": 0.0,
+          "variance": 0.0038171762639573107,
+          "n_trials": 1,
+          "t": 252,
+          "skew": 2.890785860998952,
+          "kurtosis": 15.554618471724234
+        },
+        "N=25": {
+          "dsr": 0.03344529688825332,
+          "sr": 0.009272187928661763,
+          "sr_star": 0.12339051234047602,
+          "variance": 0.0038171762639573107,
+          "n_trials": 25,
+          "t": 252,
+          "skew": 2.890785860998952,
+          "kurtosis": 15.554618471724234
+        }
+      }
+    }
+  },
+  "MES/development": {
+    "verdict": {
+      "outcome": "not_demonstrated",
+      "reasons": [
+        "p >= 0.05"
+      ],
+      "evaluable_days": 1157,
+      "non_evaluable_days": 1,
+      "trades": 1715,
+      "observed_paired_cents": 268.0910198789974,
+      "absolute_mean_cents": -527.5324114088158,
+      "p_value": 0.178,
+      "stress_outcome": "not_demonstrated",
+      "missing_session_share": 0.0034542314335060447,
+      "missing_trade_share": 0.001749271137026239,
+      "ambiguity_share": 0.013994169096209912,
+      "review_required": false,
+      "extras": {}
+    },
+    "diagnostics": {
+      "cost_ladder": {
+        "L1": {
+          "absolute_mean_cents": 28.32324978392394,
+          "paired_mean_cents": 334.05471910112357
+        },
+        "L2": {
+          "absolute_mean_cents": -156.961970613656,
+          "paired_mean_cents": 312.0668193604148
+        },
+        "L3": {
+          "absolute_mean_cents": -527.5324114088158,
+          "paired_mean_cents": 268.0910198789974
+        },
+        "L4": {
+          "absolute_mean_cents": -1268.6732929991356,
+          "paired_mean_cents": 180.1394209161625
+        }
+      },
+      "by_year": {
+        "2019": {
+          "days": 151,
+          "absolute_mean_cents": -1022.0993377483444,
+          "paired_mean_cents": -184.87350993377487
+        },
+        "2020": {
+          "days": 253,
+          "absolute_mean_cents": -1354.695652173913,
+          "paired_mean_cents": -486.74964426877466
+        },
+        "2021": {
+          "days": 252,
+          "absolute_mean_cents": 109.38492063492063,
+          "paired_mean_cents": 799.7247460317462
+        },
+        "2022": {
+          "days": 251,
+          "absolute_mean_cents": -200.15139442231074,
+          "paired_mean_cents": 483.0534501992033
+        },
+        "2023": {
+          "days": 250,
+          "absolute_mean_cents": -362.428,
+          "paired_mean_cents": 553.8712720000001
+        }
+      },
+      "top_5pct_days_share_of_paired_total": 5.29180686611968,
+      "politis_white_block_length": 1.462696925779918,
+      "dsr": {
+        "N=1": {
+          "dsr": 0.053832713570059254,
+          "sr": -0.049838884954956704,
+          "sr_star": 0.0,
+          "variance": 0.0010266392895345974,
+          "n_trials": 1,
+          "t": 1157,
+          "skew": 2.087379752058898,
+          "kurtosis": 9.706628101655133
+        },
+        "N=25": {
+          "dsr": 0.0001192147570918678,
+          "sr": -0.049838884954956704,
+          "sr_star": 0.06399110366019212,
+          "variance": 0.0010266392895345974,
+          "n_trials": 25,
+          "t": 1157,
+          "skew": 2.087379752058898,
+          "kurtosis": 9.706628101655133
+        }
+      }
+    }
+  },
+  "MES/diagnostics": {
+    "verdict": {
+      "outcome": "not_demonstrated",
+      "reasons": [
+        "p >= 0.05"
+      ],
+      "evaluable_days": 252,
+      "non_evaluable_days": 0,
+      "trades": 391,
+      "observed_paired_cents": 925.2926031746032,
+      "absolute_mean_cents": 312.19444444444446,
+      "p_value": 0.1202,
+      "stress_outcome": "not_demonstrated",
+      "missing_session_share": 0.0,
+      "missing_trade_share": 0.0,
+      "ambiguity_share": 0.0076726342710997444,
+      "review_required": false,
+      "extras": {}
+    },
+    "diagnostics": {
+      "cost_ladder": {
+        "L1": {
+          "absolute_mean_cents": 894.0396825396825,
+          "paired_mean_cents": 1000.3104603174603
+        },
+        "L2": {
+          "absolute_mean_cents": 700.0912698412699,
+          "paired_mean_cents": 975.304507936508
+        },
+        "L3": {
+          "absolute_mean_cents": 312.19444444444446,
+          "paired_mean_cents": 925.2926031746032
+        },
+        "L4": {
+          "absolute_mean_cents": -463.5992063492063,
+          "paired_mean_cents": 825.2687936507938
+        }
+      },
+      "by_year": {
+        "2024": {
+          "days": 252,
+          "absolute_mean_cents": 312.19444444444446,
+          "paired_mean_cents": 925.2926031746031
+        }
+      },
+      "top_5pct_days_share_of_paired_total": 1.8475193792837796,
+      "politis_white_block_length": 1.0,
+      "dsr": {
+        "N=1": {
+          "dsr": 0.6582134637080539,
+          "sr": 0.024753430241960524,
+          "sr_star": 0.0,
+          "variance": 0.004367114254189451,
+          "n_trials": 1,
+          "t": 252,
+          "skew": 3.106101860576306,
+          "kurtosis": 18.198623974632724
+        },
+        "N=25": {
+          "dsr": 0.03873136555913703,
+          "sr": 0.024753430241960524,
+          "sr_star": 0.13197994326095092,
+          "variance": 0.004367114254189451,
+          "n_trials": 25,
+          "t": 252,
+          "skew": 3.106101860576306,
+          "kurtosis": 18.198623974632724
+        }
+      }
+    }
+  }
+}
