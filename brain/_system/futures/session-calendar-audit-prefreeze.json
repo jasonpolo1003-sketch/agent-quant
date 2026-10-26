@@ -1,0 +1,48 @@
+{
+  "candidate_upper_bound": 1474,
+  "date_range": [
+    "2019-05-01",
+    "2024-12-31"
+  ],
+  "early_close_dates": null,
+  "eligible_session_count": null,
+  "halt_dates_verified": null,
+  "known_full_closure_dates": [
+    "2020-04-10",
+    "2020-12-25",
+    "2021-01-01",
+    "2021-12-24",
+    "2022-04-15",
+    "2024-03-29"
+  ],
+  "known_halt_lead": {
+    "2020-03-16": "limit-down reopen at 08:45 CT; source rc_data_quality.md, unreviewed"
+  },
+  "limitations": [
+    "2025+ locked partition excluded from new audit",
+    "historical exchange early-close archive absent",
+    "incomplete holiday/halts list; weekday count is NOT eligible count",
+    "no selected-contract 1-minute coverage scan; prior quality scan used highest same-day-volume contract, not D-ROLL-01",
+    "full shared raw minute file not opened, so missing-minute incidence for this rule is unknown"
+  ],
+  "missing_minutes_by_selected_contract": null,
+  "source_receipts": [
+    {
+      "path": "C:\\Users\\jason\\OneDrive\\Desktop\\Quant\\quant-agent-brain\\brain\\sources\\mes_mnq\\providers\\databento_rc_download_manifest.md",
+      "sha256": "0ece4c9862ad2fa23896961aa1215332e140ec570f54dd7bf1535b53d8bd9e3c",
+      "status": "historical unreviewed metadata; not newly verified against raw locked data"
+    },
+    {
+      "path": "C:\\Users\\jason\\OneDrive\\Desktop\\Quant\\quant-agent-brain\\brain\\sources\\mes_mnq\\validation\\rc_data_quality\\rc_data_quality.md",
+      "sha256": "dae7a73bb438d9717af98fbc1538f8712ed2fbaaf6e5fe04c25644fba000e34b",
+      "status": "historical unreviewed metadata; not newly verified against raw locked data"
+    }
+  ],
+  "sources": [
+    "C:\\Users\\jason\\OneDrive\\Desktop\\Quant\\quant-agent-brain\\brain\\sources\\mes_mnq\\providers\\databento_rc_download_manifest.md",
+    "C:\\Users\\jason\\OneDrive\\Desktop\\Quant\\quant-agent-brain\\brain\\sources\\mes_mnq\\validation\\rc_data_quality\\rc_data_quality.md"
+  ],
+  "status": "candidate_only_not_final_eligibility",
+  "timezone": "America/Chicago",
+  "weekdays_count": 1480
+}

@@ -25,6 +25,9 @@ dependencies = [
     "uvicorn>=0.30",
     "requests>=2.31",
     "websockets>=13",
+    "databento-dbn>=0.72.0",
+    "zstandard>=0.25.0",
+    "pandas-market-calendars>=5.5.0",
 ]
 
 [project.optional-dependencies]
@@ -44,7 +47,8 @@ line-length = 100
 target-version = "py311"
 # Failed-run audit directories are immutable historical receipts. Lint maintained
 # source/tests/scripts, but do not rewrite captured Python artifacts in this tree.
-extend-exclude = ["brain/00_Inbox/Failed_Runs/**"]
+# RX-0001's replication script is likewise kept byte-identical to the run it produced.
+extend-exclude = ["brain/00_Inbox/Failed_Runs/**", "scripts/rsi_exit_replication.py"]
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "I", "UP", "RUF"]

@@ -1,0 +1,11 @@
+id	file	quote	match
+Q1	source_files/phaseB/bea_schedule.ics	SUMMARY:Personal Income and Outlays\, December 2024	MATCH
+Q2	source_files/phaseB/bea_schedule.ics	DTSTART;VALUE=DATE-TIME:20250131T133000Z	MATCH
+Q3	source_files/phaseB/bea_pce.txt	The PCE price index, released each month in the Personal Income and Outlays report	MATCH
+Q4	source_files/phaseB/bea_gdp_topic.txt	Previously published estimates contain historical data and have since been revised.	MATCH
+Q5	source_files/phaseB/bea_gdp_topic.txt	Vintage History of Quarterly Gross Domestic Product (GDP) and Gross Domestic Income (GDI) Estimates	MATCH
+Q6	source_files/phaseB/ust_refunding.txt	Changes in debt management policy are generally informed by and communicated through the quarterly refunding process near the middle of each calendar quarter.	MATCH
+Q7	source_files/phaseB/td_auctioned_2025_2026.json	"""competitiveAuctionCloseTime"":""01:00 PM"""	MATCH
+Q8	source_files/phaseB/cnbc_cme_halt_2025.txt	Stock futures and options trading reopened fully at 8:30 a.m. ET.	MATCH
+Q9	source_files/phaseB/dcd_cme_outage.txt	Procedure was not followed when draining cooling towers	MATCH
+Q10	source_files/phaseB/dcd_cme_outage.txt	The data center shutdown experienced by CME Group in late November has been attributed to human error, according to a report.	MATCH

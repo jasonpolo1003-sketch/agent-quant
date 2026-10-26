@@ -1,0 +1,124 @@
+{
+  "status": "development_only_partition",
+  "approved_by": "Jason 2026-10-26 (SC-FUT-0001 prefreeze defaults, Data row)",
+  "created_utc": "2026-10-26T05:28:29+00:00",
+  "first_locked_trade_date": "2025-01-01",
+  "cutoff_exclusive_utc": "2024-12-31T23:00:00+00:00",
+  "cutoff_rule": "Globex open (17:00 America/Chicago) of the first locked trade date",
+  "source_dir": "C:\\Users\\jason\\OneDrive\\Desktop\\Quant\\data\\databento\\rc_2026-10-22",
+  "output_dir": "C:\\Users\\jason\\OneDrive\\Desktop\\Quant\\data\\databento\\dev_2019-05-01_2024-12-31",
+  "source_sha256": {
+    "glbx-mdp3_ohlcv-1m_MES-MNQ-FUT_20190501-20261022.dbn.zst": "28d7a629a24c19053f0629945aba7feffd534d2c9f6041e045a1ed5c69655e74",
+    "glbx-mdp3_ohlcv-1d_MES-MNQ-FUT_20190501-20261022.dbn.zst": "027c3a3a05caae629d7281643f005e0a0fd4f7249a0c07ca3228ca4b64d2a44a"
+  },
+  "ohlcv": [
+    {
+      "source": "glbx-mdp3_ohlcv-1m_MES-MNQ-FUT_20190501-20261022.dbn.zst",
+      "output": "glbx-mdp3_ohlcv-1m_MES-MNQ-FUT_20190501-dev.dbn.zst",
+      "schema": "ohlcv-1m",
+      "records_written": 5727350,
+      "first_ts_event": "2019-05-05T22:00:00+00:00",
+      "last_ts_event": "2024-12-31T21:59:00+00:00",
+      "reached_cutoff": true,
+      "output_sha256": "75cd9d6ac3a50970cba29fd62fb6f51ed557d004ad4c1e2071909e7fa1706fa5"
+    },
+    {
+      "source": "glbx-mdp3_ohlcv-1d_MES-MNQ-FUT_20190501-20261022.dbn.zst",
+      "output": "glbx-mdp3_ohlcv-1d_MES-MNQ-FUT_20190501-dev.dbn.zst",
+      "schema": "ohlcv-1d",
+      "records_written": 14994,
+      "first_ts_event": "2019-05-05T00:00:00+00:00",
+      "last_ts_event": "2024-12-31T00:00:00+00:00",
+      "reached_cutoff": true,
+      "output_sha256": "df5e736c4e45213576f062bb7a6c4c38f7ecd82845dd75bb7bf74fe2ea0e035e"
+    }
+  ],
+  "definitions": [
+    {
+      "file": "def_2019.dbn.zst",
+      "sha256": "5bf4523a074d88937a81dcd66f22887b8804d489712a7c0e0855c04a8ea548f1"
+    },
+    {
+      "file": "def_202001.dbn.zst",
+      "sha256": "d8922482600991655e61e67cfe369dcb27f2706189efe9814dad58e12f97704b"
+    },
+    {
+      "file": "def_202004.dbn.zst",
+      "sha256": "f5dabac860568d97be0fdabde54eeb26e77c89882dd87cc6ed023cf762df7a3d"
+    },
+    {
+      "file": "def_202007.dbn.zst",
+      "sha256": "486d284e8210542c6028ce1242a867487bee04ad84cfb0a1f5332622b35c329a"
+    },
+    {
+      "file": "def_202010.dbn.zst",
+      "sha256": "74f87b0ef34955bb1af5aca74b1de88c2a99812a5e702b4fde9bf46308c44e8a"
+    },
+    {
+      "file": "def_202101.dbn.zst",
+      "sha256": "57803248b157f70e026271497513a6b23c1b1d1831be5447550afbb835b0c10d"
+    },
+    {
+      "file": "def_202104.dbn.zst",
+      "sha256": "25ea34c777f0fe1ccbafd80acbe7161ec041d5880a948b6065a262ca319793c0"
+    },
+    {
+      "file": "def_202107.dbn.zst",
+      "sha256": "e07f6311dcf6c22220b546a4b0adb25ac80a9a99dbb64bf1b4c471dd9ee1a154"
+    },
+    {
+      "file": "def_202110.dbn.zst",
+      "sha256": "0b0ca80b9f84bdffe80c66b616fd889aea3d07163c6c7b303bfe03094c15d182"
+    },
+    {
+      "file": "def_202201.dbn.zst",
+      "sha256": "95cb6f52f7fd44dd66007637caabd0944017fd85f2f908ae940ea20315417d45"
+    },
+    {
+      "file": "def_202204.dbn.zst",
+      "sha256": "cf70dc9c287e309bc419cd23a1c07f4be2f8bab5b0c5566f823357bc3889ecde"
+    },
+    {
+      "file": "def_202207.dbn.zst",
+      "sha256": "0f980e656dc15f614676b8f9d90e738701663f2380a0315ce6e17800e83f0619"
+    },
+    {
+      "file": "def_202210.dbn.zst",
+      "sha256": "1ce305b08123f91d13b996f9693cc6811806fad8ef24c40e5712ae55fa5704a0"
+    },
+    {
+      "file": "def_202301.dbn.zst",
+      "sha256": "884dfaba45a47daea9d8ebb72b795751008d8d31915d17440317f918c744a90f"
+    },
+    {
+      "file": "def_202304.dbn.zst",
+      "sha256": "b2bedc5a6ecb9ed9817743a6ca30d01f9419e83b6d328d50c735ba122a36f037"
+    },
+    {
+      "file": "def_202307.dbn.zst",
+      "sha256": "d224278fa194be82487da752ca9795dfaca56986c54cbb35c44e79c2548d484f"
+    },
+    {
+      "file": "def_202310.dbn.zst",
+      "sha256": "7e601fec380adef91a4c390cb07da987b854ee5908ac77b6236d8e21ac88f1d2"
+    },
+    {
+      "file": "def_202401.dbn.zst",
+      "sha256": "4984f43245cdeb3163cbf775d5f06597320a03256025aa614c367f060bc22156"
+    },
+    {
+      "file": "def_202404.dbn.zst",
+      "sha256": "f24f9559959dfec0d2852f9d304f117a7d3a3ad21c24de5478aa0ad0f8ad47c6"
+    },
+    {
+      "file": "def_202407.dbn.zst",
+      "sha256": "0642450c985d3e79121fac50d8063ade83e7c3e82ba434a8b06d044b4071d94c"
+    },
+    {
+      "file": "def_202410.dbn.zst",
+      "sha256": "cec63493b324dca9ee80b15c40ed2a114c85d275bb7209fc8d9251207c53aeac"
+    }
+  ],
+  "locked_access": "stopped at first record with ts_event >= cutoff; only its timestamp was read; no locked record written or printed",
+  "excluded": "statistics schema (not time-ordered by ts_event; not needed under approved last-trade close)"
+}

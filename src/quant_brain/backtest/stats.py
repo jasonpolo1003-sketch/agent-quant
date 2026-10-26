@@ -51,21 +51,39 @@ def _biased_moments(x: np.ndarray) -> tuple[float, float]:
 
 
 def deflated_sharpe(returns: Sequence[float], trial_sharpes: Sequence[float]) -> dict[str, Any]:
-    x = np.asarray(returns, dtype=float)
-    sr = sharpe_per_period(x)
     n = len(trial_sharpes)
     variance = float(np.var(np.asarray(trial_sharpes, dtype=float), ddof=1)) if n > 1 else 0.0
+    return deflated_sharpe_n(returns, n, variance)
+
+
+def deflated_sharpe_n(returns: Sequence[float], n: int, variance: float) -> dict[str, Any]:
+    """DSR for `n` trials whose Sharpe ratios have the given cross-trial variance."""
+    x = np.asarray(returns, dtype=float)
+    sr = sharpe_per_period(x)
     normal = NormalDist()
-    sr_star = 0.0 if variance == 0 else math.sqrt(variance) * (
-        (1 - EULER_GAMMA) * normal.inv_cdf(1 - 1 / n)
-        + EULER_GAMMA * normal.inv_cdf(1 - 1 / (n * math.e))
+    sr_star = (
+        0.0
+        if variance == 0 or n < 2
+        else math.sqrt(variance)
+        * (
+            (1 - EULER_GAMMA) * normal.inv_cdf(1 - 1 / n)
+            + EULER_GAMMA * normal.inv_cdf(1 - 1 / (n * math.e))
+        )
     )
     skew, kurt = _biased_moments(x)
     t = len(x)
     denominator = math.sqrt(1 - skew * sr + ((kurt - 1) / 4) * sr**2)
     dsr = normal.cdf((sr - sr_star) * math.sqrt(t - 1) / denominator)
-    return {"dsr": dsr, "sr": sr, "sr_star": sr_star, "variance": variance, "n_trials": n,
-            "t": t, "skew": skew, "kurtosis": kurt}
+    return {
+        "dsr": dsr,
+        "sr": sr,
+        "sr_star": sr_star,
+        "variance": variance,
+        "n_trials": n,
+        "t": t,
+        "skew": skew,
+        "kurtosis": kurt,
+    }
 
 
 def percentile_strictly_below(values: Sequence[float], x: float) -> float | None:

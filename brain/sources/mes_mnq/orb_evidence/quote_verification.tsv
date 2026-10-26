@@ -1,0 +1,42 @@
+id	file	quote
+M1	orb/mesfin_2026_mnq_falsification.txt	the Opening Range Breakout long at a 15-bar hold (net +2.82 points, T = 0.88 on net returns) fails the T-statistic and year-stability gates
+M2	orb/mesfin_2026_mnq_falsification.txt	regular trading hours only (RTH, 09:30–16:00 ET), December 2021 through August 2025. After removing partial sessions and zero-volume bars, 947 complete trading days remain. Source is NinjaTrader
+M3	orb/mesfin_2026_mnq_falsification.txt	the continuous contract uses simple quarterly file concatenation with no roll adjustment
+M4	orb/mesfin_2026_mnq_falsification.txt	For MNQ: 2.0 points ($4.00 per micro contract), covering bid-ask spread, NinjaTrader exchange fees, and conservative slippage
+M5	orb/mesfin_2026_mnq_falsification.txt	The opening range (OR) is defined as 09:30–09:55 ET — the first six five-minute bars.
+M6	orb/mesfin_2026_mnq_falsification.txt	ORB long at bar+15 produces T = 0.88 on 447 OOS trades, mean net +2.82 points.
+M7	orb/mesfin_2026_mnq_falsification.txt	Parameters are selected exclusively on training data.
+Z1	orb/zarattini_aziz_2023_orb_qqq.txt	we took a bullish position starting from the second candle’s opening price.
+Z2	orb/zarattini_aziz_2023_orb_qqq.txt	We assumed a starting capital of $25,000, a maximum leverage of 4x, and a commission of $0.0005/share traded.
+Z3	orb/zarattini_aziz_2023_orb_qqq.txt	We assumed no slippage in fills.
+Z4	orb/zarattini_aziz_2023_orb_qqq.txt	Profit target 10R or EoD Whichever happens first.
+Z5	orb/zarattini_aziz_2023_orb_qqq.txt	the day trading portfo- lio produced an annualized alpha of 33% (net of commissions)
+Z6	orb/zarattini_aziz_2023_orb_qqq.txt	January 1, 2016 to February 17, 2023
+T1	orb/tsai_torb_index_futures.txt	We test ORB strategies on the index futures of DJIA, Open Range Breakout (ORB) [8] is a commonly used S&P, NASDAQ, HIS, and TAIEX from 2003 to 2013.
+T2	orb/tsai_torb_index_futures.txt	we find that our ORB strategies in each futures markets achieve over 10% annual
+T3	orb/tsai_torb_index_futures.txt	subperiods from 2003 to 2007 and from 2007 to 2013
+L1	orb/lundstrom_volatility_states.txt	of around 150 basis points per day for the S&P 500
+L2	orb/lundstrom_volatility_states.txt	assuming that traders can trade at continuous asset prices to a trading cost equal
+L3	orb/lundstrom_volatility_states.txt	When splitting the data series into smaller time periods, HLL (2013) find significantly positive returns only in the last time period
+H1	orb/holmberg_2013_ideas.txt	find that our ORB trading strategy result in significantly higher returns than zero as well as an increased success rate in relation to a fair game
+C1	orb/cemarketsolutions_nq_orb_lead.txt	30 versions were clearly positive in-sample and none of those 30 stayed clearly positive out-of-sample
+C2	orb/cemarketsolutions_nq_orb_lead.txt	Control: a random direction (seed 7) at every E1 entry, same price and time.
+F1	orb/fetna_2026_orb_225cell.txt	Opening-Range Breakout Does Not Survive Trading Costs:
+F2	orb/fetna_2026_orb_225cell.txt	equity indices NQ, ES, RTY, YM; metals GC, SI, HG; energy CL, NG.
+F3	orb/fetna_2026_orb_225cell.txt	Prices are continuous-contract series; bars are labelled by their opening minute (East
+F4	orb/fetna_2026_orb_225cell.txt	All profit-and-loss figures assume one contract throughout
+F5	orb/fetna_2026_orb_225cell.txt	a confirmation window (2018-01-01 to 2024-12-31), on which all verdicts are read;
+F6	orb/fetna_2026_orb_225cell.txt	Opening-range lengths N ∈ {5, 15, 30, 60} minutes
+F7	orb/fetna_2026_orb_225cell.txt	filled at the next one-minute open; one trade per session per side; no re-entry after a stop; no trade if both sides break on the same bar.
+F8	orb/fetna_2026_orb_225cell.txt	when both are touched within the same bar, the stop is assumed to fill first (worst case)
+F9	orb/fetna_2026_orb_225cell.txt	Every result is reported gross, at $10 per round-trip, and at $25 per round-trip — the headline figure.
+F10	orb/fetna_2026_orb_225cell.txt	No cell is POSITIVE. Of 225 cells: 0 POSITIVE, 28 NEGATIVE with power
+F11	orb/fetna_2026_orb_225cell.txt	Friction is the entire story: the median gross edge across cells is −0.01 ticks per trade
+F12	orb/fetna_2026_orb_225cell.txt	The equity index NQ is the only instrument whose grid is net positive af
+F13	orb/fetna_2026_orb_225cell.txt	none of its cells clears the verdict bar (best t = 1.56, with a sign disagreement on 2010–2017).
+F14	orb/fetna_2026_orb_225cell.txt	NQ Globex 60-minute R1, $72.7 per trade after costs — fails it:
+F15	orb/fetna_2026_orb_225cell.txt	NQ cash 15-minute R2: $87/trade in the top tercile versus $5 in the middle
+F16	orb/fetna_2026_orb_225cell.txt	The median minimum detectable effect across the grid is $51 per trade
+F17	orb/fetna_2026_orb_225cell.txt	Continuous-contract roll days remain inside the trade books
+F18	orb/fetna_2026_orb_225cell.txt	Losses shrink monotonically as the range widens
+F20	orb/fetna_2026_orb_225cell.txt	the practitioner “50%-of-range” target is the worst

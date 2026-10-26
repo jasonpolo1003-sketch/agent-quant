@@ -1,0 +1,2 @@
+ts_event,symbol,root,open,high,low,close,volume,flag
+2020-03-16 13:45:00+00:00,MESM0,MES,2448.0,2448.0,2345.0,2345.0,1730,front_jump_gt5pct

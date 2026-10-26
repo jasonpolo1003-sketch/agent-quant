@@ -1,0 +1,30 @@
+id	file	quote
+E1	economic_events/bls_sched_cpi.txt	October 2026 Nov. 10, 2026 08:30 AM
+E2	economic_events/bls_lapse_revised.txt	BLS will announce revised news release dates on this page as they become available.
+E3	economic_events/bls_lapse_revised.txt	Consumer Price Index October 2025 Thursday, November 13, 2025 Canceled
+E4	economic_events/bls_lapse_revised.txt	Employment Situation November 2025 Friday, December 5, 2025 Tuesday, December 16, 2025 8:30 AM ET
+E5	economic_events/bls_lapse_revised.txt	Consumer Price Index January 2026 Wednesday, February 11, 2026 Friday, February 13, 2026 8:30 AM ET
+E6	economic_events/bls_cpi_sep2025_resched.txt	BLS will publish the September 2025 Consumer Price Index (CPI) on Friday, October 24, 2025, at 8:30 A.M. Eastern Time.
+E7	economic_events/bls_cpi_shutdown_faq.txt	Federal government agencies were shut down or operating at reduced staffing levels during a lapse in appropriations from October 1, 2025, through November 12, 2025.
+E8	economic_events/bls_monthly/bls_2025_12.txt	Please note that due to the lapse in government services, release dates are subject to change.
+E9	economic_events/fed_monetary20260916a.txt	For release at 2:00 p.m. EDT
+E10	economic_events/fed_fomc_calendars.txt	Minutes: PDF | HTML (Released October 07, 2026)
+E11	economic_events/fed_fomc_hist_2020.txt	March 17-18 (cancelled) Meeting - 2020
+E12	economic_events/fed_fomc_hist_2020.txt	March 2 (unscheduled) Meeting - 2020 Statement (Released March 3, 2020)
+E13	venue/ts_risk_adjust_hv.txt	Ahead of Tier 1 News Events (for example, CPI, FOMC, NFP, PPI), Topstep temporarily restricts new opening positions on equity index products and metals in SIM to protect Traders from extreme volatility.
+E14	venue/ts_risk_adjust_hv.txt	No new opening transactions permitted during the 10-minute window surrounding the release (5 minutes before, 5 minutes after).
+E15	venue/ts_risk_adjust_hv.txt	Opening transactions limited to 1, 3, 6, 9, and 15 contracts for the $25K, $50K, $100K, $150K, and $250K account sizes, respectively, during the window
+E16	venue/ts_risk_adjust_hv.txt	Pending orders are not open positions. They will not fill during the 10-minute window, and new pending orders intended to execute during this timeframe cannot be placed.
+E17	venue/ts_risk_adjust_hv.txt	How you'll be alerted: we'll email you and you'll see a banner at the top of the platform
+E18	economic_events/cme_holiday.txt	Trading hours are subject to change and are in U.S. Central Time unless otherwise stated.
+E19	economic_events/cme_holiday.txt	Please note that with the 2026 and 2027 calendar year the CME Group will be providing downloadable holiday calendars for Globex
+E20	economic_events/census_calendar.txt	U.S. International Trade in Goods and Services January 7, 2027 8:30 AM November 2026
+E21	economic_events/dol_ui_claims.txt	8:30 A.M. (Eastern) Thursday, October 22, 2026
+E22	economic_events/bea_schedule.txt	October 29 8:30 AM N ews GDP (Advance Estimate), 3rd Quarter 2026
+E23	economic_events/wayback/bls_cpi_sched_wb2025-09.txt	September 2025 Oct. 15, 2025 08:30 AM
+E24	economic_events/wayback/bls_cpi_sched_wb2025-09.txt	October 2025 Nov. 13, 2025 08:30 AM
+E25	economic_events/wayback/bls_empsit_sched_wb2025-09.txt	September 2025 Oct. 03, 2025 08:30 AM
+E26	economic_events/wayback/bls_ppi_sched_wb2025-09.txt	September 2025 Oct. 16, 2025 08:30 AM
+E27	economic_events/wayback/bls_cpi_sched_wb2025-01.txt	January 2025 Feb. 12, 2025 08:30 AM
+E28	economic_events/wayback/bls_cpi_sched_wb2026-01.txt	November 2025 Dec. 18, 2025 08:30 AM
+E29	economic_events/wayback/fed_fomccal_wb2025-01.txt	2026 FOMC Meetings

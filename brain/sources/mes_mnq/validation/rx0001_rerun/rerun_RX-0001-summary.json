@@ -1,0 +1,26 @@
+{
+  "pbo": {
+    "next_open": {
+      "pbo": 0.6973581973581974,
+      "n_splits": 12870,
+      "S": 16,
+      "N": 24,
+      "logit_median": -0.4054651081081643
+    },
+    "same_close": {
+      "pbo": 0.6470862470862471,
+      "n_splits": 12870,
+      "S": 16,
+      "N": 24,
+      "logit_median": -0.2411620568168881
+    }
+  },
+  "n_configs": 192,
+  "sc0002_trials_counted_in_strict_dsr": 86,
+  "datasets": {
+    "SPY": "SPY-1d-tiingo-20261022T025225Z-b1fe5d43",
+    "QQQ": "QQQ-1d-tiingo-20261022T025225Z-897e8d48",
+    "IWM": "IWM-1d-tiingo-20261022T025225Z-b2ce5a4e"
+  },
+  "split": "2015-01-01"
+}

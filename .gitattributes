@@ -43,3 +43,10 @@ brain/03_Strategy_Cards/freeze_ledger.json -text
 
 # Backtest trial ledgers and reports: byte-exact (the ledger is append-only and gates the held-out read).
 brain/04_Backtest_Reports/** -text
+
+# Hash-pinned SC-FUT-0001 freeze inputs: never convert line endings.
+brain/_system/futures/** -text
+brain/05_Reviews/SC-FUT-0001-*.md -text
+brain/sources/mes_mnq/execution_costs/execution_costs_mes_mnq.md -text
+brain/sources/mes_mnq/contracts/roll_calendar_2019_2026.csv -text
+uv.lock -text

@@ -1,0 +1,36 @@
+id	file	quote
+B1	costs/cme_wiki_order_types.txt	A stop order with protection is activated when the market trades at or through the stop trigger price and can only be executed within the protection range limit.
+B2	costs/cme_wiki_order_types.txt	There are two types of Stop order: the Stop-Limit, which goes on the book as a Limit order when activated, and the Stop with Protection, which goes on the book as a Market order.
+B3	costs/cme_wiki_order_types.txt	Stop-limit orders are activated when an order's trigger price is traded in the market.
+B4	costs/cme_wiki_order_types.txt	CME Globex places the remaining quantity on the order book at a protection price limit of 90625.
+B5	costs/cme_wiki_order_types.txt	During the Continuous market state, a Buy stop order must be > last trade price and a Sell stop order must be < last trade price.
+B6	costs/cme_velocity_logic.txt	the instrument is placed in reserved state for a predetermined amount of time.
+B7	costs/cme_us_equity_price_limits_faq.txt	a two-minute trading halt occurs for the primary futures contract and all associated futures and options with price limits expanding to Level 2 (13%).
+B8	costs/cme_us_equity_price_limits_faq.txt	Trading of products tied to S&P 500, Nasdaq 100, Dow Jones Industrial Average, and Russell 2000 indices will resume 10 minutes after the regulatory halt commenced.
+B9	venue/ts_hours_products.txt	All positions must be closed by 3:10 PM CT each weekday
+B10	venue/ts_hours_products.txt	Avoid opening new positions after 3:08 PM CT — Risk Managers begin flattening at that time
+B11	fill_models/tradingview_strategies.txt	If the opening price of a bar is closer to the high than it is to the low, the emulator assumes that the market price moved in this order: open → high → low → close .
+B12	fill_models/tradingview_strategies.txt	the emulator assumes that no gaps exist inside each chart bar; it considers any price within the bar’s range as a valid level for filling pending orders.
+B13	fill_models/tradingview_strategies.txt	the emulator fills the order at the opening price of the bar following the gap.
+B14	fill_models/tradingview_strategies.txt	the broker emulator retrieves open, high, low, and close prices from the bars on a suitable lower timeframe
+B15	fill_models/ninjatrader_hist_fill.txt	The Standard order fill resolution uses an algorithm to break each historical bar into three virtual bars to mimic the movement of price within each bar's timeframe.
+B16	fill_models/ninjatrader_hist_fill.txt	Selecting order fill resolution of " High " will allow you to set a secondary bar series to be used as the price data to fill your orders
+B17	fill_models/ninjatrader_hist_fill.txt	you cannot have more slippage then the high/low price of the next bar
+B18	fill_models/quantconnect_fill_futures.txt	TradeBar Buy high price > stop price max(stop price, close price + slippage)
+B19	fill_models/quantconnect_fill_futures.txt	TradeBar Buy low price < limit price min(high price, limit price)
+B20	fill_models/quantconnect_fill_futures.txt	The model only fills stop market orders when the exchange is open.
+B21	fill_models/quantconnect_fill_key.txt	In backtests, the pre-built fill models assume orders completely fill.
+B22	fill_models/backtrader_exec.txt	If the open price of the bar is above the stop price the order is executed immediately with the open price.
+B23	fill_models/backtrader_exec.txt	If the open price has not penetrated below the limit price but the low price is below the limit price, then the limit price has been seen during the session and the order can be executed
+B24	fill_models/backtrader_slippage.txt	slip_match has a default of True and that means that backtrader offers a match, be it with capped or uncapped prices
+B25	orb/fetna_2026_orb_225cell.txt	within the same bar, the stop is assumed to fill first (worst case); when a bar gaps
+B26	orb/fetna_2026_orb_225cell.txt	no trade if both sides break on the same bar
+B27	orb/cemarketsolutions_nq_orb_lead.txt	Every decision uses only bars that have closed.
+B28	fill_models/mc_intrabar_price_movement_assumptions.txt	If the opening price is closer to the high of the bar than to the low, the intra-bar price movement is assumed to be in the order of Open-High-Low-Close.
+B29	fill_models/mc_intrabar_price_movement_assumptions.txt	If the opening price is closer to the low of the bar than to the high, or if the opening price is exactly in between the high and the low of the bar, the intra-bar price movement is assumed to be in the order of Open-Low-High-Close.
+B30	fill_models/mc_limit_order_exec_assumptions.txt	Backtesting Assumptions is set to Fill limit order when trade price goes beyond limit price by 3 points
+B31	fill_models/mc_price_movement_emulation_4_6_7.txt	In Bar Magnifier mode, it is considered that there are no ticks between the detailed resolution ticks.
+B32	fill_models/mc_precise_backtesting.txt	MultiCharts will use the ask data series to fill buy market, buy stop and buy limit orders.
+B33	fill_models/ninjatrader_isfilllimitontouch.txt	The default behavior of the strategy's fill algorithm is to fill a limit order once price has penetrated the limit price.
+B34	fill_models/ninjatrader_isfilllimitontouch.txt	the strategy's fill algorithm will consider a limit order filled once price has reached the limit price, but does not necessarily need to trade through the limit price
+B35	fill_models/ninjatrader_isfilllimitontouch.txt	Default is set to false

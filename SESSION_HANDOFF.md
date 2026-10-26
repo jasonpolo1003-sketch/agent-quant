@@ -1,5 +1,100 @@
 # Quant Agent Brain — Session Handoff
 
+## UI: PR #13 redesign restored as the main UI (2026-10-26)
+
+- Jason prefers the PR #13 data-terminal UI. It was merged back onto `testing` (`1e5f46b`) from tag `archive/2026-10-26/cursor-interactive-base-ui-d89c`, keeping its app.js/app.css and re-adding the Study tab. 1,004 tests pass. Serve with `.venv/Scripts/python.exe scripts/serve_terminal.py --root . --port 8765`.
+- Jason still found the UI hard to understand, so it now opens on **Home** with three plain answers (Where we are / Needs you / What we learned). The top bar is Home · Study · Chart · Learn; everything else is under **More**. Code: `src/quant_brain/ui/home.py`, `RENDER.home`.
+- **Agents: keep `brain/_system/needs_you.json` current.** Add decisions waiting on Jason (title, why, recommendation, action) and mark them `"done": true` when settled. Ledger-derivable decisions (final exam vs close) appear automatically.
+- UI code is under `src/quant_brain`, so any held-out read now needs a fresh development re-run first (code-unchanged gate).
+
+## SC-FUT-0001 practice run: NOT DEMONSTRATED; study page built (2026-10-26)
+
+- Jason confirmed interpretations A/B and authorized the development run (ledger). The run committed as `9b1fea3`.
+- **MNQ 2019–2023** (1,157 evaluable days, 1,664 trades): **$3.11/day** absolute at L3 against the $15 floor; +$5.28/day vs random entries, **p = 0.114**. Joint power is 86% at +$20/day, so this is an adequately powered negative.
+  - Missing-minute share 0.17%; same-bar share 1.7%; the verdict holds under the stress bound.
+  - By year: 2019 −$1.45, 2020 +$0.48, 2021 +$1.95, 2022 +$9.87, 2023 +$2.93.
+  - Cost ladder: L1 $5.27, L4 $0.24. DSR: N=1 0.74, N=25 0.11.
+- **2024 diagnostic:** $1.99/day, p = 0.43. **MES:** −$5.28/day.
+- The held-out read is **not** done. The gate would allow it after `held_out_authorized`, but whether to spend it is Jason's decision.
+- **Study page** (`#study`; `src/quant_brain/ui/study.py`, `RENDER.study` in `ui/static/app.js`):
+  - honesty trail, verdict meters and alarm chips;
+  - strategy-vs-luck equity with the 5–95% band of the 500 draws, and the luck histogram;
+  - by-year and cost-ladder tables;
+  - 1-minute day replay, which refuses locked-period dates.
+- The runner now saves `*.draws.npy`. The development run was re-executed at `6fcc129`; report and CSVs are byte-identical (`183f8fe`). The first replay takes ~15 s to load the minute file (cached after).
+- Verification: 1,002 passed, 2 skipped; Ruff clean. The browser extension wasn't connected, so the page was checked via its API only, not visually.
+
+## SC-FUT-0001 Step 2 built and reviewed (2026-10-26; no real P&L)
+
+- Plan: `brain/_system/plan/phase_b_sc_fut_0001_engine.md` (approved). Fixtures were committed before the engine (`2bdbbbc`). Modules in `src/quant_brain/futures/`:
+  - `orb.py`: engine;
+  - `orb_reference.py`: independent reference;
+  - `controls.py`: 500 seeded draws;
+  - `bars.py`: loader;
+  - `inference.py`: test, floor, alarms, power, DSR, Politis–White;
+  - `runner.py` + `scripts/run_sc_fut_0001.py`: gates, ledger, reports.
+- Verification:
+  - the engine and the reference agree on all fixtures and on 12,000 random days;
+  - the loader reproduces the audit's minute counts on all 1,428 MNQ sessions;
+  - mutation check: 16/17 mutants caught, and the survivor (SIGNAL_START 08:44) is equivalent;
+  - full suite **997 passed, 2 skipped**; Ruff clean.
+- An independent review (fresh agent, read-only) found 5 should-fix defects, all fixed with regression tests in `55adc2d`:
+  - a gap running to the flatten is now non-evaluable;
+  - a day is non-pairable if any control draw is non-evaluable (the old behaviour biased results toward a pass);
+  - no cash-window bars → ineligible;
+  - the stress bound is never kinder than the primary;
+  - DSR variance no longer silently 0;
+  - the dev-bars hash is checked;
+  - the loader sorts bars and rejects duplicate minutes.
+- Accepted limitation: the gates are honor-system. The ledger is an editable file, `--by Jason` is a string, and there is no lock against concurrent runs.
+- **Open for Jason before Step 3:** (A) a missing entry minute consumes that side (the engine's reading; the reviewer notes the spec could be read as re-arming); (B) the ATR close uses 15:00 CT, while the calendar's 16:00 is the Globex close.
+- `status` shows development BLOCKED only by the missing `development_authorized`. Step 3 needs Jason's explicit OK; then run `authorize development_authorized --by Jason` and `run --phase development`.
+
+## SC-FUT-0001 FROZEN (2026-10-26; Step 1 of the approved plan)
+
+- Jason approved the 5-step plan, the three audit decisions (12:15 CT early close / 12:12 exit; void range = $0 no-trade day for ORB and control; ATR window uses NYSE sessions only), DSR at N=1/25 as a diagnostic, and keeping prop-eval deferred. Recorded in `brain/05_Reviews/SC-FUT-0001-session-audit.md`.
+- Frozen spec: `brain/_system/futures/sc-fut-0001-spec.v1.json`, SHA-256 `e19f1907…30fb` after a same-day provenance-hash correction logged in `brain/04_Backtest_Reports/SC-FUT-0001.trials.jsonl` (freeze commit `bb71d2f`, correction `73d3571`; no rule changed). No nulls and no blockers; `execution_allowed: false`. Seeds: controls 20261026; bootstrap B=9999, seed 20261027.
+- Pinned inputs: dev partition manifest, `session-calendar.v1.csv` (1,880 NYSE sessions 2019-05-01..2026-10-21, with the 12:15 override), roll calendar, cost levels, `sc-fut-0001-prior-looks.md`, decision records, `uv.lock`. `.gitattributes` marks them `-text` so the hashes survive checkout. `tests/test_futures_frozen_spec.py` fails on any edit.
+- Not added to `brain/03_Strategy_Cards/freeze_ledger.json`: that ledger is the SC-0002 markdown-card schema, and its tests expect only SC-0001/0002.
+- Verification: 907 passed, 2 skipped; Ruff clean. No P&L computed.
+- **Next (Step 2):** build the minute-bar engine and the random-control generator to the frozen spec, gating on the spec hash. Test them on `simulator-handworked-fixtures.md` and synthetic bars, and write an independent reference implementation that must match trade-for-trade. Step 3 (dev replay) needs Jason's OK.
+
+## Repo cleanup and SC-FUT-0001 session audit (2026-10-26, later)
+
+- **Branches:** only `main` and `testing` remain (local and GitHub). Removed branches are kept as tags `archive/2026-10-26/*`; PR #13 (Cursor UI, unreviewed) was closed, tag `archive/2026-10-26/cursor-interactive-base-ui-d89c`. The `quant-agent-brain-ui` worktree was removed; its git-ignored `.hermes/` and `db/` are in `Desktop/Quant/_archive/`. The `quant-agent-brain-merge-fixes` worktree is now on `main`.
+- **PR #14** (`testing` → `main`) carries the futures work, the cockpit chart-resize fix, and the research notes. Raw copyrighted copies (PDFs, saved HTML, `source_files/`, YouTube transcripts) are git-ignored because the repo is public. The RX-0001 script is excluded from Ruff to stay byte-identical. **Merge awaits Jason**: auto mode refused to merge an unreviewed PR.
+- **Session audit** (outcome-blind; no prices or P&L): `brain/05_Reviews/SC-FUT-0001-session-audit.md`. MNQ has 1,154 dev and 252 diagnostic candidate days. Sessions with a live-window missing minute are 0.43% / 0.40%, below the 1% alarm. Gaps sit on fixed-roll days and the March 2020 halts. Calendars come from `pandas_market_calendars` 5.5.0 (cmegroup.com timed out); the library's 12:00 CT early close is overridden to **12:15 CT** (data plus CME's 2011 notice), pending Jason's confirmation.
+- Verification: **904 passed, 2 skipped**; Ruff clean.
+- Next: Jason confirms the 3 audit decisions (12:15 close; void range = $0 no-trade day; ATR window uses NYSE sessions) and merges PR #14. Then set seeds/hashes and freeze the spec.
+
+## SC-FUT-0001 defaults approved; dev-only data partition built (2026-10-26; no freeze or ORB P&L)
+
+- Jason approved all 13 pre-freeze defaults after a plain-language walkthrough; decisions are in `brain/05_Reviews/SC-FUT-0001-prefreeze-defaults.md` § "Jason's decisions (2026-10-26)". Key picks: 1% missing-stop alarm; matched random-entry control as primary; fixed mean-5 block bootstrap with Politis–White block length as sensitivity only; the lower-CI >$15 alternative rejected; 80% power at $20/day and the $15 floor is never lowered; opposite-side entry only after the exit bar; prop-eval deferred.
+- New `src/quant_brain/futures/dev_partition.py` + `scripts/split_dev_partition.py` (+ `tests/test_futures_dev_partition.py`). Dependencies added: `databento-dbn`, `zstandard`. The run verified source hashes, wrote `C:/Users/jason/OneDrive/Desktop/Quant/data/databento/dev_2019-05-01_2024-12-31/` (1m: 5,727,350 records, last 2024-12-31 21:59 UTC; 1d: 14,994; 21 pre-lock definition chunks), and stopped at the first record ≥ cutoff 2024-12-31 23:00 UTC (Globex open of trade date 2025-01-01). No locked record was written or printed. Manifest: `brain/_system/futures/dev-partition-manifest.json`. An independent re-decode confirmed every output record precedes the cutoff, timestamps are monotonic and metadata `end` equals the cutoff.
+- Verification: full suite **901 passed, 2 skipped**, Ruff clean.
+- Next: obtain official CME holiday/early-close calendars for 2019-05-01..2024-12-31; run the eligibility / missing-minute / ATR warm-up audit on the dev partition only; set seeds and hashes; freeze the spec. Development replay and the held-out read each still need separate authorization.
+
+## SC-FUT-0001 pre-freeze build (2026-10-25; no freeze or ORB P&L)
+
+- Jason authorized a pre-freeze build only. Card/spec now retain $15 net/MNQ/eligible day, lower one-sided CI >$15 as **unselected** alternative, missing live-stop minutes as non-observed adverse-extreme stress bounds, 14 prior dated-contract sessions with required closes, impossible simultaneous close double-break invariant, and positive stop-distance half-tick rounding up. Proposed missing-stop-gap alarm is >1% of eligible sessions OR >1% of executed trades, plus conclusion sensitivity, **pending Jason approval**.
+- One review list: `brain/05_Reviews/SC-FUT-0001-prefreeze-defaults.md`. Draft artifacts: `brain/_system/futures/{data-manifest-prefreeze,contract-map-manifest-prefreeze,session-calendar-audit-prefreeze,power-mde-prefreeze,trade-equity-record-draft,sc-fut-0001-spec.v0}.json`, `simulator-handworked-fixtures.md`, `PREFREEZE_SHA256SUMS`. Historical full-range OHLCV hashes are carried from a previously verified receipt, not rehashed; 21 pre-2025 definition chunks were rehashed. The calendar count is weekday-only upper bound; historical early closes/halts and chosen-contract missing-minute coverage are **not audited** because raw OHLCV mixes locked dates and no safe dev-only partition exists yet. No held-out data was decoded.
+- `src/quant_brain/futures/prefreeze_stats.py` + `tests/test_futures_prefreeze_stats.py` implement synthetic-only stationary paired-bootstrap plumbing. A null returns nonrejection and a planted +$15 paired difference is detected; this is not real strategy evidence or a frozen inference method. Conditional power worksheet proposes 80% at true $20/day and shows assumed σ/dependence sensitivities, but **empirical dev variance, eligible count and joint two-gate power remain unavailable without authorized frozen-rule dev outcomes**.
+- Verification: focused **43 passed, 1 skipped**, Ruff clean; full suite **896 passed, 2 skipped, 1 pre-existing Starlette deprecation warning**; diff checks clean. No ORB strategy P&L, empirical MDE, simulator probabilities, commit, held-out read, fee payment or trade. Next: Jason reviews remaining defaults and the >1% alarm; get a safe dev-only data isolation/official session and halt history; select statistical gate, exact eval rules, hashes and freeze separately before dev replay.
+
+## Freeze-review draft and eval diagnostic scoped (2026-10-25)
+
+- Jason supplied **$15/day net per MNQ per eligible session** (no-trade $0) and the pasted table of defaults; these are labeled engineering assumptions in `brain/03_Strategy_Cards/SC-FUT-0001-mnq-orb-falsification.md`. Source paper's after-cost result is negative; do not make an eval timeline depend on this rule.
+- New canonical **draft, not executable/frozen** spec: `brain/_system/futures/sc-fut-0001-spec.v0.json`. Freeze-review blocker packet: `brain/05_Reviews/SC-FUT-0001-freeze-review.md`. The user asked that a prop-eval simulator be added to **development stage**; the Git-ignored revised plan Stage 3, card and packet now scope paired stationary-block daily resampling at 1/2/3/5 MNQ. Venue-specific target, trailing DD, daily limit, reset, horizon and intraday marked equity are absent, so no pass/blow-up estimate is possible. A daily total cannot identify intraday loss-rule breaches.
+- No rule implementation, development or held-out strategy P&L, empirical MDE, eval simulation, fee payment, paper/live trading or freeze occurred. Source hashes and provenance, trial ledger, test algorithm/power and execution edge semantics still need review and approval. Held-out read remains separately gated.
+
+## Lean futures ORB plan and single-rule card draft (2026-10-25)
+
+- Jason approved revising the overbuilt futures plan to a spec-first, single-rule MNQ falsification path. The revised plan is `.hermes/plans/2026-10-25_175634-lean-orb-preregistration-revision.md` (Git-ignored); the older plan is superseded. A three-week preflight target is a scope checkpoint, never permission to waive causality or cost checks.
+- Jason explicitly approved **PROP-011** for this single-rule track: PBO is `not applicable`, not a pass. A selectable family still requires CSCV/PBO. Recorded in `brain/_system/plan/plan_change_proposals.md` and PLAN.md §10. Other safeguards remain: L3 costs, one locked held-out read, power/MDE, paired random anchors, full trial accounting, no MES rescue, no live trading.
+- Jason chose **draft for review, do not freeze or test** for Fetna's cash-open 15-minute R2 (10% prior 14-day ATR stop, no target). Draft: `brain/03_Strategy_Cards/SC-FUT-0001-mnq-orb-falsification.md`. It states sourced rules versus engineering assumptions and lists unresolved ATR, fill, sample, randomization, effect-size and statistical decisions. It is not a strategy approval or a machine-readable frozen spec.
+- The five existing futures kernel files remain staged and uncommitted on `feature/phase-b-futures-foundation`. This checkpoint changed only governance/docs and the draft card; **no market-data strategy calculations, P&L, held-out read, commit, paid purchase, or broker action** occurred. Focused kernel suite rerun: **39 passed, 1 skipped**; `git diff --check` and cached diff check clean; original Fetna PDF SHA-256 matched the research note.
+- Next: review the draft card and resolve its economic target, decision statistic, exact execution semantics, inherited-selection treatment and power method. Only then hash-commit the approved spec before expanding the engine. The real held-out run requires separate authorization.
+
 ## PROP-010 accepted; free-tier backend built (2026-09-29)
 
 - **Decision:** Jason said "let's create the free one first" and relaxed the process gates for this direction. The safety rules stand: no live trading or broker routing, no paid data without a decision, provenance on data, and SC-0002 stays closed.

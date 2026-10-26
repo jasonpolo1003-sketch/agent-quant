@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "dataset_id": "QQQ-1d-tiingo-20261022T025225Z-897e8d48",
+  "symbol": "QQQ",
+  "timeframe": "1d",
+  "provider": "tiingo",
+  "endpoint": "https://api.tiingo.com/tiingo/daily/QQQ/prices?startDate=1990-01-01&format=json",
+  "provider_meta": {
+    "name": "Invesco QQQ Trust Series 1",
+    "exchangeCode": "NASDAQ",
+    "startDate": "1999-03-10",
+    "endDate": "2026-10-21"
+  },
+  "downloaded_at": "2026-10-22T02:52:25.442491+00:00",
+  "path": "data/parquet/QQQ/QQQ-1d-tiingo-20261022T025225Z-897e8d48.parquet",
+  "raw_path": "data/raw/tiingo/QQQ-1d-tiingo-20261022T025225Z-897e8d48.json",
+  "csv_path": "data/raw/tiingo/QQQ-1d-tiingo-20261022T025225Z-897e8d48.csv",
+  "rows": 6948,
+  "first_date": "1999-03-10",
+  "last_date": "2026-10-21",
+  "columns": [
+    "date",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "adj_open",
+    "adj_high",
+    "adj_low",
+    "adj_close",
+    "adj_volume",
+    "div_cash",
+    "split_factor"
+  ],
+  "price_basis": "tiingo_as_traded_raw_plus_adjusted",
+  "price_basis_note": "open/high/low/close/volume are Tiingo raw as-traded prices (NOT split-adjusted); adj_* are Tiingo split-and-dividend adjusted; div_cash and split_factor are per-day corporate actions. A backtest must state which basis it executes on (use adj_* for returns).",
+  "date_note": "dates are exchange trading dates (US/Eastern); Tiingo returns T00:00:00Z which is the trading date, not a UTC instant",
+  "raw_sha256": "a3bf43845f55c7432f73be52858a8cda39fd82e50a361a5a832da2e4bc0f154f",
+  "file_sha256": "daba32166982dc9243954e1d04f31eedce08b9f4819206e0fb022bb86909fb94",
+  "csv_sha256": "14d932a8ff4a4510edd6c8db23fab686156a349df36e5420cb950d3d6c030f2e",
+  "checks": {
+    "duplicate_dates": 0,
+    "monotonic": true,
+    "nan_cells": 0,
+    "nonpositive_prices": 0,
+    "ohlc_inconsistent_rows": 0,
+    "calendar_gaps_gt4d": [
+      "2001-09-10->2001-09-17",
+      "2006-12-29->2007-01-03",
+      "2012-10-26->2012-10-31"
+    ],
+    "adj_factor_drift_nonevent_max": 4.4935166698678586e-12,
+    "adj_factor_drift_nonevent_gt1e-6": 0,
+    "adj_factor_event_max_rel_err": 7.248003783022056e-05,
+    "dividend_events": 89,
+    "split_events": [
+      "2000-03-20 x2.0"
+    ],
+    "adj_ohl_same_factor_max_abs_err": 4.920397422836231e-12,
+    "adj_close_moves_gt15pct": [
+      "2001-01-03"
+    ],
+    "xcheck_yfinance": {
+      "dataset": "QQQ-1d-yfinance-20260930T015409Z-3b97502a",
+      "overlap_rows": 6724,
+      "tiingo_only_dates_in_overlap_window": 0,
+      "split_adj_close_max_rel_diff": 0.012558041351400373,
+      "rows_close_diff_gt_0.1pct": 17,
+      "adj_return_max_abs_diff": 0.012718233343500751,
+      "rows_adj_return_diff_gt_0.1pct": 34,
+      "rows_adj_return_diff_gt_0.1pct_by_year": {
+        "2000": 10,
+        "2001": 6,
+        "2005": 2,
+        "2006": 2,
+        "2007": 7,
+        "2008": 2,
+        "2009": 2,
+        "2010": 1,
+        "2013": 1,
+        "2020": 1
+      },
+      "top_close_disagreements": [
+        {
+          "date": "2001-08-31",
+          "tiingo_close_splitadj": 36.17,
+          "yf_close": 36.63
+        },
+        {
+          "date": "2001-04-06",
+          "tiingo_close_splitadj": 36.3,
+          "yf_close": 35.95
+        },
+        {
+          "date": "2009-07-16",
+          "tiingo_close_splitadj": 37.01,
+          "yf_close": 37.36
+        },
+        {
+          "date": "2007-02-20",
+          "tiingo_close_splitadj": 44.68,
+          "yf_close": 45.05
+        },
+        {
+          "date": "2000-04-10",
+          "tiingo_close_splitadj": 99.5,
+          "yf_close": 100.125
+        }
+      ],
+      "sample": [
+        {
+          "date": "2000-01-03",
+          "close": 189.5,
+          "t_splitadj": 94.75,
+          "close_yf": 94.75,
+          "adj_close": 79.8594,
+          "adj_close_yf": 79.7566
+        },
+        {
+          "date": "2005-05-10",
+          "close": 35.766,
+          "t_splitadj": 35.766,
+          "close_yf": 35.77,
+          "adj_close": 30.4457,
+          "adj_close_yf": 30.41
+        },
+        {
+          "date": "2010-09-13",
+          "close": 47.25,
+          "t_splitadj": 47.25,
+          "close_yf": 47.25,
+          "adj_close": 41.1009,
+          "adj_close_yf": 41.1256
+        },
+        {
+          "date": "2016-01-14",
+          "close": 104.07,
+          "t_splitadj": 104.07,
+          "close_yf": 104.07,
+          "adj_close": 96.3307,
+          "adj_close_yf": 96.4666
+        },
+        {
+          "date": "2021-05-19",
+          "close": 322.59,
+          "t_splitadj": 322.59,
+          "close_yf": 322.59,
+          "adj_close": 312.4206,
+          "adj_close_yf": 312.3819
+        },
+        {
+          "date": "2026-09-28",
+          "close": 736.53,
+          "t_splitadj": 736.53,
+          "close_yf": 736.53,
+          "adj_close": 736.53,
+          "adj_close_yf": 736.53
+        }
+      ]
+    }
+  },
+  "problems": [],
+  "warnings": [
+    "calendar gaps >4 days: 2001-09-10->2001-09-17, 2006-12-29->2007-01-03, 2012-10-26->2012-10-31"
+  ],
+  "status": "unregistered (no price_datasets DB row written; not accepted by verify_market_data.py)",
+  "secret_handling": "API key read from box env file; not stored in repo or manifest"
+}

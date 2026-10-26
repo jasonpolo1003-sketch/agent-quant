@@ -3,10 +3,12 @@
 "use strict";
 
 const PAGES = [
+  { id: "home", label: "Home" },
   { id: "chart", label: "Chart" },
   { id: "today", label: "Today" },
   { id: "activity", label: "Activity" },
   { id: "strategies", label: "Lab" },
+  { id: "study", label: "Study" },
   { id: "risk", label: "Risk Center" },
   { id: "market", label: "Screener" },
   { id: "live", label: "Live Feed" },
@@ -83,9 +85,20 @@ function toast(text, kind = "") {
 function clearCharts() { while (charts.length) { try { charts.pop().remove(); } catch (e) { /* already gone */ } } }
 
 // ---------- navigation ----------
+// The bar shows the few pages that answer "what's going on"; the rest sit under More.
+const MAIN_TABS = ["home", "study", "chart", "learn"];
 function buildTabs() {
-  $("#tabs").innerHTML = PAGES.map((p) => `<button type="button" data-page="${p.id}">${p.label}</button>`).join("");
-  $("#tabs").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) go(b.dataset.page); });
+  const tab = (p) => `<button type="button" data-page="${p.id}">${p.label}</button>`;
+  const rest = PAGES.filter((p) => !MAIN_TABS.includes(p.id));
+  $("#tabs").innerHTML = MAIN_TABS.map((id) => tab(PAGES.find((p) => p.id === id))).join("")
+    + `<details class="tabs-more"><summary>More</summary><div class="tabs-more-menu">${rest.map(tab).join("")}</div></details>`;
+  $("#tabs").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    const menu = b.closest("details");
+    if (menu) menu.open = false;
+    go(b.dataset.page);
+  });
 }
 function paintTabs() {
   document.querySelectorAll("#tabs button").forEach((b) => {
@@ -103,7 +116,8 @@ function go(page, opts = {}) {
     clearInterval(state.liveTimer);
     state.liveTimer = null;
   }
-  if (!PAGES.some((p) => p.id === page)) page = "today";
+  if (page !== "today") stopBaseReplayTimer();
+  if (!PAGES.some((p) => p.id === page)) page = "home";
   state.page = page;
   if (page === "activity") state.unseen = 0;
   paintTabs();
@@ -114,6 +128,7 @@ function go(page, opts = {}) {
   const main = $("#page");
   main.innerHTML = `<p class="faint">Loading…</p>`;
   RENDER[page](main, opts).catch((e) => { main.innerHTML = `${head("Something went wrong")}<p class="error">${esc(e.message)}</p><p class="muted">Is the terminal server still running?</p>`; });
+  renderRoamingCompanion();
 }
 window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if (h !== state.page) go(h); });
 
@@ -270,12 +285,35 @@ const fileLink = (path, label) => `<a href="#" data-file="${esc(path)}">${esc(la
 
 const RENDER = {};
 
-// ---------- Today Cockpit ----------
+// ---------- Today Cockpit (Interactive Home Base & Visual Agent UI) ----------
+let baseReplayTimer = null;
+
+function stopBaseReplayTimer() {
+  if (baseReplayTimer) {
+    clearInterval(baseReplayTimer);
+    baseReplayTimer = null;
+  }
+}
+
 RENDER.today = async (main) => {
-  const [t, h] = await Promise.all([
+  stopBaseReplayTimer();
+
+  const [t, h, labData, snapData, calData, descRuns, replaysList, datasetsList] = await Promise.all([
     api("/api/today"),
-    api("/api/home").catch(() => ({ counts: {}, pipeline: [] }))
+    api("/api/home").catch(() => ({ counts: {}, pipeline: [], runs: [] })),
+    api("/api/lab").catch(() => ({ cards: [], backtests: [], reviews: [] })),
+    api("/api/market/snapshot").catch(() => ({ rows: [], missing: [], presets: [] })),
+    api("/api/market/calendar").catch(() => ({ events: [] })),
+    api("/api/runs/described?limit=8").catch(() => []),
+    api("/api/replays").catch(() => []),
+    api("/api/datasets").catch(() => []),
   ]);
+
+  const BotEngine = window.QBBots;
+  const botStyle = (() => {
+    try { return localStorage.getItem("qb-bot-style") || "droid"; } catch (_) { return "droid"; }
+  })();
+  let currentBotStyle = botStyle;
 
   const pipeline = (h.pipeline && h.pipeline.length) ? h.pipeline : (t.steps || []);
   const steps = pipeline.map((s, i) => `
@@ -296,180 +334,563 @@ RENDER.today = async (main) => {
     ? `<p>${status(t.health.status)} <span class="faint">${esc(ago(t.health.finished_at))}</span></p><p class="muted small">${esc(t.health.summary)}</p>`
     : `<p class="muted">Automated health checks ensure models and database connections remain valid.</p><button class="btn" data-go="setup">Set up checks</button>`;
 
+  // Dynamic Backtest & Strategy Summary from /api/lab
+  const activeCard = (labData.cards || []).find((c) => c.strategy_id === "SC-0002") || (labData.cards || [])[0] || null;
+  const activeReview = (labData.reviews || []).find((r) => r.strategy_id === (activeCard?.strategy_id || "SC-0002")) || (labData.reviews || [])[0] || null;
+  const ruleRuns = (labData.backtests || []).filter((b) => b.config && b.config.kind === "rule");
+  const bhRuns = (labData.backtests || []).filter((b) => b.config && b.config.kind === "buy_and_hold");
+
+  const pickBt = (phase, rule = "A", sym = "SPY", cost = 5) =>
+    ruleRuns.find((b) => b.config.phase === phase && String(b.config.rule) === rule && b.config.symbol === sym && Number(b.config.cost_bps) === cost)
+    || ruleRuns.find((b) => b.config.phase === phase)
+    || null;
+  const pickBh = (phase, sym = "SPY") =>
+    bhRuns.find((b) => b.config.phase === phase && b.config.symbol === sym) || null;
+
+  const isBt = pickBt("in_sample", "A", "SPY", 5);
+  const hoBt = pickBt("held_out", "A", "SPY", 5);
+  const isBh = pickBh("in_sample", "SPY");
+  const hoBh = pickBh("held_out", "SPY");
+
+  // Market movers & upcoming macro events for What's New Hub
+  const marketRows = Array.isArray(snapData?.rows) ? snapData.rows : [];
+  const oversoldRows = UIState.filterMarketRows(marketRows, "oversold_uptrend");
+  const topMovers = marketRows
+    .filter((r) => UIState.strictFiniteNumber(r.change_1d_pct) !== null)
+    .slice()
+    .sort((a, b) => Math.abs(Number(b.change_1d_pct)) - Math.abs(Number(a.change_1d_pct)))
+    .slice(0, 4);
+  const upcomingMacro = (calData?.events || []).slice(0, 4);
+
+  const totalTrials = (labData.backtests || []).length || h.counts?.backtests || 0;
+  const totalDatasets = h.counts?.price_datasets || marketRows.length || 0;
+  const totalSources = h.counts?.sources || 0;
+
   main.innerHTML = `
-    <!-- Cockpit Header with Bot Co-Pilot Pill -->
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; flex-wrap:wrap; gap:16px;">
+    <!-- Title Row -->
+    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
       <div>
-        <h1 style="margin:0 0 6px;">Quant Brain Command Cockpit</h1>
-        <p class="lead">Deterministic algorithmic research terminal. Held-out validation, DSR deflated Sharpe ratio, zero lookahead bias.</p>
+        <h1>Quant Brain Overview</h1>
+        <p class="lead">${esc(t.headline?.title || "SC-0002 finished all 5 steps")}: ${esc(t.headline?.detail || "Held-out DSR 0.896 vs 0.950 required gate. Next: " + (t.next || "backend decision"))}</p>
       </div>
-      <button id="today-bot-pill" type="button" class="box" style="padding:8px 14px; display:inline-flex; align-items:center; gap:10px; cursor:pointer; border-color:rgba(56, 189, 248, 0.3); background:var(--surface-2); border-radius:var(--radius-sm);" title="Click to cycle Quant Agent insights" aria-label="Show the next Quant Agent insight">
-        <span style="font-size:16px;">🤖</span>
-        <span class="mono small"><strong style="color:var(--accent);">Quant Agent:</strong> <span id="today-bot-msg">SC-0002 Gate Verified · 101 In-Sample Trades Loaded</span></span>
-      </button>
+      <div class="row" style="gap:8px;">
+        <button id="today-bot-pill" type="button" class="btn small" title="Cycle Quant Agent insights" aria-label="Show the next Quant Agent insight">
+          <span class="small"><strong>Agent Insight:</strong> <span id="today-bot-msg">SC-0002 Gate Verified · 101 In-Sample Trades Loaded</span></span>
+        </button>
+        <div class="seg" role="group" aria-label="Layout view mode">
+          <button id="cockpit-btn-split" type="button" aria-pressed="true">Split View</button>
+          <button id="cockpit-btn-feed" type="button" aria-pressed="false">Feed Focus</button>
+          <button id="cockpit-btn-chart" type="button" aria-pressed="false">Chart Focus</button>
+          <button id="cockpit-btn-strategy" type="button" aria-pressed="false">Base Focus</button>
+        </div>
+      </div>
     </div>
 
-    <!-- 5-Step Epistemic Research Pipeline -->
-    <section style="margin-bottom:24px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <h2 style="margin:0; font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;">Epistemic Research Pipeline</h2>
-        <span class="mono faint small">5 Phase Verification Gate</span>
+    <!-- Overall Summary KPI Strip (1px divided strip) -->
+    <section class="kpi-strip" aria-label="Project Summary Metrics">
+      <div class="kpi-cell">
+        <span class="kpi-label">Epistemic Stage</span>
+        <span class="kpi-val">5 / 5</span>
+        <span class="kpi-sub">Research to Review complete</span>
+      </div>
+      <div class="kpi-cell">
+        <span class="kpi-label">Active Strategy Verdict</span>
+        <span class="kpi-val bad">${esc((activeReview?.verdict || "Reject").toUpperCase())}</span>
+        <span class="kpi-sub">SC-0002 · DSR 0.896 vs 0.950</span>
+      </div>
+      <div class="kpi-cell">
+        <span class="kpi-label">Backtest Trial Ledger</span>
+        <span class="kpi-val">${esc(totalTrials)}</span>
+        <span class="kpi-sub">101 in-sample · 91 held-out trades</span>
+      </div>
+      <div class="kpi-cell">
+        <span class="kpi-label">Verified Market Data</span>
+        <span class="kpi-val">${esc(totalDatasets)}</span>
+        <span class="kpi-sub">${esc(totalSources)} curated sources · ${esc(t.git?.branch || "main")}</span>
+      </div>
+      <div class="kpi-cell">
+        <span class="kpi-label">Live Coinbase BTC-USD</span>
+        <span class="kpi-val" id="today-btc-val">Price unavailable</span>
+        <span class="kpi-sub"><span class="live" id="today-coinbase-status" style="padding:1px 6px; font-size:11px;"><i></i><span>WAITING</span></span></span>
+      </div>
+    </section>
+
+    <!-- Simplified Obsidian & Plan Summary Hub (6 Plain-English Doors that open inline on this page) -->
+    <section id="hub-cards-section" aria-label="Simplified Project Summary Hub">
+      <div class="row" style="justify-content:space-between; margin-bottom:10px;">
+        <div>
+          <h2 style="margin:0;">Executive Summary &amp; Obsidian Brain Map</h2>
+          <p class="muted small" style="margin:2px 0 0;">Everything summed up in plain words. Click any button below to open that note or tool right here on the Main Page.</p>
+        </div>
+        <span class="badge small">Click any card to inspect inline</span>
+      </div>
+
+      <div class="hub-cards-grid">
+        <article class="hub-card" data-hub-card="plan">
+          <div class="hub-card-head">
+            <h3 class="hub-card-title">1. Master Plan &amp; Handoff</h3>
+            <span class="status done">5 / 5 Stages</span>
+          </div>
+          <p class="hub-card-summary">We built a 5-stage quant research harness. Phases 0-5, Gate C, Gate F (48 datasets), Strategy Card SC-0002, the 72-trial backtest, and the Adversarial Review are complete. Next: ${esc(clip(t.next || "PROP-010 Learning Terminal", 95))}</p>
+          <div class="hub-card-links">
+            <button type="button" class="btn small" data-inline-note="PLAN.md">Read PLAN.md</button>
+            <button type="button" class="btn small" data-inline-note="SESSION_HANDOFF.md">Read Handoff</button>
+            <button type="button" class="btn small" data-inline-note="brain/_system/plan/learning_terminal_plan.md">Learning Plan</button>
+          </div>
+        </article>
+
+        <article class="hub-card" data-hub-card="strategies">
+          <div class="hub-card-head">
+            <h3 class="hub-card-title">2. Strategy &amp; Backtest Lab</h3>
+            <span class="status failed">SC-0002 Rejected</span>
+          </div>
+          <p class="hub-card-summary">Connors RSI(2) &lt; 10 above 200-day SMA on SPY/QQQ/IWM. Earned +40.2% in-sample (101 trades) and +36.4% held-out (91 trades), which missed our 0.950 Deflated Sharpe gate (0.896) and Buy &amp; Hold (0.46 vs 0.89).</p>
+          <div class="hub-card-links">
+            <button type="button" class="btn small primary" data-inline-page="strategies">Open Lab Inline</button>
+            <button type="button" class="btn small" data-inline-note="brain/05_Reviews/SC-0002-adversarial-review.md">Review Note</button>
+            <button type="button" class="btn small" data-inline-note="brain/04_Backtest_Reports/SC-0002-held-out.md">Held-Out Report</button>
+            <button type="button" class="btn small" data-inline-note="brain/03_Strategy_Cards/SC-0002-rsi2-connors-spy.md">SC-0002 Card</button>
+          </div>
+        </article>
+
+        <article class="hub-card" data-hub-card="vault">
+          <div class="hub-card-head">
+            <h3 class="hub-card-title">3. Obsidian Vault &amp; Research</h3>
+            <span class="status accepted">${esc(totalSources)} Sources</span>
+          </div>
+          <p class="hub-card-summary">${esc(totalSources)} curated sources in 01_Sources (StockCharts RSI, TA-Lib, QuantConnect Look-Ahead &amp; Survivorship Bias) embedded in RAG. Scout RUN-871299ea31 validated all 5 sources across 15 windows.</p>
+          <div class="hub-card-links">
+            <button type="button" class="btn small primary" data-inline-note="brain/01_Sources/docs/SRC-1ea110cb46-stockcharts-chartschool-relative-strength-index-rsi.md">Browse Vault Notes</button>
+            <button type="button" class="btn small" data-inline-note="brain/01_Sources/docs/SRC-2830f8cd41-quantconnect-glossary-look-ahead-bias.md">Look-Ahead Note</button>
+            <button type="button" class="btn small" data-inline-note="brain/00_Inbox/Failed_Runs/RUN-871299ea31.md">RUN-871299ea31</button>
+          </div>
+        </article>
+
+        <article class="hub-card" data-hub-card="market">
+          <div class="hub-card-head">
+            <h3 class="hub-card-title">4. Market Screener &amp; Macro</h3>
+            <span class="status accepted">${esc(totalDatasets)} Datasets</span>
+          </div>
+          <p class="hub-card-summary">${esc(totalDatasets)} Gate F daily EOD datasets (2000-2026) with 5 quant screener presets (Oversold Uptrend, Near 52W High, Calm Volatility), official Federal Reserve FOMC dates, and live Coinbase BTC/ETH.</p>
+          <div class="hub-card-links">
+            <button type="button" class="btn small primary" data-inline-page="market">Open Screener &amp; FOMC Inline</button>
+            <button type="button" class="btn small" data-inline-page="live">Live Crypto Inline</button>
+            <button type="button" class="btn small" data-go="chart">Full Superchart</button>
+          </div>
+        </article>
+
+        <article class="hub-card" data-hub-card="risk">
+          <div class="hub-card-head">
+            <h3 class="hub-card-title">5. Risk Simulators &amp; Decisions</h3>
+            <span class="status completed">Paper Guard</span>
+          </div>
+          <p class="hub-card-summary">Calculate share size from stop-loss distance, compare Full vs Half-Kelly sizing, and run 2,000 Monte Carlo paths to see probability of ruin, plus read all PROP-001..010 and DEC-* decisions.</p>
+          <div class="hub-card-links">
+            <button type="button" class="btn small primary" data-inline-page="risk">Open Risk Center Inline</button>
+            <button type="button" class="btn small" data-inline-note="brain/_system/plan/plan_change_proposals.md">Proposals (PROP-001..010)</button>
+          </div>
+        </article>
+
+        <article class="hub-card" data-hub-card="learn">
+          <div class="hub-card-head">
+            <h3 class="hub-card-title">6. Agents, Automations &amp; Tutor</h3>
+            <span class="status completed">5 Agents</span>
+          </div>
+          <p class="hub-card-summary">5 specialist bots enforced by the harness, scheduled health/data jobs, and a NotebookLM-style AI Tutor that reads ticked vault files and cites exact [file:line] numbers.</p>
+          <div class="hub-card-links">
+            <button type="button" class="btn small primary" data-inline-page="learn">Open AI Tutor Inline</button>
+            <button type="button" class="btn small" data-inline-page="activity">Activity Inline</button>
+            <button type="button" class="btn small" data-inline-page="setup">Setup Inline</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Inline Main-Page Stage Switcher: Open any page or Obsidian note right here on the Main Page -->
+    <section class="box" id="main-inline-stage" style="margin-bottom:20px;">
+      <div class="inline-stage-bar">
+        <div class="seg" id="inline-stage-tabs" role="group" aria-label="Main page workspace view">
+          <button type="button" data-stage-tab="overview" aria-pressed="true">Feed, Base &amp; Replay Chart</button>
+          <button type="button" data-stage-tab="vault" aria-pressed="false">Obsidian Vault Reader</button>
+          <button type="button" data-stage-tab="strategies" aria-pressed="false">Strategy Lab</button>
+          <button type="button" data-stage-tab="market" aria-pressed="false">Screener &amp; FOMC</button>
+          <button type="button" data-stage-tab="risk" aria-pressed="false">Risk Center</button>
+          <button type="button" data-stage-tab="live" aria-pressed="false">Live Crypto</button>
+          <button type="button" data-stage-tab="activity" aria-pressed="false">Activity &amp; Runs</button>
+          <button type="button" data-stage-tab="learn" aria-pressed="false">AI Tutor</button>
+          <button type="button" data-stage-tab="setup" aria-pressed="false">Setup</button>
+        </div>
+        <span class="faint small" id="inline-stage-status">Viewing Main Feed, Agent Base &amp; Chart</span>
+      </div>
+
+      <!-- Mounted Inline Tool or Obsidian Vault Reader -->
+      <div id="inline-stage-mount" hidden></div>
+
+      <!-- Default Overview Workspace: Left = Unified Everything Feed | Right = Interactive Agent Base + Backtest Replay Chart -->
+      <div class="overview-grid" id="cockpit-grid" style="margin-bottom:0;">
+      <!-- Left Column: Unified Master Feed (One Stream for Everything) -->
+      <section class="box" id="master-feed-section">
+        <div class="master-feed-controls">
+          <div>
+            <h2 style="margin:0;">Unified Everything Feed</h2>
+            <p class="muted small" style="margin:2px 0 0;">Every backtest, review, strategy card, research source, failed-run receipt, market dataset, FOMC event, decision, and commit in one place.</p>
+          </div>
+          <div class="row" style="gap:8px;">
+            <input type="text" id="master-feed-search" placeholder="Search (SC-0002, SPY, FOMC, Qwen…)" aria-label="Search unified feed" style="width:210px;">
+            <div class="seg" role="group" aria-label="Feed sort order">
+              <button type="button" id="feed-sort-featured" aria-pressed="true">Featured</button>
+              <button type="button" id="feed-sort-newest" aria-pressed="false">Newest</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-bottom:10px; justify-content:space-between;">
+          <div class="seg" id="master-feed-tabs" role="group" aria-label="Filter feed by category"></div>
+          <span class="faint small" id="master-feed-count"></span>
+        </div>
+
+        <ul class="master-feed-list" id="master-feed-list"></ul>
+
+        <div class="box-foot" id="master-feed-foot" hidden>
+          <div class="row" style="justify-content:space-between;">
+            <span class="small muted" id="master-feed-foot-label">All project categories merged</span>
+            <button type="button" class="btn small" id="master-feed-more-btn">Show all items</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Interactive Visual Agent Base + Embedded Backtest Replay Chart -->
+      <div class="stack" id="cockpit-col-right" style="gap:20px;">
+        <!-- Interactive Visual Agent Base Map -->
+        <section class="box" id="cockpit-col-strategy" style="padding:16px;">
+          <div id="base-map-section" style="display:flex; flex-direction:column; height:100%;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h2 style="margin:0;">Interactive Agent Base</h2>
+                <p class="muted small" style="margin:2px 0 0;">Click any bot, workstation, or feed row to inspect state, or replay the latest run.</p>
+              </div>
+              <div class="row" style="gap:6px;">
+                <div class="seg" role="group" aria-label="Bot visual style">
+                  <button type="button" class="bot-style-btn" data-bot-style="droid" aria-pressed="${currentBotStyle === "droid"}">Droids</button>
+                  <button type="button" class="bot-style-btn" data-bot-style="pixel" aria-pressed="${currentBotStyle === "pixel"}">Pixel</button>
+                  <button type="button" class="bot-style-btn" data-bot-style="geometric" aria-pressed="${currentBotStyle === "geometric"}">Geo</button>
+                </div>
+                <button class="btn small primary" id="base-replay-run-btn" type="button">Replay Run</button>
+                <button class="btn small" id="base-reset-bots-btn" type="button">Reset</button>
+              </div>
+            </div>
+
+            <div class="base-stage-wrap">
+              <div class="base-floor-canvas" id="base-floor-canvas">
+                <svg class="base-paths-svg" viewBox="0 0 100 100" preserveAspectRatio="none" id="base-paths-svg"></svg>
+                <div id="base-stations-layer"></div>
+                <div id="base-bots-layer"></div>
+              </div>
+              <div class="base-inspector" id="base-inspector">
+                <div class="grow">
+                  <div class="row" style="gap:8px;">
+                    <span class="badge small" id="insp-badge">BASE</span>
+                    <b id="insp-title" style="font-size:13px;">Click any Bot or Workstation</b>
+                  </div>
+                  <p id="insp-desc" class="muted small" style="margin:3px 0 0;">Each bot represents a verified harness module. Watch them move when tasks run.</p>
+                </div>
+                <div class="row" id="insp-actions" style="gap:6px;">
+                  <button class="btn small" id="insp-ask-tutor" type="button">Ask Tutor</button>
+                  <button class="btn small" id="insp-open-page" type="button" data-go="activity">Activity</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Backtest Replay Chart & Strategy Metrics -->
+        <section class="box" id="cockpit-col-chart">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+            <div class="row" style="gap:8px;">
+              <h2 style="margin:0;">SPY · Connors RSI(2) Backtest Replay</h2>
+              <span id="today-replay-badge" class="badge small">In-Sample (101 trades)</span>
+            </div>
+            <div class="row" style="gap:6px;">
+              ${replaysList.length > 1 ? `<select id="today-replay-select" aria-label="Select backtest replay" style="padding:4px 8px; font-size:12px;">
+                ${replaysList.map((r) => `<option value="${esc(r.id)}">${esc(r.card_id)} Rule ${esc(r.rule_id)} · ${esc(r.symbol)} (${esc(r.phase === "held_out" ? "Held-Out" : "In-Sample")})</option>`).join("")}
+              </select>` : ""}
+              <button class="btn small" id="today-toggle-replay" type="button">Switch to Held-Out (91)</button>
+              <button class="btn small" data-go="chart" type="button">Full Chart</button>
+            </div>
+          </div>
+
+          <div id="today-chart-wrap" style="height:220px; width:100%; border-radius:var(--radius-sm); overflow:hidden; background:var(--bg); border:1px solid var(--line); position:relative;">
+            <div id="today-chart-canvas" style="width:100%; height:100%;"></div>
+            <div id="today-chart-loading" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:var(--surface); font-size:12px; color:var(--muted);">Loading SPY backtest bars…</div>
+          </div>
+
+          <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:12px;">
+            <div class="row" style="gap:6px;">
+              <button class="btn small" id="today-prev-trade" type="button">Prev Trade</button>
+              <button class="btn small" id="today-next-trade" type="button">Next Trade</button>
+              <span id="today-trade-info" class="muted">Viewing Trade 1 of 101</span>
+            </div>
+            <div class="row small muted" style="gap:12px;">
+              <span>Return: <b class="good" id="today-stat-return">${isBt ? esc(pct(isBt.total_return, 1)) : "+40.2%"}</b></span>
+              <span>Win Rate: <b id="today-stat-win">${isBt && isBt.win_rate != null ? esc(pct(isBt.win_rate, 1).replace("+", "")) : "71.3%"}</b></span>
+              <span>Sharpe: <b id="today-stat-sharpe">${isBt ? esc(fmt(isBt.sharpe, 2)) : "0.41"}</b> (vs ${isBh ? esc(fmt(isBh.sharpe, 2)) : "0.29"} B&amp;H)</span>
+              <span>Max DD: <b id="today-stat-dd">${isBt ? esc(pct(isBt.max_drawdown, 1)) : "-15.1%"}</b></span>
+            </div>
+          </div>
+
+          <div class="box-foot" style="margin-top:10px;">
+            <div class="row" style="justify-content:space-between;">
+              <span class="small muted"><b>Why rejected:</b> ${esc(activeReview?.verdict_text || "Held-out DSR 0.896 < 0.950 required gate; random-entry 94.9% < 95%.")}</span>
+              <div class="row" style="gap:10px;">
+                <button class="link small" data-inline-page="strategies">All ${esc(totalTrials)} Trials</button>
+                <button class="link small" data-inline-page="risk">Risk Simulators</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+    </section>
+
+    <!-- 5-Step Epistemic Pipeline -->
+    <section>
+      <div class="row" style="justify-content:space-between; margin-bottom:10px;">
+        <h2 style="margin:0;">5-Stage Epistemic Research Pipeline</h2>
+        <span class="faint small">Branch ${esc(t.git?.branch || "main")} (${esc(t.git?.head || "")}) · ${plural(t.git?.uncommitted || 0, "unsaved file")}</span>
       </div>
       <ol class="steps">${steps}</ol>
     </section>
-
-    <!-- Half-Screen Ergonomic View Controller -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
-      <div class="row" style="gap:6px; background:var(--surface-2); padding:3px 6px; border-radius:var(--radius-sm); border:1px solid var(--line);">
-        <button class="btn small" id="cockpit-btn-split" type="button" aria-pressed="true" style="font-size:12px; font-weight:600; background:rgba(56,189,248,0.18); color:var(--accent);">⊞ Split / Adaptive</button>
-        <button class="btn small" id="cockpit-btn-chart" type="button" aria-pressed="false" style="font-size:12px; font-weight:600; background:none; color:var(--muted);">📈 Chart Max</button>
-        <button class="btn small" id="cockpit-btn-strategy" type="button" aria-pressed="false" style="font-size:12px; font-weight:600; background:none; color:var(--muted);">🎯 Strategy &amp; Risk Deck</button>
-      </div>
-      <div class="row" style="gap:8px; font-size:11.5px; color:var(--muted); font-family:var(--mono);">
-        <span id="cockpit-viewport-pill" style="padding:3px 8px; border-radius:10px; background:rgba(255,255,255,0.05); border:1px solid var(--line);">Adaptive Sizing Active</span>
-      </div>
-    </div>
-
-    <!-- Standard Pro Split: Left 65% Superchart Replay | Right 35% Executive Deck -->
-    <section style="margin-bottom:32px;">
-      <div class="cockpit-split" id="cockpit-grid">
-        <!-- Left 65%: Embedded TradingView Lightweight Chart -->
-        <div id="cockpit-col-chart" class="box" style="padding:18px; display:flex; flex-direction:column; justify-content:space-between; min-width:0;">
-          <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-              <div class="row" style="gap:8px;">
-                <b style="font-size:15px; color:#fff;">SPY</b>
-                <span style="font-size:12px; color:var(--muted);">S&amp;P 500 ETF · Connors RSI(2) Replay</span>
-                <span id="today-replay-badge" style="font-size:11px; padding:2px 8px; border-radius:10px; background:rgba(56,189,248,0.12); color:var(--accent); font-weight:600;">In-Sample (101 trades)</span>
-              </div>
-              <div class="row" style="gap:8px;">
-                <button class="btn small" id="today-toggle-replay" type="button" style="font-size:12px;">Toggle Held-Out (91 trades)</button>
-                <button class="btn small" data-go="chart" type="button" style="font-size:12px;">Open Full Lab ↗</button>
-              </div>
-            </div>
-
-            <!-- Candlestick chart canvas wrap -->
-            <div id="today-chart-wrap" style="height:360px; width:100%; border-radius:var(--radius-sm); overflow:hidden; background:#0b0f19; border:1px solid var(--line); position:relative;">
-              <div id="today-chart-canvas" style="width:100%; height:100%;"></div>
-              <div id="today-chart-loading" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(11,15,25,0.7); font-family:var(--mono); font-size:12px; color:var(--muted);">Loading SPY backtest bars…</div>
-            </div>
-          </div>
-
-          <!-- Trade Step-Through Controls Bar -->
-          <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-family:var(--mono); font-size:12px;">
-            <div class="row" style="gap:8px;">
-              <button class="btn small" id="today-prev-trade" type="button">◀ Prev Trade</button>
-              <button class="btn small" id="today-next-trade" type="button">Next Trade ▶</button>
-              <span id="today-trade-info" style="color:var(--muted);">Viewing Trade 1 of 101</span>
-            </div>
-            <div class="row" style="gap:12px; font-size:11.5px; color:var(--muted);">
-              <span><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--good); margin-right:4px;"></span>Long Entry (RSI &lt; 10)</span>
-              <span><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--bad); margin-right:4px;"></span>Exit (SMA 5)</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right 35%: Executive Strategy Verdict & Risk Deck -->
-        <div id="cockpit-col-strategy" class="stack" style="gap:16px; min-width:0;">
-          <!-- Strategy Performance Card -->
-          <div class="box" style="padding:18px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Strategy Performance</span>
-              <span style="font-size:11px; padding:2px 8px; border-radius:10px; background:rgba(244,63,94,0.15); color:var(--bad); font-weight:600;">REJECTED</span>
-            </div>
-            <h3 style="margin:0 0 10px; color:#fff; font-size:14.5px;">SC-0002 · Connors RSI(2) on SPY</h3>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; font-family:var(--mono);">
-              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
-                <span style="font-size:11px; color:var(--muted); display:block;">In-Sample Return</span>
-                <span style="font-size:16px; font-weight:700; color:var(--good);">+40.2%</span>
-                <span style="font-size:10px; color:var(--faint); display:block;">2.1% ann. (2000-2015)</span>
-              </div>
-              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
-                <span style="font-size:11px; color:var(--muted); display:block;">Win Rate</span>
-                <span style="font-size:16px; font-weight:700; color:#fff;">71.3%</span>
-                <span style="font-size:10px; color:var(--faint); display:block;">101 trades</span>
-              </div>
-              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
-                <span style="font-size:11px; color:var(--muted); display:block;">Sharpe Ratio</span>
-                <span style="font-size:16px; font-weight:700; color:#fff;">0.41</span>
-                <span style="font-size:10px; color:var(--faint); display:block;">vs 0.29 Buy &amp; Hold</span>
-              </div>
-              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
-                <span style="font-size:11px; color:var(--muted); display:block;">Max Drawdown</span>
-                <span style="font-size:16px; font-weight:700; color:var(--good);">-15.1%</span>
-                <span style="font-size:10px; color:var(--faint); display:block;">vs -55.2% Buy &amp; Hold</span>
-              </div>
-            </div>
-            <p style="font-size:12px; color:var(--muted); line-height:1.45; margin:0;">
-              <strong style="color:#fff;">Why rejected?</strong> No edge shown out-of-sample (2016–2026). DSR scored 0.896 against the required 0.950 gate.
-            </p>
-          </div>
-
-          <!-- Risk Center Telemetry -->
-          <div class="box" style="padding:18px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Risk Center Telemetry</span>
-              <span style="font-size:11px; padding:2px 8px; border-radius:10px; background:rgba(16,185,129,0.15); color:var(--good); font-weight:600;">Paper Guard Active</span>
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-family:var(--mono); margin-bottom:10px;">
-              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
-                <span style="font-size:11px; color:var(--muted); display:block;">Risk of Ruin</span>
-                <span style="font-size:16px; font-weight:700; color:var(--good);">0.02%</span>
-                <span style="font-size:10px; color:var(--faint); display:block;">2,000-trader MC</span>
-              </div>
-              <div style="background:var(--surface-2); padding:8px 10px; border-radius:var(--radius-sm); border:1px solid var(--line);">
-                <span style="font-size:11px; color:var(--muted); display:block;">Half-Kelly Sizing</span>
-                <span style="font-size:16px; font-weight:700; color:var(--accent);">4.2%</span>
-                <span style="font-size:10px; color:var(--faint); display:block;">Safe leverage scalar</span>
-              </div>
-            </div>
-            <button class="link small" data-go="risk" style="font-weight:600;">Open Risk Simulators →</button>
-          </div>
-
-          <!-- Live Coinbase Stream Widget -->
-          <div class="box" style="padding:18px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted);">Coinbase Upstream</span>
-              <div class="live" id="today-coinbase-status" style="margin:0;"><i></i><span>WAITING</span></div>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:var(--surface-2); border-radius:var(--radius-sm); border:1px solid var(--line); font-family:var(--mono); font-size:12.5px;">
-              <span style="font-weight:700; color:#fff;">BTC-USD</span>
-              <span id="today-btc-val" style="font-weight:700;">Price unavailable</span>
-            </div>
-            <div style="margin-top:8px;">
-              <button class="link small" data-go="live" style="font-weight:600;">Open Live Depth &amp; Tape →</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Lower Deck: Telemetry Feed & System Status -->
-    <div class="cols">
-      <section class="box">
-        <h2>Live Agent &amp; System Timeline</h2>
-        ${feed}
-      </section>
-      <div class="stack">
-        <section class="box">
-          <h2>Handoff Directive</h2>
-          <p>${esc(t.next || "All current research and terminal tasks up to date.")}</p>
-          <p class="faint small">Synchronized from PLAN.md §10 handoff checkpoint.</p>
-        </section>
-        <section class="box">
-          <h2>Automated Health Checks</h2>
-          ${health}
-        </section>
-        <section class="box">
-          <h2>Git &amp; Database Integrity</h2>
-          <p class="muted">Branch <span class="mono">${esc(t.git.branch)}</span>, ${plural(t.git.uncommitted, "file")} changed. Connected to read-only SQLite brain.</p>
-        </section>
-      </div>
-    </div>
   `;
 
   main.querySelectorAll("[data-open-run]").forEach((b) => (b.onclick = () => { state.openRun = b.dataset.openRun; go("activity"); }));
   main.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => go(b.dataset.go)));
+  main.querySelectorAll("[data-jump-sym]").forEach((tr) => (tr.onclick = () => {
+    if (window.CH) { CH.symbol = tr.dataset.jumpSym; CH.formula = ""; saveCH(); }
+    go("chart");
+  }));
+
+  // Render Interactive Visual Agent Base Map
+  let focusFeedItemOnBase = null;
+  if (BotEngine) {
+    const stationsLayer = $("#base-stations-layer");
+    const botsLayer = $("#base-bots-layer");
+    const pathsSvg = $("#base-paths-svg");
+    const botStates = BotEngine.deriveInitialBotStates({
+      counts: h.counts || {},
+      runs: descRuns,
+      lab: labData,
+    });
+    let selectedEntity = null;
+
+    // Draw SVG connecting paths between stations
+    if (pathsSvg) {
+      pathsSvg.innerHTML = BotEngine.PATH_EDGES.map(([aId, bId]) => {
+        const a = BotEngine.stationById(aId);
+        const b = BotEngine.stationById(bId);
+        return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#2e2e32" stroke-width="0.6" stroke-dasharray="1.5 1.5"/>`;
+      }).join("");
+    }
+
+    // Draw Stations
+    if (stationsLayer) {
+      stationsLayer.innerHTML = BotEngine.STATIONS.map((st) => `
+        <div class="base-station" data-station-id="${esc(st.id)}" style="left:${st.x}%; top:${st.y}%;" role="button" tabindex="0" aria-label="${esc(st.label)} workstation">
+          <div class="st-title"><span class="st-dot" style="background:${esc(st.color)};"></span>${esc(st.label)}</div>
+          <div class="st-sub">${esc(st.sub)}</div>
+        </div>
+      `).join("");
+    }
+
+    const updateInspector = (badgeText, titleText, descText, targetPage, tutorPrompt) => {
+      const badgeEl = $("#insp-badge");
+      const titleEl = $("#insp-title");
+      const descEl = $("#insp-desc");
+      const openBtn = $("#insp-open-page");
+      const askBtn = $("#insp-ask-tutor");
+      if (badgeEl) badgeEl.textContent = badgeText;
+      if (titleEl) titleEl.textContent = titleText;
+      if (descEl) descEl.textContent = descText;
+      if (openBtn && targetPage) {
+        openBtn.dataset.go = targetPage;
+        openBtn.textContent = `Open ${PAGES.find((p) => p.id === targetPage)?.label || targetPage} →`;
+        openBtn.onclick = () => go(targetPage);
+      }
+      if (askBtn) {
+        askBtn.onclick = () => go("learn", { question: tutorPrompt || `Explain ${titleText} and how it works in Quant Brain.` });
+      }
+    };
+
+    // Slight positional offsets when multiple bots share a station
+    const computeBotCoords = () => {
+      const byStation = {};
+      Object.values(botStates).forEach((b) => {
+        byStation[b.stationId] = byStation[b.stationId] || [];
+        byStation[b.stationId].push(b);
+      });
+      Object.values(byStation).forEach((group) => {
+        group.forEach((b, idx) => {
+          const st = BotEngine.stationById(b.stationId);
+          const spread = (idx - (group.length - 1) / 2) * 7;
+          b.x = Math.max(6, Math.min(94, st.x + spread));
+          b.y = Math.max(14, Math.min(88, st.y + 13));
+        });
+      });
+    };
+
+    const paintBots = () => {
+      if (!botsLayer) return;
+      computeBotCoords();
+      botsLayer.innerHTML = Object.values(botStates).map((b) => {
+        const isSel = selectedEntity === b.id;
+        return `<button type="button" class="base-bot-sprite ${b.walking ? "walking" : ""} ${isSel ? "selected" : ""}" data-bot-id="${esc(b.id)}" style="left:${b.x}%; top:${b.y}%;" aria-label="${esc(b.name)} (${esc(b.mood)})">
+          ${(isSel || b.walking) ? `<div class="bot-speech-pop">${esc(b.speech)}</div>` : ""}
+          <div class="bot-avatar-ring" style="border-color:${esc(b.color)};">
+            ${BotEngine.botAvatarSvg(currentBotStyle, b.color, b.mood)}
+          </div>
+          <span class="bot-name-tag">${esc(b.name)}</span>
+        </button>`;
+      }).join("");
+
+      botsLayer.querySelectorAll("[data-bot-id]").forEach((btn) => {
+        btn.onclick = () => {
+          const b = botStates[btn.dataset.botId];
+          if (!b) return;
+          selectedEntity = b.id;
+          const st = BotEngine.stationById(b.stationId);
+          updateInspector(
+            `${b.badge} · ${b.mood.toUpperCase()}`,
+            `${b.name} @ ${st.label}`,
+            `${b.speech} — ${b.detail}`,
+            st.page,
+            `Explain the role of ${b.name} (${b.role}) in this project and what rules it follows.`
+          );
+          paintBots();
+        };
+      });
+    };
+
+    paintBots();
+
+    stationsLayer?.querySelectorAll("[data-station-id]").forEach((el) => {
+      const activateStation = () => {
+        const st = BotEngine.stationById(el.dataset.stationId);
+        stationsLayer.querySelectorAll(".base-station").forEach((s) => s.classList.toggle("active", s === el));
+        updateInspector(
+          "WORKSTATION",
+          `${st.label} (${st.sub})`,
+          st.description,
+          st.page,
+          `Explain the ${st.label} stage (${st.sub}) in Quant Brain and how it prevents common quant mistakes.`
+        );
+      };
+      el.onclick = activateStation;
+      el.onkeydown = (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); activateStation(); } };
+    });
+
+    // Style switcher buttons (Sci-Fi Droids / Pixel Arcade / Geometric)
+    main.querySelectorAll(".bot-style-btn").forEach((btn) => {
+      btn.onclick = () => {
+        currentBotStyle = btn.dataset.botStyle || "droid";
+        try { localStorage.setItem("qb-bot-style", currentBotStyle); } catch (_) {}
+        main.querySelectorAll(".bot-style-btn").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+        paintBots();
+        renderRoamingCompanion();
+      };
+    });
+
+    // Replay Latest Run animation on the Base Map
+    const replayBtn = $("#base-replay-run-btn");
+    const resetBtn = $("#base-reset-bots-btn");
+
+    if (replayBtn) {
+      replayBtn.onclick = async () => {
+        stopBaseReplayTimer();
+        replayBtn.disabled = true;
+        replayBtn.textContent = "Replaying Run…";
+        let events = [];
+        const latestRunId = descRuns[0]?.run_id || (h.runs && h.runs[0]?.run_id);
+        if (latestRunId) {
+          try {
+            const detail = await api(`/api/runs/${encodeURIComponent(latestRunId)}`);
+            events = detail.events || [];
+          } catch (_) { events = []; }
+        }
+        const stepsToPlay = BotEngine.buildReplayStepsFromEvents(events, descRuns[0] || {});
+        let idx = 0;
+
+        const runStep = () => {
+          if (idx >= stepsToPlay.length) {
+            stopBaseReplayTimer();
+            Object.values(botStates).forEach((b) => { b.walking = false; });
+            if (replayBtn) {
+              replayBtn.disabled = false;
+              replayBtn.textContent = "▶ Replay Latest Run";
+            }
+            paintBots();
+            return;
+          }
+          const step = stepsToPlay[idx++];
+          Object.values(botStates).forEach((b) => { b.walking = false; });
+          const bot = botStates[step.botId] || botStates.scout;
+          bot.stationId = step.stationId;
+          bot.mood = step.mood;
+          bot.speech = step.speech;
+          bot.walking = true;
+          selectedEntity = bot.id;
+          const st = BotEngine.stationById(step.stationId);
+          updateInspector(
+            `STEP ${idx}/${stepsToPlay.length} · ${step.stage.toUpperCase()}`,
+            `${bot.name} moved to ${st.label}`,
+            step.speech,
+            st.page,
+            `Explain what happened during stage ${step.stage} in run ${step.runId || "the latest run"}.`
+          );
+          paintBots();
+        };
+
+        runStep();
+        baseReplayTimer = setInterval(runStep, 1400);
+      };
+    }
+
+    if (resetBtn) {
+      resetBtn.onclick = () => {
+        stopBaseReplayTimer();
+        if (replayBtn) {
+          replayBtn.disabled = false;
+          replayBtn.textContent = "▶ Replay Latest Run";
+        }
+        const fresh = BotEngine.deriveInitialBotStates({ counts: h.counts || {}, runs: descRuns, lab: labData });
+        Object.keys(fresh).forEach((k) => { botStates[k] = fresh[k]; });
+        selectedEntity = null;
+        paintBots();
+      };
+    }
+
+    focusFeedItemOnBase = (item) => {
+      stopBaseReplayTimer();
+      const bId = item.bot_id || "scout";
+      const stId = item.station_id || "scout_desk";
+      const bot = botStates[bId] || botStates.scout;
+      if (!bot) return;
+      Object.values(botStates).forEach((b) => { b.walking = false; });
+      bot.stationId = stId;
+      bot.mood = BotEngine.mapStatusToMood(item.status || "completed");
+      bot.speech = item.title;
+      bot.walking = true;
+      selectedEntity = bot.id;
+      const st = BotEngine.stationById(stId);
+      updateInspector(
+        item.badge || "FEED EVENT",
+        `${bot.name} @ ${st.label}: ${item.title}`,
+        item.summary || "",
+        st.page,
+        `Explain "${item.title}" in plain words: ${item.summary || ""}`
+      );
+      paintBots();
+      $("#cockpit-col-strategy")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    };
+  }
 
   // Interactive Bot Pill
   const botTips = [
@@ -488,6 +909,7 @@ RENDER.today = async (main) => {
   }
 
   // Load and Render Embedded SPY Backtest Chart
+  let loadReplayFromFeed = null;
   const chartCanvas = $("#today-chart-canvas");
   if (chartCanvas && window.LightweightCharts) {
     let currentReplayId = "SC-0002-in-sample-A-SPY-5bps";
@@ -495,20 +917,20 @@ RENDER.today = async (main) => {
     let currentTradeIdx = 0;
 
     const chart = LightweightCharts.createChart(chartCanvas, {
-      layout: { background: { color: "#0b0f19" }, textColor: "#94a3b8", fontSize: 12 },
-      grid: { vertLines: { color: "rgba(255, 255, 255, 0.04)" }, horzLines: { color: "rgba(255, 255, 255, 0.04)" } },
-      rightPriceScale: { borderColor: "rgba(255, 255, 255, 0.08)" },
-      timeScale: { borderColor: "rgba(255, 255, 255, 0.08)", rightOffset: 6 },
+      layout: { background: { color: "#171719" }, textColor: "#b4b4b4", fontSize: 12 },
+      grid: { vertLines: { color: "#222224" }, horzLines: { color: "#222224" } },
+      rightPriceScale: { borderColor: "#222224" },
+      timeScale: { borderColor: "#222224", rightOffset: 6 },
       autoSize: true,
     });
     charts.push(chart);
 
     const candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
-      upColor: "#10b981", downColor: "#f43f5e", borderVisible: false,
-      wickUpColor: "#10b981", wickDownColor: "#f43f5e"
+      upColor: "#44a282", downColor: "#e5566f", borderVisible: false,
+      wickUpColor: "#44a282", wickDownColor: "#e5566f"
     });
     const smaSeries = chart.addSeries(LightweightCharts.LineSeries, {
-      color: "#f59e0b", lineWidth: 1.5, title: "SMA 200"
+      color: "#d9a441", lineWidth: 1.5, title: "SMA 200"
     });
 
     async function loadReplay(replayId) {
@@ -539,7 +961,7 @@ RENDER.today = async (main) => {
             markers.push({
               time: t.entry_date,
               position: "belowBar",
-              color: "#10b981",
+              color: "#44a282",
               shape: "arrowUp",
               text: "#" + t.number
             });
@@ -548,7 +970,7 @@ RENDER.today = async (main) => {
             markers.push({
               time: t.exit_date,
               position: "aboveBar",
-              color: "#f43f5e",
+              color: "#e5566f",
               shape: "arrowDown",
               text: "Exit"
             });
@@ -595,6 +1017,13 @@ RENDER.today = async (main) => {
     if (nextBtn) nextBtn.onclick = () => stepTrade(1);
 
     const togglePhaseBtn = $("#today-toggle-replay");
+    const replaySelect = $("#today-replay-select");
+    if (replaySelect) {
+      replaySelect.onchange = (e) => {
+        currentReplayId = e.target.value;
+        loadReplay(currentReplayId);
+      };
+    }
     if (togglePhaseBtn) {
       togglePhaseBtn.onclick = () => {
         if (currentReplayId === "SC-0002-in-sample-A-SPY-5bps") {
@@ -611,6 +1040,15 @@ RENDER.today = async (main) => {
     }
 
     loadReplay(currentReplayId);
+    loadReplayFromFeed = (repId) => {
+      currentReplayId = repId;
+      if (replaySelect) replaySelect.value = repId;
+      if ($("#today-replay-badge")) {
+        $("#today-replay-badge").textContent = repId.includes("held-out") ? "Held-Out (91 trades)" : "In-Sample (101 trades)";
+      }
+      loadReplay(repId);
+      $("#cockpit-col-chart")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    };
 
     // Responsive View Switcher & Element ResizeObserver
     const chartWrap = $("#today-chart-wrap");
@@ -646,52 +1084,380 @@ RENDER.today = async (main) => {
 
     // View Switching Controls
     const btnSplit = $("#cockpit-btn-split");
+    const btnFeed = $("#cockpit-btn-feed");
     const btnChart = $("#cockpit-btn-chart");
     const btnStrat = $("#cockpit-btn-strategy");
+    const feedSectionEl = $("#master-feed-section");
+    const rightColEl = $("#cockpit-col-right");
 
     const setViewMode = (mode) => {
       if (!chartCol || !stratCol) return;
-      const selected = mode === "chart" || mode === "strategy" ? mode : "split";
-      [["split", btnSplit], ["chart", btnChart], ["strategy", btnStrat]].forEach(([name, btn]) => {
-        btn.setAttribute("aria-pressed", String(name === selected));
+      const selected = ["chart", "strategy", "feed"].includes(mode) ? mode : "split";
+      [["split", btnSplit], ["feed", btnFeed], ["chart", btnChart], ["strategy", btnStrat]].forEach(([name, btn]) => {
+        if (btn) btn.setAttribute("aria-pressed", String(name === selected));
       });
-      if (mode === "chart") {
+      if (mode === "feed") {
+        if (gridEl) gridEl.style.gridTemplateColumns = "1fr";
+        if (feedSectionEl) feedSectionEl.style.display = "flex";
+        if (rightColEl) rightColEl.style.display = "none";
+      } else if (mode === "chart") {
+        if (gridEl) gridEl.style.gridTemplateColumns = "1fr";
+        if (feedSectionEl) feedSectionEl.style.display = "none";
+        if (rightColEl) rightColEl.style.display = "grid";
         chartCol.style.display = "flex";
         stratCol.style.display = "none";
-        if (chartWrap) chartWrap.style.height = "520px";
-        btnChart.style.background = "rgba(56,189,248,0.18)";
-        btnChart.style.color = "var(--accent)";
-        btnSplit.style.background = "none";
-        btnSplit.style.color = "var(--muted)";
-        btnStrat.style.background = "none";
-        btnStrat.style.color = "var(--muted)";
+        if (chartWrap) chartWrap.style.height = "460px";
       } else if (mode === "strategy") {
+        if (gridEl) gridEl.style.gridTemplateColumns = "1fr";
+        if (feedSectionEl) feedSectionEl.style.display = "none";
+        if (rightColEl) rightColEl.style.display = "grid";
         chartCol.style.display = "none";
-        stratCol.style.display = "grid";
-        btnStrat.style.background = "rgba(56,189,248,0.18)";
-        btnStrat.style.color = "var(--accent)";
-        btnSplit.style.background = "none";
-        btnSplit.style.color = "var(--muted)";
-        btnChart.style.background = "none";
-        btnChart.style.color = "var(--muted)";
+        stratCol.style.display = "flex";
       } else {
+        if (gridEl) gridEl.style.gridTemplateColumns = "";
+        if (feedSectionEl) feedSectionEl.style.display = "flex";
+        if (rightColEl) rightColEl.style.display = "grid";
         chartCol.style.display = "flex";
-        stratCol.style.display = "grid";
-        if (chartWrap) chartWrap.style.height = "360px";
-        btnSplit.style.background = "rgba(56,189,248,0.18)";
-        btnSplit.style.color = "var(--accent)";
-        btnChart.style.background = "none";
-        btnChart.style.color = "var(--muted)";
-        btnStrat.style.background = "none";
-        btnStrat.style.color = "var(--muted)";
+        stratCol.style.display = "flex";
+        if (chartWrap) chartWrap.style.height = "220px";
       }
       setTimeout(updateSizingTelemetry, 40);
     };
 
     if (btnSplit) btnSplit.onclick = () => setViewMode("split");
+    if (btnFeed) btnFeed.onclick = () => setViewMode("feed");
     if (btnChart) btnChart.onclick = () => setViewMode("chart");
     if (btnStrat) btnStrat.onclick = () => setViewMode("strategy");
   }
+
+  // Unified Master Feed Controller
+  const rawFeed = Array.isArray(t.feed) && t.feed.length
+    ? t.feed
+    : (t.timeline || []).map((i, idx) => ({
+        id: `tl-${idx}`,
+        when: i.when,
+        category: i.kind === "commit" ? "code" : "research",
+        badge: (i.kind || "event").toUpperCase(),
+        status: i.status || "completed",
+        title: i.who,
+        summary: i.text,
+        metrics: i.ref ? [i.ref] : [],
+        run_id: i.kind === "run" ? i.ref : null,
+        priority: 70,
+      }));
+
+  const FEED_CATEGORIES = [
+    { id: "all", label: "All", match: () => true },
+    { id: "backtest", label: "Backtests & Reviews", match: (x) => x.category === "backtest" },
+    { id: "research", label: "Research & Sources", match: (x) => x.category === "research" },
+    { id: "strategy", label: "Strategies & Decisions", match: (x) => x.category === "strategy" || x.category === "decision" },
+    { id: "market", label: "Market & Macro", match: (x) => x.category === "market" },
+    { id: "code", label: "Runs & Commits", match: (x) => x.category === "code" },
+  ];
+
+  let activeFeedCat = "all";
+  let activeFeedSort = "featured";
+  let feedSearchQuery = "";
+  let feedExpanded = false;
+
+  const feedTabsEl = $("#master-feed-tabs");
+  const feedListEl = $("#master-feed-list");
+  const feedCountEl = $("#master-feed-count");
+  const feedFootEl = $("#master-feed-foot");
+  const feedMoreBtn = $("#master-feed-more-btn");
+  const feedSearchEl = $("#master-feed-search");
+  const sortFeaturedBtn = $("#feed-sort-featured");
+  const sortNewestBtn = $("#feed-sort-newest");
+
+  const renderMasterFeed = () => {
+    if (!feedListEl || !feedTabsEl) return;
+
+    const q = feedSearchQuery.trim().toLowerCase();
+    const matchesSearch = (item) => {
+      if (!q) return true;
+      const hay = `${item.title || ""} ${item.summary || ""} ${item.badge || ""} ${(item.metrics || []).join(" ")} ${item.file_path || ""}`.toLowerCase();
+      return hay.includes(q);
+    };
+
+    const searchFiltered = rawFeed.filter(matchesSearch);
+
+    feedTabsEl.innerHTML = FEED_CATEGORIES.map((cat) => {
+      const cnt = searchFiltered.filter(cat.match).length;
+      return `<button type="button" data-feed-cat="${esc(cat.id)}" aria-pressed="${activeFeedCat === cat.id}">${esc(cat.label)} (${cnt})</button>`;
+    }).join("");
+
+    feedTabsEl.querySelectorAll("[data-feed-cat]").forEach((btn) => {
+      btn.onclick = () => {
+        activeFeedCat = btn.dataset.feedCat;
+        renderMasterFeed();
+      };
+    });
+
+    const catObj = FEED_CATEGORIES.find((c) => c.id === activeFeedCat) || FEED_CATEGORIES[0];
+    const filtered = searchFiltered.filter(catObj.match).slice();
+
+    if (activeFeedSort === "newest") {
+      filtered.sort((a, b) => String(b.when || "").localeCompare(String(a.when || "")));
+    } else {
+      filtered.sort((a, b) => (Number(b.priority || 0) - Number(a.priority || 0)) || String(b.when || "").localeCompare(String(a.when || "")));
+    }
+
+    const limit = feedExpanded ? filtered.length : 6;
+    const shown = filtered.slice(0, limit);
+
+    if (feedCountEl) {
+      feedCountEl.textContent = `Showing ${shown.length} of ${filtered.length} items`;
+    }
+    if (feedFootEl && feedMoreBtn) {
+      feedFootEl.hidden = filtered.length <= 6;
+      feedMoreBtn.textContent = feedExpanded ? "Show fewer items" : `Show all ${filtered.length} items`;
+    }
+
+    if (!shown.length) {
+      feedListEl.innerHTML = `<li class="empty">No items match this filter or search query.</li>`;
+      return;
+    }
+
+    feedListEl.innerHTML = shown.map((item, i) => {
+      const dateLabel = item.when ? (item.when.length > 10 ? ago(item.when) : item.when) : "";
+      const metricsHtml = (item.metrics || []).map((m) => `<span class="badge small">${esc(m)}</span>`).join("");
+      return `<li class="master-feed-row" data-feed-idx="${i}">
+        <div class="master-feed-meta">
+          <span class="badge small">${esc(item.badge || item.category)}</span>
+          <span class="master-feed-when">${esc(dateLabel)}</span>
+        </div>
+        <div class="master-feed-body">
+          <div class="master-feed-title">
+            <span>${esc(item.title)}</span>
+            ${item.status ? status(item.status) : ""}
+          </div>
+          <p class="master-feed-summary">${esc(item.summary || "")}</p>
+          ${metricsHtml ? `<div class="master-feed-metrics">${metricsHtml}</div>` : ""}
+        </div>
+        <div class="master-feed-actions">
+          ${item.replay_id ? `<button type="button" class="btn small" data-feed-replay="${esc(item.replay_id)}">Replay on Chart</button>` : ""}
+          ${item.symbol ? `<button type="button" class="btn small" data-feed-sym="${esc(item.symbol)}">Open ${esc(item.symbol)}</button>` : ""}
+          ${item.file_path ? `<button type="button" class="btn small" data-feed-note="${esc(item.file_path)}">Read Note</button>` : ""}
+          ${item.run_id ? `<button type="button" class="btn small" data-open-run="${esc(item.run_id)}">Inspect Run</button>` : ""}
+          <button type="button" class="btn small" data-feed-base="${i}">Show on Base</button>
+          <button type="button" class="link small" data-feed-tutor="${i}">Ask Tutor</button>
+        </div>
+      </li>`;
+    }).join("");
+
+    feedListEl.querySelectorAll("[data-feed-replay]").forEach((btn) => {
+      btn.onclick = () => {
+        if (loadReplayFromFeed) loadReplayFromFeed(btn.dataset.feedReplay);
+      };
+    });
+    feedListEl.querySelectorAll("[data-feed-note]").forEach((btn) => {
+      btn.onclick = () => {
+        openInlineVaultNote(btn.dataset.feedNote);
+      };
+    });
+    feedListEl.querySelectorAll("[data-feed-sym]").forEach((btn) => {
+      btn.onclick = () => {
+        if (window.CH) { CH.symbol = btn.dataset.feedSym; CH.formula = ""; saveCH(); }
+        go("chart");
+      };
+    });
+    feedListEl.querySelectorAll("[data-open-run]").forEach((btn) => {
+      btn.onclick = () => {
+        state.openRun = btn.dataset.openRun;
+        openInlineStage("activity");
+      };
+    });
+    feedListEl.querySelectorAll("[data-feed-base]").forEach((btn) => {
+      btn.onclick = () => {
+        const item = shown[Number(btn.dataset.feedBase)];
+        if (item && focusFeedItemOnBase) focusFeedItemOnBase(item);
+      };
+    });
+    feedListEl.querySelectorAll("[data-feed-tutor]").forEach((btn) => {
+      btn.onclick = () => {
+        const item = shown[Number(btn.dataset.feedTutor)];
+        if (!item) return;
+        if (item.file_path) state.learn.selected.add(item.file_path);
+        if (item.run_id) state.learn.selected.add(`run:${item.run_id}`);
+        openInlineStage("learn", { question: `Explain "${item.title}" in plain words: what happened, what evidence or numbers it produced, and how it fits into the project.` });
+      };
+    });
+  };
+
+  if (feedSearchEl) {
+    feedSearchEl.oninput = (e) => {
+      feedSearchQuery = e.target.value;
+      renderMasterFeed();
+    };
+  }
+  if (sortFeaturedBtn && sortNewestBtn) {
+    sortFeaturedBtn.onclick = () => {
+      activeFeedSort = "featured";
+      sortFeaturedBtn.setAttribute("aria-pressed", "true");
+      sortNewestBtn.setAttribute("aria-pressed", "false");
+      renderMasterFeed();
+    };
+    sortNewestBtn.onclick = () => {
+      activeFeedSort = "newest";
+      sortNewestBtn.setAttribute("aria-pressed", "true");
+      sortFeaturedBtn.setAttribute("aria-pressed", "false");
+      renderMasterFeed();
+    };
+  }
+  if (feedMoreBtn) {
+    feedMoreBtn.onclick = () => {
+      feedExpanded = !feedExpanded;
+      renderMasterFeed();
+    };
+  }
+
+  renderMasterFeed();
+
+  // Inline Main-Page Stage & Obsidian Vault Note Reader
+  const stageTabsEl = $("#inline-stage-tabs");
+  const stageStatusEl = $("#inline-stage-status");
+  const stageMountEl = $("#inline-stage-mount");
+  const overviewGridEl = $("#cockpit-grid");
+  let currentVaultNote = "PLAN.md";
+  let vaultRawMode = false;
+
+  async function renderInlineVaultReader(notePath) {
+    if (!stageMountEl) return;
+    currentVaultNote = notePath || currentVaultNote || "PLAN.md";
+    stageMountEl.hidden = false;
+    if (overviewGridEl) overviewGridEl.hidden = true;
+    stageMountEl.innerHTML = `<p class="muted">Loading Obsidian vault &amp; ${esc(currentVaultNote)}…</p>`;
+
+    try {
+      const [sourcesGroups, fileData] = await Promise.all([
+        state.learn.sources ? Promise.resolve(state.learn.sources) : api("/api/learn/sources"),
+        api(`/api/file?path=${encodeURIComponent(currentVaultNote)}`),
+      ]);
+      state.learn.sources = sourcesGroups;
+
+      const navHtml = (sourcesGroups || []).map((g) => `
+        <details class="src-group" ${g.items.some((i) => i.path === currentVaultNote) || g.group === "Plan & rules" || g.group === "Strategy & results" ? "open" : ""}>
+          <summary>${esc(g.group)} (${g.items.length})</summary>
+          <div style="display:grid; gap:2px; margin-top:4px;">
+            ${g.items.map((i) => `<button type="button" class="vault-note-btn" data-vault-note="${esc(i.path)}" aria-current="${i.path === currentVaultNote}">
+              ${esc(i.path.split("/").pop())}
+            </button>`).join("")}
+          </div>
+        </details>
+      `).join("");
+
+      const rawText = String(fileData?.text || "");
+      const bodyHtml = vaultRawMode
+        ? `<pre class="pre" style="max-height:none; margin:0;">${esc(rawText)}</pre>`
+        : `<div class="md">${renderMarkdown(rawText)}</div>`;
+
+      stageMountEl.innerHTML = `
+        <div class="inline-vault-grid">
+          <aside class="box" style="padding:12px;">
+            <div class="row" style="justify-content:space-between; margin-bottom:8px;">
+              <b style="font-size:13px;">Obsidian Vault &amp; Plan</b>
+              <span class="faint small">${(sourcesGroups || []).reduce((acc, g) => acc + g.items.length, 0)} files</span>
+            </div>
+            <input type="text" id="inline-vault-filter" placeholder="Filter vault notes…" style="width:100%; margin-bottom:8px;">
+            <div class="vault-nav-list" id="inline-vault-nav">${navHtml}</div>
+          </aside>
+
+          <div class="box" style="padding:16px;">
+            <div class="row" style="justify-content:space-between; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--line);">
+              <div>
+                <span class="badge small">OBSIDIAN NOTE</span>
+                <b style="margin-left:8px; font-size:14px;">${esc(currentVaultNote)}</b>
+              </div>
+              <div class="row" style="gap:6px;">
+                <button type="button" class="btn small" id="vault-toggle-raw">${vaultRawMode ? "Formatted View" : "Raw Source"}</button>
+                <button type="button" class="btn small primary" id="vault-ask-tutor">Ask Tutor About This Note</button>
+                <button type="button" class="btn small" id="vault-back-overview">Back to Feed &amp; Base</button>
+              </div>
+            </div>
+            <div class="vault-note-body">${bodyHtml}</div>
+          </div>
+        </div>
+      `;
+
+      stageMountEl.querySelectorAll("[data-vault-note]").forEach((btn) => {
+        btn.onclick = () => renderInlineVaultReader(btn.dataset.vaultNote);
+      });
+      $("#vault-toggle-raw")?.addEventListener("click", () => {
+        vaultRawMode = !vaultRawMode;
+        renderInlineVaultReader(currentVaultNote);
+      });
+      $("#vault-ask-tutor")?.addEventListener("click", () => {
+        state.learn.selected.add(currentVaultNote);
+        openInlineStage("learn", { question: `Summarize ${currentVaultNote} in plain words and explain how it fits into the Quant Brain plan.` });
+      });
+      $("#vault-back-overview")?.addEventListener("click", () => {
+        openInlineStage("overview");
+      });
+      $("#inline-vault-filter")?.addEventListener("input", (e) => {
+        const q = e.target.value.trim().toLowerCase();
+        stageMountEl.querySelectorAll("[data-vault-note]").forEach((b) => {
+          b.hidden = Boolean(q && !b.dataset.vaultNote.toLowerCase().includes(q));
+        });
+        if (q) stageMountEl.querySelectorAll(".src-group").forEach((d) => { d.open = true; });
+      });
+    } catch (err) {
+      stageMountEl.innerHTML = `<p class="error">${esc(err.message)}</p>`;
+    }
+  }
+
+  async function openInlineStage(tabId, opts = {}) {
+    if (state.liveSource && tabId !== "live") {
+      try { state.liveSource.close(); } catch (_) {}
+      state.liveSource = null;
+    }
+    if (state.liveTimer && tabId !== "live") {
+      clearInterval(state.liveTimer);
+      state.liveTimer = null;
+    }
+
+    stageTabsEl?.querySelectorAll("[data-stage-tab]").forEach((btn) => {
+      btn.setAttribute("aria-pressed", String(btn.dataset.stageTab === tabId));
+    });
+
+    if (tabId === "overview") {
+      if (stageMountEl) { stageMountEl.hidden = true; stageMountEl.innerHTML = ""; }
+      if (overviewGridEl) overviewGridEl.hidden = false;
+      if (stageStatusEl) stageStatusEl.textContent = "Viewing Main Feed, Agent Base & Chart";
+      return;
+    }
+
+    if (tabId === "vault") {
+      if (stageStatusEl) stageStatusEl.textContent = `Reading Obsidian Note: ${opts.note || currentVaultNote}`;
+      await renderInlineVaultReader(opts.note || currentVaultNote);
+      $("#main-inline-stage")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      return;
+    }
+
+    if (RENDER[tabId] && stageMountEl) {
+      if (overviewGridEl) overviewGridEl.hidden = true;
+      stageMountEl.hidden = false;
+      const pageLabel = PAGES.find((p) => p.id === tabId)?.label || tabId;
+      if (stageStatusEl) stageStatusEl.textContent = `Inline Tool: ${pageLabel}`;
+      stageMountEl.innerHTML = `<p class="muted">Loading ${esc(pageLabel)}…</p>`;
+      await RENDER[tabId](stageMountEl, opts);
+      $("#main-inline-stage")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+
+  function openInlineVaultNote(notePath) {
+    currentVaultNote = notePath || "PLAN.md";
+    openInlineStage("vault", { note: currentVaultNote });
+  }
+
+  stageTabsEl?.querySelectorAll("[data-stage-tab]").forEach((btn) => {
+    btn.onclick = () => openInlineStage(btn.dataset.stageTab);
+  });
+  main.querySelectorAll("[data-inline-page]").forEach((btn) => {
+    btn.onclick = () => openInlineStage(btn.dataset.inlinePage);
+  });
+  main.querySelectorAll("[data-inline-note]").forEach((btn) => {
+    btn.onclick = () => openInlineVaultNote(btn.dataset.inlineNote);
+  });
 };
 
 // ---------- Activity ----------
@@ -863,6 +1629,205 @@ async function renderBacktests(d) {
     renderBacktests(d);
   }));
   box.querySelectorAll("[data-show-replay]").forEach((b) => (b.onclick = () => { window.pendingReplay = b.dataset.showReplay; go("chart"); }));
+}
+
+// ---------- Home: three plain answers ----------
+RENDER.home = async (main) => {
+  const d = await api("/api/home-plain");
+  const w = d.where;
+  const need = (n) => `<article class="box need">
+      <p class="card-title">${esc(n.title)}</p>
+      ${n.why ? `<p class="muted">${esc(n.why)}</p>` : ""}
+      ${n.recommendation ? `<p><b>Recommended:</b> ${esc(n.recommendation)}</p>` : ""}
+      ${n.action ? (n.action.url
+        ? `<a class="btn primary" href="${esc(n.action.url)}" target="_blank" rel="noopener">${esc(n.action.label)}</a>`
+        : `<button class="btn primary" data-go="${esc(n.action.page)}">${esc(n.action.label)}</button>`) : ""}
+    </article>`;
+  const finding = (f) => {
+    const o = OUTCOME[f.outcome] || { word: f.outcome, cls: "" };
+    return `<article class="box finding"><div class="row"><span class="badge ${o.cls}">${esc(o.word)}</span><b>${esc(f.title)}</b></div>
+      <p>${esc(f.plain)}</p><p class="muted small">${esc(f.takeaway)}</p>
+      <button class="link small" data-go="${esc(f.page)}">See the details →</button></article>`;
+  };
+  main.innerHTML = `${head("Home", "Three questions, in plain words. Everything else is under More.")}
+    <section class="plain"><h2>Where we are</h2>
+      <article class="box"><p class="card-title">${esc(w.card)}</p><p class="muted">${esc(w.idea)}</p>
+        ${trailStrip(w.trail)}
+        <p style="margin-top:12px"><b>Now:</b> ${esc(w.now)}<br><b>Next:</b> ${esc(w.next)}</p></article></section>
+    <section class="plain"><h2>Needs you ${d.needs.length ? `<span class="count">${d.needs.length}</span>` : ""}</h2>
+      ${d.needs.length ? d.needs.map(need).join("") : `<p class="muted">Nothing is waiting on you.</p>`}</section>
+    <section class="plain"><h2>What we learned</h2>${d.learned.map(finding).join("")}
+      <p class="faint small">"Not demonstrated" means the test found no reliable edge. It is a real result, not a failure of the process.</p></section>`;
+  main.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => go(b.dataset.go)));
+};
+
+// ---------- Study: SC-FUT-0001 ----------
+const OUTCOME = {
+  pass_to_execution_calibration: { word: "PASSED", cls: "good", note: "Beat random entries and cleared the $15/day floor. Next would be a small paper-trading fill study, not real money." },
+  not_demonstrated: { word: "NOT DEMONSTRATED", cls: "bad", note: "No edge shown: it either didn't beat random entries convincingly, or didn't clear $15/day after costs." },
+  inconclusive: { word: "INCONCLUSIVE", cls: "warn", note: "The data can't settle it (too many gaps, too few trades, or the verdict flips under the worst-case check)." },
+};
+const WINDOW_WORD = { development: "Practice 2019–2023", diagnostics: "2024 check", held_out: "Final exam 2025–2026" };
+const money = (n, d = 2) => (n == null ? "-" : `${n < 0 ? "−" : ""}$${fmt(Math.abs(n), d)}`);
+
+// A horizontal meter with a pass line. `good` says which side of the line passes.
+function meter({ label, value, text, min, max, line, lineLabel, good }) {
+  const at = (v) => Math.max(0, Math.min(100, ((v - min) / (max - min)) * 100));
+  const passed = good === "below" ? value < line : value >= line;
+  return `<div class="meter"><div class="row"><b>${label}</b><span class="grow"></span><span class="${passed ? "good" : "bad"}">${text}</span></div>
+    <div class="meter-track" role="img" aria-label="${esc(`${label}: ${text}; pass line ${lineLabel}`)}">
+      <i class="meter-fill ${passed ? "good" : "bad"}" style="left:${Math.min(at(value), at(line))}%;width:${Math.abs(at(value) - at(line))}%"></i>
+      <i class="meter-line" style="left:${at(line)}%"></i><i class="meter-dot ${passed ? "good" : "bad"}" style="left:${at(value)}%"></i></div>
+    <div class="row faint small"><span>${esc(String(min))}</span><span class="grow"></span><span>pass line: ${esc(lineLabel)}</span><span class="grow"></span><span>${esc(String(max))}</span></div></div>`;
+}
+
+function chip(ok, text) { return `<span class="chip ${ok ? "good" : "bad"}">${ok ? "✓" : "!"} ${esc(text)}</span>`; }
+
+function verdictCard(key, entry) {
+  const v = entry.verdict, o = OUTCOME[v.outcome] || { word: v.outcome, cls: "", note: "" };
+  const [market, window] = key.split("/");
+  const p = v.p_value, abs = v.absolute_mean_cents == null ? null : v.absolute_mean_cents / 100;
+  const paired = v.observed_paired_cents == null ? null : v.observed_paired_cents / 100;
+  const power = entry.power;
+  return `<article class="box verdict">
+    <div class="row"><span class="mono faint">${esc(market)} · ${esc(WINDOW_WORD[window] || window)}</span><span class="grow"></span><span class="faint small">${fmt(v.evaluable_days, 0)} days · ${fmt(v.trades, 0)} trades</span></div>
+    <p class="verdict-word ${o.cls}">${o.word}</p><p class="muted" style="margin-top:0">${esc(o.note)}</p>
+    ${p == null ? "" : meter({ label: "Better than random entries?", value: p, text: `p = ${fmt(p, 3)} · ${money(paired)}/day better`, min: 0, max: 1, line: 0.05, lineLabel: "p < 0.05", good: "below" })}
+    ${abs == null ? "" : meter({ label: "Profit per day after costs", value: abs, text: `${money(abs)}/day`, min: -30, max: 30, line: 15, lineLabel: "$15/day", good: "above" })}
+    <div class="row" style="margin-top:12px">
+      ${chip(v.missing_session_share <= 0.01, `data gaps ${fmt(v.missing_session_share * 100, 1)}% (limit 1%)`)}
+      ${v.ambiguity_share == null ? "" : chip(v.ambiguity_share <= 0.1, `same-minute stops ${fmt(v.ambiguity_share * 100, 1)}% (limit 10%)`)}
+      ${power ? chip(power.joint_power >= 0.8, `power ${fmt(power.joint_power * 100, 0)}% to catch a real $20/day edge (target 80%)`) : ""}
+      ${v.stress_outcome ? chip(v.stress_outcome === v.outcome || v.outcome === "inconclusive", `worst-case check: ${v.stress_outcome === v.outcome ? "same verdict" : "different"}`) : ""}
+    </div></article>`;
+}
+
+function trailStrip(trail) {
+  return `<ol class="trail">${trail.map((s) => `<li class="${s.done ? "done" : "todo"}" title="${esc(s.about)}">
+    <b>${s.done ? "✓" : "🔒"} ${esc(s.label)}</b><span class="faint small">${s.at ? esc(s.at.slice(0, 10)) : "not yet"}</span>
+    ${s.detail ? `<span class="mono faint small">${esc(String(s.detail).slice(0, 10))}…</span>` : ""}</li>`).join("")}</ol>`;
+}
+
+function histogramSvg(h) {
+  const W = 640, H = 170, pad = 24, n = h.counts.length, top = Math.max(...h.counts, 1);
+  const lo = h.edges[0], hi = h.edges[n], x = (v) => pad + ((v - lo) / (hi - lo || 1)) * (W - 2 * pad);
+  const bars = h.counts.map((c, i) => { const x0 = x(h.edges[i]), x1 = x(h.edges[i + 1]); const bh = (c / top) * (H - 2 * pad); return `<rect x="${x0 + 1}" y="${H - pad - bh}" width="${Math.max(1, x1 - x0 - 2)}" height="${bh}" class="hist-bar"/>`; }).join("");
+  const ox = Math.max(pad, Math.min(W - pad, x(h.orb_total)));
+  return `<svg viewBox="0 0 ${W} ${H}" class="hist" role="img" aria-label="${esc(`Totals of 500 random-entry versions; the strategy's total ${money(h.orb_total, 0)} beat ${Math.round(h.share_of_draws_beaten * 100)}% of them`)}">
+    ${bars}<line x1="${ox}" x2="${ox}" y1="${pad / 2}" y2="${H - pad}" class="hist-orb"/>
+    <text x="${ox + 4}" y="${pad}" class="hist-label">strategy ${esc(money(h.orb_total, 0))}</text>
+    <text x="${pad}" y="${H - 6}" class="hist-axis">${esc(money(lo, 0))}</text><text x="${W - pad}" y="${H - 6}" text-anchor="end" class="hist-axis">${esc(money(hi, 0))}</text></svg>`;
+}
+
+function yearTable(diag) {
+  if (!diag || !diag.by_year) return "";
+  const years = Object.entries(diag.by_year), ladder = Object.entries(diag.cost_ladder || {});
+  return `<div class="study-grid">
+    <div class="box"><h3>By year</h3><p class="faint small">Does any edge come from one lucky year?</p><div class="table-wrap"><table><tr><th>Year</th><th class="num">Days</th><th class="num">Per day</th><th class="num">vs random</th></tr>
+      ${years.map(([y, r]) => `<tr><td>${esc(y)}</td><td class="num">${fmt(r.days, 0)}</td><td class="num ${r.absolute_mean_cents >= 0 ? "good" : "bad"}">${money(r.absolute_mean_cents / 100)}</td><td class="num ${r.paired_mean_cents >= 0 ? "good" : "bad"}">${money(r.paired_mean_cents / 100)}</td></tr>`).join("")}</table></div></div>
+    <div class="box"><h3>Cost ladder</h3><p class="faint small">Per-day profit as trading costs rise. L3 is the official level.</p><div class="table-wrap"><table><tr><th>Cost level</th><th class="num">Per day</th><th class="num">vs random</th></tr>
+      ${ladder.map(([l, r]) => `<tr${l === "L3" ? ' class="bench"' : ""}><td>${esc(l)}${l === "L3" ? " (official)" : ""}</td><td class="num ${r.absolute_mean_cents >= 0 ? "good" : "bad"}">${money(r.absolute_mean_cents / 100)}</td><td class="num ${r.paired_mean_cents >= 0 ? "good" : "bad"}">${money(r.paired_mean_cents / 100)}</td></tr>`).join("")}</table></div></div></div>`;
+}
+
+RENDER.study = async (main) => {
+  const d = await api("/api/study");
+  const S = (state.study = state.study || { phase: "development", market: "MNQ", window: "development", day: null });
+  const report = d.phases[S.phase];
+  const lead = "One strategy, tested honestly: rules frozen first, compared with 500 random entries every day, and a locked final exam that can be opened only once.";
+  if (!report) {
+    main.innerHTML = `${head("Study: SC-FUT-0001", lead)}${trailStrip(d.trail)}<div class="empty"><h3>No results yet</h3>The practice run hasn't finished. This page fills in from its report.</div>`;
+    return;
+  }
+  const keys = Object.keys(report);
+  const windows = [...new Set(keys.map((k) => k.split("/")[1]))];
+  if (!windows.includes(S.window)) S.window = windows[0];
+  const key = `${S.market}/${S.window}`, entry = report[key];
+  const seg = (name, values, word) => `<div class="seg" role="group" aria-label="${name}">${values.map((v) => `<button type="button" data-study-${name}="${esc(v)}" aria-pressed="${S[name] === v}">${esc(word(v))}</button>`).join("")}</div>`;
+  const phases = Object.keys(d.phases);
+  main.innerHTML = `${head("Study: SC-FUT-0001", lead)}
+    <section>${trailStrip(d.trail)}</section>
+    <div class="row" style="margin:14px 0">${phases.length > 1 ? seg("phase", phases, (v) => (v === "held_out" ? "Final exam" : "Practice")) : ""}${seg("market", ["MNQ", "MES"], (v) => (v === "MNQ" ? "MNQ (main)" : "MES (comparison only)"))}${seg("window", windows, (v) => WINDOW_WORD[v] || v)}</div>
+    <section>${entry ? verdictCard(key, entry) : `<p class="muted">No result for ${esc(key)}.</p>`}</section>
+    <section><h2>Strategy vs luck</h2>
+      <p class="muted">The bold line is the strategy's running profit after costs. The grey band is where 90% of 500 random-entry versions ended up on the same days, with the same stop and costs. Inside the band means you can't tell it from luck.</p>
+      <div class="legend"><span><i style="background:#f0a93b"></i>strategy</span><span><i style="background:#94a3b8"></i>random entries: average</span><span><i style="background:#475569"></i>random entries: 5%–95% band</span></div>
+      <div class="study-chart" id="study-equity"></div>
+      <div id="study-hist"></div></section>
+    <section><h2>Where the money goes</h2>${yearTable(entry && entry.diagnostics)}</section>
+    <section><h2>Replay a day</h2>
+      <p class="muted">Pick a day to see the 1-minute candles, the opening-range box, the breakout, the stop and the exit. Faint dots are where random entries went in that day.</p>
+      <div class="row"><label class="small">Day <select id="study-day"></select></label><button class="btn" id="study-best">Best day</button><button class="btn" id="study-worst">Worst day</button></div>
+      <div id="study-replay-info" class="small muted" style="margin:8px 0"></div><div class="study-chart tall" id="study-replay"></div></section>`;
+  main.querySelectorAll("[data-study-phase],[data-study-market],[data-study-window]").forEach((b) => (b.onclick = () => {
+    if (b.dataset.studyPhase) { S.phase = b.dataset.studyPhase; S.window = S.phase === "held_out" ? "held_out" : "development"; }
+    if (b.dataset.studyMarket) S.market = b.dataset.studyMarket;
+    if (b.dataset.studyWindow) S.window = b.dataset.studyWindow;
+    S.day = null;
+    go("study");
+  }));
+  const fileKey = `${S.market}.${S.window}`;
+  const sp = `phase=${encodeURIComponent(S.phase)}&key=${encodeURIComponent(fileKey)}`;
+  const [series, days] = await Promise.all([api(`/api/study/series?${sp}`), api(`/api/study/days?${sp}`)]);
+  drawEquity(series);
+  $("#study-hist").innerHTML = series.histogram
+    ? `<h3>Where would luck have put you?</h3><p class="muted">Each bar counts random-entry versions by their total profit. The line is the strategy: it beat ${Math.round(series.histogram.share_of_draws_beaten * 100)}% of them. To count as an edge it needs to beat about 95%.</p>${histogramSvg(series.histogram)}`
+    : `<p class="faint small">The luck band and histogram need the per-entry file from a newer practice run.</p>`;
+  const traded = days.filter((x) => x.trades > 0);
+  $("#study-day").innerHTML = traded.map((x) => `<option value="${esc(x.date)}">${esc(x.date)} · ${money(x.orb)} · ${x.trades} trade${x.trades > 1 ? "s" : ""}</option>`).join("");
+  const show = (day) => { S.day = day; $("#study-day").value = day; drawReplay(S.market, day); };
+  $("#study-day").onchange = (e) => show(e.target.value);
+  $("#study-best").onclick = () => show(traded.reduce((a, b) => (b.orb > a.orb ? b : a)).date);
+  $("#study-worst").onclick = () => show(traded.reduce((a, b) => (b.orb < a.orb ? b : a)).date);
+  if (traded.length && S.window !== "held_out") show(S.day && traded.some((x) => x.date === S.day) ? S.day : traded[0].date);
+};
+
+function drawEquity(s) {
+  const box = $("#study-equity");
+  const chart = LightweightCharts.createChart(box, { ...CHART_OPTS(), autoSize: true });
+  charts.push(chart);
+  const pts = (arr) => s.dates.map((t, i) => ({ time: t, value: arr[i] }));
+  if (s.band_low) {
+    chart.addSeries(LightweightCharts.LineSeries, { color: "#475569", lineWidth: 1, lineStyle: 2, priceLineVisible: false, lastValueVisible: false }).setData(pts(s.band_low));
+    chart.addSeries(LightweightCharts.LineSeries, { color: "#475569", lineWidth: 1, lineStyle: 2, priceLineVisible: false, lastValueVisible: false }).setData(pts(s.band_high));
+  }
+  chart.addSeries(LightweightCharts.LineSeries, { color: "#94a3b8", lineWidth: 1, priceLineVisible: false }).setData(pts(s.control_mean));
+  const orb = chart.addSeries(LightweightCharts.LineSeries, { color: "#f0a93b", lineWidth: 3 });
+  orb.setData(pts(s.orb));
+  orb.createPriceLine({ price: 0, color: "#64748b", lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
+  chart.timeScale().fitContent();
+}
+
+async function drawReplay(market, day) {
+  const info = $("#study-replay-info"), box = $("#study-replay");
+  info.textContent = "Loading the day's minute bars…";
+  let r;
+  try { r = await api(`/api/study/replay?market=${encodeURIComponent(market)}&day=${encodeURIComponent(day)}`); }
+  catch (e) { info.innerHTML = `<span class="error">${esc(e.message)}</span>`; return; }
+  while (charts.length > 1) { try { charts.pop().remove(); } catch (e) { /* gone */ } }
+  box.innerHTML = "";
+  const chart = LightweightCharts.createChart(box, { ...CHART_OPTS(), autoSize: true, timeScale: { timeVisible: true, secondsVisible: false, borderColor: "#27302b" } });
+  charts.push(chart);
+  const candles = chart.addSeries(LightweightCharts.CandlestickSeries, { upColor: "#5cc98f", downColor: "#ef6b6b", borderVisible: false, wickUpColor: "#5cc98f", wickDownColor: "#ef6b6b" });
+  candles.setData(r.candles);
+  if (r.range.high != null) {
+    candles.createPriceLine({ price: r.range.high, color: "#38bdf8", lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: "range high" });
+    candles.createPriceLine({ price: r.range.low, color: "#38bdf8", lineWidth: 1, lineStyle: 0, axisLabelVisible: true, title: "range low" });
+  }
+  const markers = [];
+  r.trades.forEach((t, i) => {
+    const long = t.side === "long";
+    if (t.signal) markers.push({ time: t.signal, position: long ? "aboveBar" : "belowBar", color: "#38bdf8", shape: "circle", text: "breakout" });
+    markers.push({ time: t.entry_time, position: long ? "belowBar" : "aboveBar", color: "#f0a93b", shape: long ? "arrowUp" : "arrowDown", text: `${long ? "buy" : "sell"} ${fmt(t.entry)}` });
+    markers.push({ time: t.exit_time, position: long ? "aboveBar" : "belowBar", color: t.net >= 0 ? "#10b981" : "#f43f5e", shape: "square", text: `${t.reason === "flatten" ? "exit" : "stopped"} ${money(t.net)}` });
+    candles.createPriceLine({ price: t.stop, color: "#f43f5e", lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: `stop ${i + 1}` });
+  });
+  r.gaps.forEach((g) => markers.push({ time: g, position: "inBar", color: "#f59e0b", shape: "square", text: "gap" }));
+  if (r.control) r.control.entries.forEach((c) => markers.push({ time: c.time, position: "inBar", color: "rgba(148,163,184,0.35)", shape: "circle", size: 0.4 }));
+  markers.sort((a, b) => a.time - b.time);
+  LightweightCharts.createSeriesMarkers(candles, markers);
+  chart.timeScale().fitContent();
+  const t = r.trades.map((x) => `${x.side} at ${fmt(x.entry)} → ${x.reason === "flatten" ? "closed at the 3:07 exit" : "stopped"} at ${fmt(x.exit)} (${money(x.net)})${x.gap_affected ? ", data gap while open" : ""}`).join("; ");
+  info.innerHTML = `${esc(r.date)} · ${esc(market)} · stop distance ${fmt(r.stop_points)} pts · day ${money(r.net)}${r.control ? ` · random entries averaged ${money(r.control.mean)}` : ""}<br>${esc(t)}`;
 }
 
 // ---------- Learn ----------
@@ -1148,7 +2113,7 @@ RENDER.risk = async (main) => {
         </section>
 
         <section class="box">
-          <h2>Kelly Criterion & Leverage</h2>
+          <h2>Kelly Criterion &amp; Position Scaling</h2>
           <p class="muted small">The mathematical formula for maximum compounding growth. Notice how aggressive full-Kelly is compared to realistic sizing.</p>
           <div class="stats compact" id="kelly-stats"></div>
           <div class="box" id="kelly-explain" style="background:var(--surface-2);font-size:13px;color:var(--muted)"></div>
@@ -1737,11 +2702,152 @@ function connectTickerLive() {
   }
 }
 
+// ---------- Roaming Screen Companion Co-Pilot ----------
+let companionOpen = false;
+let companionCustomText = null;
+let companionCoords = null;
+let patrolIdx = 0;
+
+const PAGE_COMPANION_GUIDE = {
+  today: {
+    title: "Command Base Co-Pilot",
+    text: "You're at the Main Base. Click any bot on the floorplan to see what it does, or press 'Replay Latest Run' to watch them move between stations.",
+    question: "Explain how all the agents in the Quant Brain harness work together from Research to Review.",
+  },
+  chart: {
+    title: "Superchart Co-Pilot",
+    text: "Use Replay or Blind Mode to step through bars without hindsight bias, or load SC-0002's 101 trades in the bottom drawer.",
+    question: "Explain what this chart is showing and how next-bar execution prevents look-ahead bias.",
+  },
+  activity: {
+    title: "Operations Trail Co-Pilot",
+    text: "Every agent run, Qwen validation gate, and git commit is recorded here. Click any run to see why it stopped.",
+    question: "What happened in the last research run, and why did the fail-closed safeguards trigger?",
+  },
+  strategies: {
+    title: "Strategy & Trial Lab Co-Pilot",
+    text: "Every parameter test counts as a trial. We compare against Buy & Hold and discount for multiple testing using DSR.",
+    question: "Why was SC-0002 rejected on held-out data despite having a 71% win rate in-sample?",
+  },
+  risk: {
+    title: "Risk & Survival Co-Pilot",
+    text: "Test your position sizing and run 2,000 Monte Carlo paths to see how risk per trade impacts probability of ruin.",
+    question: "Why does risking 5% or 10% per trade lead to ruin even when a strategy has a positive edge?",
+  },
+  market: {
+    title: "Screener & Macro Co-Pilot",
+    text: "Filter the starter universe by RSI(2) and SMA(200), or check upcoming FOMC rate decision dates.",
+    question: "Why do quants combine a short-term oversold indicator like RSI(2) with a long-term trend filter like SMA(200)?",
+  },
+  live: {
+    title: "Microstructure Co-Pilot",
+    text: "Streaming live Coinbase ticks and 10-level order book depth. Watch how bid-ask spread and depth shift in real time.",
+    question: "Explain bid-ask spread, order book depth, and how slippage affects algorithmic trading.",
+  },
+  learn: {
+    title: "Grounded Tutor Co-Pilot",
+    text: "Tick any project files on the left and ask a question. Every claim links to the exact source line.",
+    question: "Explain this whole project to me like I'm new to it.",
+  },
+  setup: {
+    title: "Automations & Models Co-Pilot",
+    text: "Manage scheduled health checks, market data refreshes, and check which AI backends and skills are registered.",
+    question: "How do the harness permissions and read-only database rules keep the project safe?",
+  },
+};
+
+function renderRoamingCompanion() {
+  const root = $("#roaming-companion-root");
+  if (!root || !window.QBBots) return;
+  const styleMode = (() => {
+    try { return localStorage.getItem("qb-bot-style") || "droid"; } catch (_) { return "droid"; }
+  })();
+  const guide = PAGE_COMPANION_GUIDE[state.page] || PAGE_COMPANION_GUIDE.today;
+  const bodyText = companionCustomText || guide.text;
+  const posStyle = companionCoords
+    ? `left:${companionCoords.left}px; top:${companionCoords.top}px; right:auto; bottom:auto;`
+    : "";
+
+  root.innerHTML = `
+    <div class="roaming-companion" id="roaming-companion" style="${posStyle}">
+      ${companionOpen ? `
+        <div class="roaming-companion-card" role="region" aria-label="Quant Co-Pilot Assistant">
+          <div class="row" style="margin-bottom:6px;">
+            <b style="color:var(--accent); font-size:12.5px;">${esc(guide.title)}</b>
+            <span class="grow"></span>
+            ${companionCoords ? `<button type="button" class="link small" id="comp-dock" style="margin-right:6px;">Dock</button>` : ""}
+            <button type="button" class="link small" id="comp-close" aria-label="Minimize Co-Pilot">Close</button>
+          </div>
+          <p style="margin:0 0 10px; color:var(--text); line-height:1.45;">${esc(bodyText)}</p>
+          <div class="row" style="gap:6px;">
+            <button type="button" class="btn small primary" id="comp-ask-btn">Explain This Screen</button>
+            ${state.page !== "today" ? `<button type="button" class="btn small" id="comp-home-btn">Return to Base</button>` : `<button type="button" class="btn small" id="comp-patrol-btn">Walk to Next Panel</button>`}
+          </div>
+        </div>
+      ` : ""}
+      <button type="button" class="roaming-companion-btn" id="comp-toggle-btn" title="Quant Co-Pilot Bot (Click to interact)" aria-expanded="${companionOpen}">
+        ${window.QBBots.botAvatarSvg(styleMode, "#4a8ad6", companionOpen ? "happy" : "idle")}
+      </button>
+    </div>
+  `;
+
+  $("#comp-toggle-btn")?.addEventListener("click", () => {
+    companionOpen = !companionOpen;
+    companionCustomText = null;
+    renderRoamingCompanion();
+  });
+  $("#comp-close")?.addEventListener("click", () => {
+    companionOpen = false;
+    companionCoords = null;
+    document.querySelectorAll(".roam-target-highlight").forEach((el) => el.classList.remove("roam-target-highlight"));
+    renderRoamingCompanion();
+  });
+  $("#comp-dock")?.addEventListener("click", () => {
+    companionCoords = null;
+    document.querySelectorAll(".roam-target-highlight").forEach((el) => el.classList.remove("roam-target-highlight"));
+    renderRoamingCompanion();
+  });
+  $("#comp-ask-btn")?.addEventListener("click", () => {
+    companionOpen = false;
+    companionCoords = null;
+    go("learn", { question: guide.question });
+  });
+  $("#comp-home-btn")?.addEventListener("click", () => {
+    companionCoords = null;
+    go("today");
+  });
+  $("#comp-patrol-btn")?.addEventListener("click", () => {
+    const targets = [
+      { sel: ".kpi-strip", msg: "KPI Strip: 5/5 stages complete, 72 trials recorded in the ledger, and 48 verified EOD datasets." },
+      { sel: "#cockpit-col-chart", msg: "SPY Backtest Replay: Step through 101 in-sample or 91 held-out trades with next-bar execution." },
+      { sel: "#cockpit-col-strategy", msg: "Agent Operations Base: 5 specialist bots mapped to their workstations. Click Replay Run to animate." },
+      { sel: "#master-feed-section", msg: "Unified Everything Feed: Every backtest, review, research source, failed-run receipt, market dataset, FOMC event, decision, and commit in one filterable stream." },
+    ];
+    const pick = targets[patrolIdx % targets.length];
+    patrolIdx += 1;
+    document.querySelectorAll(".roam-target-highlight").forEach((el) => el.classList.remove("roam-target-highlight"));
+    const el = $(pick.sel);
+    if (el) {
+      el.classList.add("roam-target-highlight");
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      const rect = el.getBoundingClientRect();
+      const maxLeft = Math.max(20, window.innerWidth - 380);
+      const maxTop = Math.max(20, window.innerHeight - 170);
+      companionCoords = {
+        left: Math.min(maxLeft, Math.max(20, Math.round(rect.right - 340))),
+        top: Math.min(maxTop, Math.max(60, Math.round(rect.top + 16))),
+      };
+    }
+    companionCustomText = pick.msg;
+    renderRoamingCompanion();
+  });
+}
+
 // ---------- boot ----------
 function boot() {
   buildTabs();
-  let first = "chart";
-  try { const s = localStorage.getItem("qb-page"); if (PAGES.some((p) => p.id === s)) first = s; } catch (e) { /* storage blocked */ }
+  // Always open on Home (the plain-answers page) unless a link names a page.
+  let first = "home";
   const hash = location.hash.slice(1);
   if (PAGES.some((p) => p.id === hash)) first = hash;
   go(first);
@@ -1749,5 +2855,6 @@ function boot() {
   hydrateTicker();
   connectTickerLive();
   footer();
+  renderRoamingCompanion();
 }
 document.addEventListener("DOMContentLoaded", boot);

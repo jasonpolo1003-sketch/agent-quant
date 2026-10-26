@@ -1,0 +1,12 @@
+id	file	quote	match
+Q1	source_files/cme_equity_rolldates.txt	Equity products roll date is the Monday prior to the third Friday of the expiration month.	MATCH
+Q2	source_files/cme_equity_rolldates.txt	allow market participants to roll their futures positions from one quarterly futures contract month to the next at any time they choose	MATCH
+Q3	source_files/cme_trading_hours_holidays.txt	Trading hours are subject to change and are in U.S. Central Time unless otherwise stated.	MATCH
+Q4	source_files/cme_trading_hours_holidays.txt	with the 2026 and 2027 calendar year the CME Group will be providing downloadable holiday calendars for Globex	MATCH
+Q5	source_files/phaseB/db_symbology.txt	Raw symbols are the original string symbols used by the publisher in the source data.	MATCH
+Q6	source_files/phaseB/db_symbology.txt	some publishers remap them daily	MATCH
+Q7	source_files/phaseB/db_symbology.txt	Parent symbology is a smart symbology feature that allows you to easily refer to groups of related symbols using a single root symbol.	MATCH
+Q8	source_files/phaseB/db_symbology.txt	this field will indicate whether the instrument is a future or futures spread	MATCH
+Q9	source_files/venue/px_search_contracts.txt	"""id"": ""CON.F.US.MNQ.U25"""	MATCH
+Q10	source_files/venue/px_search_contracts.txt	"""name"": ""MNQU5"""	MATCH
+Q11	source_files/phaseB/cme_block_response.txt	This IP address is blocked due to suspected web scraping activity	MATCH

@@ -29,10 +29,12 @@ from quant_brain.ui import (
     sessions,
     skills,
     store,
+    study,
     summary,
     tutor,
     winsched,
 )
+from quant_brain.ui import home as home_page
 from quant_brain.ui.backends import BACKENDS, BackendError, get_backend
 
 STATIC_DIR = Path(__file__).resolve().parents[3] / "ui" / "static"
@@ -138,7 +140,7 @@ def create_app(config: TerminalConfig) -> FastAPI:
 
     @app.get("/api/home")
     def home() -> dict[str, Any]:
-        counts = readers.brain_counts(config.brain_db)
+        counts = readers.effective_counts(root, config.brain_db)
         git = readers.git_activity(root, 8)
         health = store.list_runs(config.terminal_db, limit=200)
         last_health = next((r for r in health if r["kind"] == "health_check"
@@ -159,23 +161,72 @@ def create_app(config: TerminalConfig) -> FastAPI:
                 out.append(summary.describe_run(evs))
         return out
 
+    def _calendar_data() -> dict[str, Any]:
+        path = root / "data" / "processed" / "calendar.json"
+        if path.is_file():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        fomc_events = []
+        for d in [
+            "2026-01-28", "2026-03-18", "2026-05-06", "2026-06-17",
+            "2026-07-29", "2026-09-16", "2026-10-28", "2026-12-09"
+        ]:
+            fomc_events.append({
+                "date": d,
+                "title": "FOMC Rate Decision & Press Conference",
+                "source": "Federal Reserve (Official Calendar)",
+                "why": market_cal.FOMC_WHY,
+                "importance": "high",
+            })
+        return {
+            "events": fomc_events,
+            "note": "To add FRED economic releases (CPI, Jobs, GDP) run 'python scripts/fetch_calendar.py' with FRED_API_KEY in .env.",
+        }
+
     @app.get("/api/today")
     def today() -> dict[str, Any]:
         counts = readers.effective_counts(root, config.brain_db)
         notes = readers.review_notes(root)
         git = readers.git_activity(root, 12)
         job_runs = store.list_runs(config.terminal_db, limit=12)
+        desc_runs = _described_runs(8)
+        cal = _calendar_data()
         last_health = next((r for r in job_runs if r["kind"] == "health_check"
                             and r["status"] in ("completed", "failed")), None)
         return {
             "headline": summary.headline(counts, notes[0] if notes else None),
             "steps": summary.steps(counts),
             "next": readers.plan_checkpoint(root)["next"],
-            "timeline": summary.timeline(git["commits"], _described_runs(8), job_runs),
+            "timeline": summary.timeline(git["commits"], desc_runs, job_runs),
+            "feed": readers.master_feed(
+                root,
+                config.brain_db,
+                described_runs=desc_runs,
+                job_runs=job_runs,
+                calendar_events=cal.get("events", []),
+                commits=git["commits"],
+            ),
             "health": last_health,
             "git": {"branch": git["branch"], "head": git["head"],
                     "uncommitted": len(git["changes"])},
         }
+
+    @app.get("/api/feed")
+    def unified_feed():
+        git = readers.git_activity(root, 20)
+        job_runs = store.list_runs(config.terminal_db, limit=20)
+        desc_runs = _described_runs(20)
+        cal = _calendar_data()
+        return readers.master_feed(
+            root,
+            config.brain_db,
+            described_runs=desc_runs,
+            job_runs=job_runs,
+            calendar_events=cal.get("events", []),
+            commits=git["commits"],
+        )
 
     @app.get("/api/runs/described")
     def described_runs(limit: int = 40):
@@ -350,6 +401,34 @@ def create_app(config: TerminalConfig) -> FastAPI:
             raise HTTPException(404, "no such backtest")
         return readers.equity_series(root, found[0])
 
+    # --- SC-FUT-0001 study ----------------------------------------------------------
+
+    def _study(fn, *args):
+        try:
+            return fn(*args)
+        except study.StudyError as exc:
+            raise HTTPException(404, str(exc)) from exc
+
+    @app.get("/api/home-plain")
+    def home_plain():
+        return home_page.home(root)
+
+    @app.get("/api/study")
+    def study_overview():
+        return study.overview(root)
+
+    @app.get("/api/study/series")
+    def study_series(phase: str = "development", key: str = "MNQ.development"):
+        return _study(study.series, root, phase, key)
+
+    @app.get("/api/study/days")
+    def study_days(phase: str = "development", key: str = "MNQ.development"):
+        return study.day_list(root, phase, key)
+
+    @app.get("/api/study/replay")
+    def study_replay(day: str, market: str = "MNQ"):
+        return _study(study.replay, root, market, day)
+
     # --- chart workspace ------------------------------------------------------------
 
     charts = chartdata.ChartData(root, config.brain_db)
@@ -517,28 +596,7 @@ def create_app(config: TerminalConfig) -> FastAPI:
 
     @app.get("/api/market/calendar")
     def market_calendar():
-        path = root / "data" / "processed" / "calendar.json"
-        if path.is_file():
-            try:
-                return json.loads(path.read_text(encoding="utf-8"))
-            except Exception:
-                pass
-        fomc_events = []
-        for d in [
-            "2026-01-28", "2026-03-18", "2026-05-06", "2026-06-17",
-            "2026-07-29", "2026-09-16", "2026-10-28", "2026-12-09"
-        ]:
-            fomc_events.append({
-                "date": d,
-                "title": "FOMC Rate Decision & Press Conference",
-                "source": "Federal Reserve (Official Calendar)",
-                "why": market_cal.FOMC_WHY,
-                "importance": "high",
-            })
-        return {
-            "events": fomc_events,
-            "note": "To add FRED economic releases (CPI, Jobs, GDP) run 'python scripts/fetch_calendar.py' with FRED_API_KEY in .env.",
-        }
+        return _calendar_data()
 
     # --- live streaming feeds -------------------------------------------------------
 

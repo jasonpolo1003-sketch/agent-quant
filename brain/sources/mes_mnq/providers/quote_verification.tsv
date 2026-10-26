@@ -1,0 +1,35 @@
+P1	providers/db_glbx_dataset.txt	Directly captured at Aurora DC3 with an FPGA-based network card and hardware timestamping. Synchronized to UTC with PTP. Data prior to 2017-05-21 is retrieved from FIX flat files and does not have capture timestamps
+P2	providers/db_glbx_dataset.txt	MBO, MBP-1, MBP-10, TBBO, Trades, BBO-1s, BBO-1m, OHLCV-1s, OHLCV-1m, OHLCV-1h, OHLCV-1d, Definition, Statistics, Status, CMBP-1, CBBO-1s, CBBO-1m
+P3	providers/db_schema_ohlcv.txt	The ts_event timestamp marks the start of each interval. If no trade occurs within the interval, no record is printed.
+P4	providers/db_schema_ohlcv.txt	Our ohlcv-1d schema is based on UTC dates.
+P5	providers/db_schema_tbbo.txt	The capture-server-received timestamp expressed as the number of nanoseconds since the UNIX epoch.
+P6	providers/db_limits.txt	100 concurrent connections. 100 time series requests per second. 100 symbology requests per second. 20 metadata requests per second.
+P7	providers/db_get_cost.txt	This method may not be accurate for time ranges that are not discrete multiples of 10 minutes, potentially over-reporting the cost in such cases.
+P8	providers/db_metered_pricing.txt	We meter the data by its uncompressed size in binary encoding.
+P9	providers/db_faq_credits.txt	All new users receive $125 in free credits upon signup. Credits can be used on historical data, or can be used towards the cost of the first month of a subscription plan. These credits are shared across your team and expire after 6 months.
+P10	providers/db_faq_credits.txt	There is no monthly subscription fee for usage-based historical data.
+P11	providers/db_unit_pricing_2024-12-11.txt	GLBX.MDP3 OHLCV1m $70.00/GB $84.00/GB
+P12	providers/db_unit_pricing_2024-12-11.txt	GLBX.MDP3     TBBO           $28.00/GB     $33.60/GB
+P13	providers/db_unit_pricing_2024-12-11.txt	GLBX.MDP3 MBP1 $1.80/GB $2.16/GB
+P14	providers/db_trading_hours.txt	We'll use the status schema for this example. This schema provides updates about the trading session.
+P15	providers/firstrate_mes.txt	Buy Now £199.95
+P16	providers/firstrate_mes.txt	Continuous data is from 5-May-2019 , Individual contracts start with MESZ19 (December 2019)
+P17	providers/firstrate_mes.txt	Unadjusted - actual historic traded prices with no adjustments
+P18	providers/firstrate_mes.txt	an annual subscription of $99.95 is required for the updates
+P19	providers/firstrate_faq.txt	All data is in US Eastern time (EST or EDT depending on the time of year), except crypto data, which is in UTC. Timestamps mark the start of each bar.
+P20	providers/firstrate_faq.txt	We don't include bars where no trades took place, so a missing minute means there was no trading in it.
+P21	providers/firstrate_faq.txt	We provide two weeks of recent data as a sample for each dataset.
+P22	providers/firstrate_license.txt	Publishing research – published research and academic papers are permitted provided the raw data is not redistributed.
+P23	providers/kibot_buy.txt	for example ES 1-minute full history is $110
+P24	providers/kibot_timezone.txt	Kibot data uses US Eastern Time (ET) for timestamps by default, and the time zone can be changed to suit your needs.
+P25	providers/kibot_format.txt	For bar data (second, minute, daily), the timestamp represents the bar open time, the moment the bar begins, not when it closes.
+P26	providers/kibot_continuous.txt	Kibot builds continuous contracts using calendar-based unadjusted rollover.
+P27	providers/kibot_continuous.txt	Kibot provides all individual contract files, so you can construct your own continuous series with whichever adjustment method suits your strategy.
+P28	providers/kibot_license.txt	The Licensee warrants that he will not resell or redistribute the Data or the Software. The Data is for the Licensee's own internal use only.
+P29	providers/norgate_futures.txt	Unless otherwise specified, the Close price in the data is the official settlement price (and not the last-traded price).
+P30	providers/polygon_pricing.txt	Futures Starter Great for aggregates $29/month Billed monthly Sign up All Futures Tickers Unlimited API Calls 2 Years Historical Data
+P31	providers/polygon_pricing.txt	Futures Developer Great for historical data $79/month Billed monthly Sign up All Futures Tickers Unlimited API Calls 5 Years Historical Data
+P32	providers/polygon_pricing.txt	Futures Advanced Great for real-time data $199/month Billed monthly Sign up All Futures Tickers Unlimited API Calls 7+ Years Historical Data
+P33	providers/massive_futures_aggs.md	Bars are built from the trades in each interval, so an interval with no trades has no bar.
+P34	providers/massive_futures_schedules.md	All times are returned in Coordinated Universal Time (UTC)
+P35	providers/barchart_ondemand.txt	Valid Values ticks, minutes, nearbyMinutes, formTMinutes, daily
