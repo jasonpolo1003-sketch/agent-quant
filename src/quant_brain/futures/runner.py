@@ -136,8 +136,11 @@ def gate_problems(root: Path, phase: str, data_dir: Path) -> list[str]:
         spec = _spec(root)
         spec["data_partitions"]["source_data_manifest_sha256"]
         spec["data_partitions"]["raw_download_sha256sums_sha256"]
+        locked = spec["provenance"]["dependency_lock_sha256"]
     except (OSError, ValueError, KeyError, TypeError):
-        return [*problems, "spec unreadable or missing pinned data hashes"]
+        return [*problems, "spec unreadable or missing pinned hashes"]
+    if sha256(root / "uv.lock") != locked:
+        problems.append("uv.lock differs from the frozen dependency lock")
     if phase == "development":
         manifest = data_dir / "manifest.json"
         if (

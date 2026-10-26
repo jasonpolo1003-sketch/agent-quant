@@ -47,7 +47,8 @@ def repo(tmp_path):
         "data_partitions": {
             "source_data_manifest_sha256": _sha(dev / "manifest.json"),
             "raw_download_sha256sums_sha256": _sha(raw / "SHA256SUMS"),
-        }
+        },
+        "provenance": {"dependency_lock_sha256": _sha(root / "uv.lock")},
     }
     (root / runner.SPEC).parent.mkdir(parents=True, exist_ok=True)
     (root / runner.SPEC).write_text(json.dumps(spec), encoding="utf-8")
@@ -115,8 +116,11 @@ def test_spec_edit_and_dirty_code_are_refused(repo):
     (root / "src/quant_brain/x.py").write_text("changed\n", encoding="utf-8")
     with pytest.raises(runner.GateError, match="committed and clean"):
         runner.run(root, "development", dev, synthetic_loader, replicates=99)
+    (root / "uv.lock").write_text("other\n", encoding="utf-8")
+    assert any("dependency lock" in p for p in runner.gate_problems(root, "development", dev))
     (root / runner.SPEC).write_text("{}", encoding="utf-8")
-    assert any("freeze hash" in p for p in runner.gate_problems(root, "development", dev))
+    problems = runner.gate_problems(root, "development", dev)
+    assert any("freeze hash" in p for p in problems) and any("unreadable" in p for p in problems)
 
 
 def _fake_dev_completion(root, power=0.9, review=False):
