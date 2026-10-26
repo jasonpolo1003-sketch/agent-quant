@@ -1,0 +1,156 @@
+{
+  "schema_version": "sc-fut-0001-1",
+  "card_id": "SC-FUT-0001",
+  "status": "frozen",
+  "frozen": true,
+  "frozen_at": "2026-10-26",
+  "approved_by": "Jason 2026-10-26 (prefreeze defaults; session-audit decisions; plan approval)",
+  "supersedes": {"file": "sc-fut-0001-spec.v0.json", "sha256": "e6f7a9cf8283c2f9459a6059c54424b69094d0987cc3a50b80409f707df46fc6"},
+  "execution_allowed": false,
+  "execution_gates": [
+    "development replay (2019-05-01..2024-12-31 partition) requires Jason's explicit authorization",
+    "locked held-out read (2025-01-01..2026-10-21) requires separate explicit authorization and happens once"
+  ],
+  "source": {
+    "paper": "Fetna (2026), Opening-Range Breakout Does Not Survive Trading Costs, unreviewed preprint",
+    "local_pdf_sha256": "40b68d2f60561cec7f384559c48f7d3e5a528ca1591a0ea1dcabac6ae67e249f",
+    "sourced_rules": ["one-minute N-bar opening range with void range on any missing minute", "first post-range minute close outside range, next minute open entry", "one trade per side, no re-entry after stop, no same-bar double breakout", "R2 stop 10% of prior 14-day ATR, no target, flat at close", "gap-through stop fill at bar open"],
+    "paper_result": "headline negative after costs; adaptation is a falsification/replication, not a demonstrated edge"
+  },
+  "instrument": {
+    "primary": "MNQ",
+    "comparison_only": "MES",
+    "comparison_rule": "MES reported separately under the identical rule; cannot rescue an MNQ miss",
+    "contract_count_primary": 1,
+    "price_tick_points": "0.25",
+    "tick_value_usd": {"MNQ": "0.50", "MES": "1.25"},
+    "point_value_usd": {"MNQ": "2.00", "MES": "5.00"},
+    "dated_unadjusted_contracts": true,
+    "calendar_timezone": "America/Chicago",
+    "primary_roll": "D-ROLL-01: from the CME trade date equal to the contract's expiration minus eight calendar days (holiday-adjusted), trade the next quarterly; versioned in contract_map",
+    "sensitivity_roll": "prior-day volume only; diagnostic, nonselectable",
+    "event_exclusion": "none"
+  },
+  "sessions": {
+    "eligible_calendar": "NYSE cash-open sessions (08:30 CT open exists); CME-only holiday sessions are never candidate days",
+    "calendar_source": "pandas_market_calendars 5.5.0 NYSE + CME_Equity; CME equity early close fixed at 12:15 CT (overrides library 12:00; bar data and CME 2011 notice)",
+    "bar_timestamp": "ts_event labels minute start; a bar is known at minute end",
+    "trade_date": "CME Globex trade date; bars at or after 17:00 CT belong to the next trade date"
+  },
+  "rule": {
+    "anchor_local_time": "08:30",
+    "range_bar_count": 15,
+    "range_bars": "08:30..08:44 CT inclusive, complete at 08:45",
+    "range_void_on_missing_bar": true,
+    "void_range_day": "eligible no-trade day: ORB $0 and control $0",
+    "signal": "first completed one-minute bar (start >= 08:45 CT) closing strictly above range high (long) or strictly below range low (short)",
+    "entry": "open of the minute immediately after the signal bar; if that bar is absent, skip that signal and log it; never fill a missing minute or chase the next visible open",
+    "earliest_entry_fill_local_time": "08:46",
+    "new_entry_cutoff_local_time_inclusive": "14:30 (entry fill minute), or exit minute minus 1 on early-close days if earlier",
+    "one_entry_per_direction_per_session": true,
+    "opposite_direction_after_exit": "allowed if flat and direction unused; its signal bar must start after the exit bar (no signal on the exit bar itself)",
+    "simultaneous_double_break": "impossible for one close with range high >= low; assert invariant",
+    "atr": {
+      "completed_prior_sessions": 14,
+      "session_set": "the 14 NYSE cash sessions immediately before the candidate day; CME-only holiday sessions skipped",
+      "contract_history": "dated contract being traded on the candidate day; no stitching",
+      "true_range": "max(H - L, |H - C_prev|, |L - C_prev|) per prior session",
+      "high_low": "max high / min low over all bars of the dated contract in that session's CME trade date (17:00 CT previous day to 16:00 CT)",
+      "prior_close_session_definition": "close of the last one-minute bar of the dated contract starting before that session's CME equity close (15:00 CT normal; 12:15 CT early close); C_prev is that close for the preceding NYSE session in the set",
+      "required_sessions": "15 sessions with a regular-hours close (14 true ranges plus the close before the first); any missing -> candidate day ineligible, decided from data only",
+      "aggregation": "simple mean of the 14 true ranges",
+      "stop_fraction": "0.10",
+      "distance_rounding": "0.10 x ATR rounded to the nearest 0.25-point tick, exact half tick rounds up (ROUND_HALF_UP), minimum one tick"
+    },
+    "stop": "long: entry price minus rounded distance; short: entry plus rounded distance. Filled at the stop level, or at the bar open if the bar opens through it. On the entry bar, a touch counts as stopped (adverse first). No target.",
+    "standard_flatten_open_local_time": "15:07",
+    "early_close_flatten": "open of the minute 3 minutes before the 12:15 CT close (12:12 CT)",
+    "position_overlap": "never",
+    "overnight_position": false,
+    "missing_minute_with_live_stop": "unknown execution. Stress bound = worse of stop level and next visible bar's adverse extreme; reported only as a bound, never as an observed fill. No later visible bar before flatten -> non-evaluable trade",
+    "missing_flatten_bar_with_live_position": "non-evaluable; never a fabricated fill and never counted as a $0 day",
+    "missing_minute_alarm": "if >1% of eligible sessions OR >1% of executed trades have a missing minute while a stop is live, the affected result is inconclusive; below that, any verdict that flips under the stress bound is also inconclusive"
+  },
+  "costs": {
+    "source_decision": "D-COST-01",
+    "primary_level": "L3",
+    "l3_round_trip_usd_per_contract": {"MNQ": "3.22", "MES": "6.22"},
+    "l3_round_trip_slippage_ticks": 4,
+    "fees_round_trip_usd": "1.22",
+    "accounting": "subtract L3 exactly once per completed round trip from reference-price P&L; no extra spread or stop slippage; gap-through OHLC reference stays adverse",
+    "stress": "L1-L4 fixed, L5 delayed/no-fill; reported, nonselectable",
+    "cost_levels_source": "brain/sources/mes_mnq/execution_costs/execution_costs_mes_mnq.md",
+    "cost_levels_manifest_sha256": "60311a7c45374245c59cc73392640d972df73bed043f07a3baa937badf91daab"
+  },
+  "data_partitions": {
+    "date_basis": "CME trade date, America/Chicago",
+    "development_inclusive": ["2019-05-01", "2023-12-31"],
+    "diagnostics_inclusive": ["2024-01-01", "2024-12-31"],
+    "locked_internal_held_out_inclusive": ["2025-01-01", "2026-10-21"],
+    "eligible_day_includes_no_trade_as_zero": true,
+    "missing_session_eligibility": "candidate day = eligible-calendar session with ATR history complete (rule.atr.required_sessions). Void range -> eligible $0 day. No bars in the cash window -> ineligible (data only). Non-evaluable trades are counted and reported separately and never imputed",
+    "development_partition_manifest": "C:/Users/jason/OneDrive/Desktop/Quant/data/databento/dev_2019-05-01_2024-12-31/manifest.json",
+    "source_data_manifest_sha256": "3f2774974c09c8e21d458ad05d485f61828388315d3d8a7a07359d5ac9da5ad4",
+    "raw_download_sha256sums_sha256": "d4c7ec935b275d27eb0d46c458af8b6e82aa78df9f95943b75f383c4e8576d9d",
+    "session_calendar": "brain/_system/futures/session-calendar.v1.csv",
+    "session_calendar_manifest_sha256": "5572e6a77724312aaac7becd2d24505b7f74898919b8e24f32c1237cef2d09fe",
+    "contract_map": "brain/sources/mes_mnq/contracts/roll_calendar_2019_2026.csv (instrument ids from DBN symbology mappings)",
+    "contract_map_manifest_sha256": "0de7de8fa4e90849d5bb86c0db3a35c9b876c4ed7cf352608ba915ccc60de0d1",
+    "coverage_audit": {"file": "brain/_system/futures/session-audit-dev.json", "sha256": "4878b77f57f36cbd8aff3436f434a5597cdf831083bc0667dbcdf931d7ceb3cb"}
+  },
+  "controls": {
+    "draws_per_eligible_session": 500,
+    "draw_seed": 20261026,
+    "seed_scheme": "numpy PCG64 seeded with [draw_seed, root_code (MNQ=1, MES=2), yyyymmdd of trade date]; draws generated in order 0..499",
+    "legal_entry_minutes": "fill minutes 08:46..entry cutoff inclusive (rule.new_entry_cutoff_local_time_inclusive), strictly after any previous control trade's exit minute",
+    "legal_minute_endpoint_and_invalid_draw_policy": "draw a fill minute uniformly among legal minutes; if that bar is absent, redraw from the same generator (deterministic rejection, count logged); if no legal minute with a bar remains, that control trade is not taken and is logged",
+    "direction": "uniform long/short per control trade, independent of the ORB direction",
+    "trade_count_matching_policy": "each draw takes k sequential trades, k = the ORB's executed entry count that day (0, 1 or 2); k = 0 -> control $0",
+    "same_as_orb": "dated contract, ATR stop distance, stop/gap fill rules, flatten minute, L3 cost, missing-minute policy",
+    "control_daily_aggregation": "control daily P&L = arithmetic mean of the 500 draws' net daily P&L",
+    "preserve_each_draw_and_paired_daily_pnl": true,
+    "diagnostics_nonselectable": ["same-direction random time", "long and short legs separately"]
+  },
+  "inference": {
+    "estimand": "MNQ net USD per eligible day at L3, including $0 for no-trade days",
+    "economic_minimum_usd_per_eligible_day": "15.00",
+    "primary_statistic": "mean over eligible days of (ORB net USD minus control daily P&L)",
+    "alpha": "0.05",
+    "null_and_test_algorithm": "one-sided; stationary bootstrap (Politis-Romano) of complete paired eligible days with mean block length 5; resample the null-centred paired differences (d - mean d); p = (1 + #{bootstrap mean >= observed mean}) / (B + 1)",
+    "bootstrap_draws_and_seed": {"B": 9999, "seed": 20261027},
+    "block_length_sensitivity": "Politis-White (2004) automatic block length with Patton-Politis-White (2009) correction; reported only, cannot change the verdict",
+    "decision": "pass requires p < 0.05 AND observed mean absolute MNQ net >= $15 per eligible day; the lower-one-sided-CI > $15 alternative is rejected",
+    "power_target": "80% at true +$20/day absolute and at +$20/day paired advantage",
+    "development_only_power_mde": "computed from the authorized development replay (empirical variance and dependence) before any held-out read. If power < 80%, either extend with prospective data or record inconclusive; the $15 floor is never lowered",
+    "selection": {
+      "single_local_rule_pbo": "not_applicable (PROP-011)",
+      "effective_trial_count_or_range": "decisive test is the locked 2025-2026 period, unseen by anyone; DSR reported at N=1 and N=25",
+      "dsr_treatment": "Bailey & Lopez de Prado (2014) DSR on the ORB daily net series at N=1 and N=25, cross-trial Sharpe variance proxied by the variance of the 500 control draws' daily Sharpe ratios; diagnostic only, not a gate",
+      "local_prior_looks_ledger": "brain/_system/futures/sc-fut-0001-prior-looks.md",
+      "local_prior_looks_ledger_sha256": "afd8040aea7ff969675d193d066a757c3b80fbd2d84eadc22c6b6f9499355e20"
+    },
+    "outcomes": ["pass_to_execution_calibration", "not_demonstrated", "inconclusive"],
+    "diagnostics_nonselectable": ["year and regime splits", "fixed vs volume roll", "L1-L5 costs", "top-day concentration vs control", "leave-one-month/quarter-out", "MES comparison"],
+    "held_out_access_requires_separate_authorization": true
+  },
+  "ambiguity": {
+    "alarm_if_entry_and_stop_same_minute_share_gt": "0.10",
+    "denominator_and_zero_trade_policy": "denominator = executed ORB trades in the development replay; zero trades -> not_estimable",
+    "response": "review before any held-out read; no tuning on held-out"
+  },
+  "development_only_prop_eval": {
+    "status": "deferred_by_Jason_2026-10-26",
+    "scope": "outside this freeze; requires a frozen-rule development replay and a selected venue/rulebook; never a strategy gate or purchase authorization"
+  },
+  "decision_records": {
+    "prefreeze_defaults": {"file": "brain/05_Reviews/SC-FUT-0001-prefreeze-defaults.md", "sha256": "3488f4eb454eacff7b792e6d68e7671cb4b041ac77dc0df26d483eab918957c0"},
+    "session_audit_decisions": {"file": "brain/05_Reviews/SC-FUT-0001-session-audit.md", "sha256": "bd42f117c7201e67ac57c61837d9414f7262ba3b8873843296a20edd90923595"}
+  },
+  "provenance": {
+    "dependency_lock_sha256": "30f5c33ee438c951e77a5940cb290cfd7e8c5cd3d0faaaa06dd83199e4b677d8",
+    "spec_hash": "sha256 of this file's bytes, recorded in sc-fut-0001-spec.v1.sha256 and the trial ledger",
+    "code_commit_at_freeze": "the commit adding this file, recorded in the trial ledger freeze event; the engine is implemented after freeze and must gate on this spec hash",
+    "seeds": "inline (controls.draw_seed, inference.bootstrap_draws_and_seed.seed)"
+  },
+  "freeze_blockers": []
+}

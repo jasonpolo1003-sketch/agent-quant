@@ -1,7 +1,10 @@
 ---
 card_id: SC-FUT-0001
-status: draft_for_review
-frozen: false
+status: frozen
+frozen: true
+frozen_at: 2026-10-26
+frozen_spec: brain/_system/futures/sc-fut-0001-spec.v1.json
+frozen_spec_sha256: 9e77ef0c0522e9e0759e7cccb8f1f85cf5f746e2b7d65e4bd7f8a8e113ab9634
 created: 2026-10-25
 method_family: opening_range_breakout
 primary: MNQ
@@ -11,6 +14,8 @@ source_status: unreviewed_research_lead
 ---
 
 # SC-FUT-0001 — Draft MNQ cash-open 15-minute ORB, R2 exit
+
+> **FROZEN 2026-10-26.** The binding rules are now `brain/_system/futures/sc-fut-0001-spec.v1.json` (SHA-256 above), approved by Jason. Where this card's draft text below differs, the frozen spec wins. Development replay and the held-out read each still need Jason's separate authorization. Any change from here means a new card, with this one counted as a trial.
 
 **FREEZE-REVIEW DRAFT — NOT FROZEN OR TESTABLE.** Jason supplied an economic floor and defaults for the open rows; they are engineering assumptions, not sourced findings. The proposed canonical spec is `brain/_system/futures/sc-fut-0001-spec.v0.json` (draft, fail-closed); the freeze-review checklist is `brain/05_Reviews/SC-FUT-0001-freeze-review.md`. No implementation or strategy P&L run is authorized by these documents. Fetna's headline result is negative after costs; the expected outcome is `not_demonstrated`, not a prop-eval timeline.
 

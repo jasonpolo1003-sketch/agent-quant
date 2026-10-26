@@ -132,6 +132,37 @@ def _minutes(day: date, start: time, end_inclusive: time) -> pd.DatetimeIndex:
     return pd.date_range(lo, hi, freq="min")
 
 
+@dataclass(frozen=True)
+class CashSession:
+    day: date
+    close: pd.Timestamp
+    exit_at: time
+    early: bool
+    flags: tuple[str, ...]
+
+
+def cash_sessions(start: date, end: date) -> list[CashSession]:
+    """NYSE cash-open sessions with the CME equity close and SC-FUT-0001 exit minute."""
+    nyse = pmc.get_calendar("NYSE").schedule(start, end, tz=CHICAGO)
+    cme = pmc.get_calendar("CME_Equity").schedule(start, end, tz=CHICAGO)
+    sessions = []
+    for ts in nyse.index:
+        day = ts.date()
+        flags = []
+        if ts not in cme.index:
+            flags.append("nyse_open_cme_closed")
+            close = pd.Timestamp.combine(day, time(15, 0)).tz_localize(CHICAGO)
+        else:
+            close = cme.loc[ts, "market_close"]
+        early = close.time() < time(15, 10)
+        if early and close.time() != EQUITY_EARLY_CLOSE:
+            flags.append(f"calendar_close_{close.strftime('%H%M')}_overridden")
+            close = pd.Timestamp.combine(day, EQUITY_EARLY_CLOSE).tz_localize(CHICAGO)
+        exit_at = (close - EARLY_EXIT_LEAD).time() if early else NORMAL_EXIT
+        sessions.append(CashSession(day, close, exit_at, early, tuple(flags)))
+    return sessions
+
+
 def audit_sessions(
     bars: pd.DataFrame,
     mappings: dict,
@@ -142,30 +173,20 @@ def audit_sessions(
     end: date,
     dev_end: date,
 ) -> list[SessionRow]:
-    nyse = pmc.get_calendar("NYSE").schedule(start - timedelta(days=40), end, tz=CHICAGO)
-    cme = pmc.get_calendar("CME_Equity").schedule(start - timedelta(days=40), end, tz=CHICAGO)
     schedule = selected_contracts(roll_csv, root)
     keyed = bars.assign(day=bars["minute"].dt.date)
     by_day = {key: set(group["minute"]) for key, group in keyed.groupby(["instrument_id", "day"])}
-    sessions = [ts.date() for ts in nyse.index]
+    calendar = cash_sessions(start - timedelta(days=40), end)
+    sessions = [s.day for s in calendar]
     rows = []
-    for position, day in enumerate(sessions):
+    for position, session in enumerate(calendar):
+        day, close, exit_at, early = session.day, session.close, session.exit_at, session.early
         if day < start:
             continue
         contract = contract_on(schedule, day)
         iid = instrument_for(mappings, contract, day)
         have = by_day.get((iid, day), set())
-        flags = []
-        if pd.Timestamp(day) not in cme.index:
-            flags.append("nyse_open_cme_closed")
-            close = pd.Timestamp.combine(day, time(15, 0)).tz_localize(CHICAGO)
-        else:
-            close = cme.loc[pd.Timestamp(day), "market_close"]
-        early = close.time() < time(15, 10)
-        if early and close.time() != EQUITY_EARLY_CLOSE:
-            flags.append(f"calendar_close_{close.strftime('%H%M')}_overridden")
-            close = pd.Timestamp.combine(day, EQUITY_EARLY_CLOSE).tz_localize(CHICAGO)
-        exit_at = (close - EARLY_EXIT_LEAD).time() if early else NORMAL_EXIT
+        flags = list(session.flags)
         window = _minutes(day, RANGE_START, exit_at)
         present = [m in have for m in window]
         live = [ok for m, ok in zip(window, present, strict=True) if m.time() >= SIGNAL_START]

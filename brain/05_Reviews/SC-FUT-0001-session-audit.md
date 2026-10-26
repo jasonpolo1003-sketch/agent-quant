@@ -29,3 +29,11 @@
 3. Whether CME-only holiday sessions count toward the 14-session ATR window [recommend no; the audit uses NYSE sessions only, and this affects only windows that span those holidays].
 
 Development n ≈ 1,154 is close to the power worksheet's upper bound of 1,213, so the conditional power rows are not materially changed. Empirical variance still requires the authorized replay.
+
+## Jason's decisions (2026-10-26)
+Approved with the plan ("approve plain"):
+1. Equity early close 12:15 CT; flatten at 12:12 CT.
+2. Incomplete (void) opening range: eligible no-trade day, $0 for ORB and control.
+3. The 14-session ATR window uses NYSE cash sessions only; CME-only holiday sessions are skipped.
+4. Selection: the locked 2025–2026 test is decisive; DSR is reported at N=1 and N=25 as a diagnostic only (see `brain/_system/futures/sc-fut-0001-prior-looks.md`).
+5. Prop-eval simulator stays deferred and is outside the freeze.
