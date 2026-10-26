@@ -1,5 +1,14 @@
 # Quant Agent Brain — Session Handoff
 
+## SC-FUT-0001 FROZEN (2026-10-26; Step 1 of the approved plan)
+
+- Jason approved the 5-step plan, the three audit decisions (12:15 CT early close / 12:12 exit; void range = $0 no-trade day for ORB and control; ATR window uses NYSE sessions only), DSR at N=1/25 as a diagnostic, and keeping prop-eval deferred. Recorded in `brain/05_Reviews/SC-FUT-0001-session-audit.md`.
+- Frozen spec: `brain/_system/futures/sc-fut-0001-spec.v1.json`, SHA-256 `9e77ef0c…9634` (also in `.sha256`, the card frontmatter, and `brain/04_Backtest_Reports/SC-FUT-0001.trials.jsonl`, freeze commit `bb71d2f`). No nulls and no blockers; `execution_allowed: false`. Seeds: controls 20261026; bootstrap B=9999, seed 20261027.
+- Pinned inputs: dev partition manifest, `session-calendar.v1.csv` (1,880 NYSE sessions 2019-05-01..2026-10-21, with the 12:15 override), roll calendar, cost levels, `sc-fut-0001-prior-looks.md`, decision records, `uv.lock`. `.gitattributes` marks them `-text` so the hashes survive checkout. `tests/test_futures_frozen_spec.py` fails on any edit.
+- Not added to `brain/03_Strategy_Cards/freeze_ledger.json`: that ledger is the SC-0002 markdown-card schema, and its tests expect only SC-0001/0002.
+- Verification: 907 passed, 2 skipped; Ruff clean. No P&L computed.
+- **Next (Step 2):** build the minute-bar engine and the random-control generator to the frozen spec, gating on the spec hash. Test them on `simulator-handworked-fixtures.md` and synthetic bars, and write an independent reference implementation that must match trade-for-trade. Step 3 (dev replay) needs Jason's OK.
+
 ## Repo cleanup and SC-FUT-0001 session audit (2026-10-26, later)
 
 - **Branches:** only `main` and `testing` remain (local and GitHub). Removed branches are kept as tags `archive/2026-10-26/*`; PR #13 (Cursor UI, unreviewed) was closed, tag `archive/2026-10-26/cursor-interactive-base-ui-d89c`. The `quant-agent-brain-ui` worktree was removed; its git-ignored `.hermes/` and `db/` are in `Desktop/Quant/_archive/`. The `quant-agent-brain-merge-fixes` worktree is now on `main`.
