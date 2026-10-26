@@ -1,5 +1,31 @@
 # Quant Agent Brain — Session Handoff
 
+## SC-FUT-0001 Step 2 built and reviewed (2026-10-26; no real P&L)
+
+- Plan: `brain/_system/plan/phase_b_sc_fut_0001_engine.md` (approved). Fixtures were committed before the engine (`2bdbbbc`). Modules in `src/quant_brain/futures/`:
+  - `orb.py`: engine;
+  - `orb_reference.py`: independent reference;
+  - `controls.py`: 500 seeded draws;
+  - `bars.py`: loader;
+  - `inference.py`: test, floor, alarms, power, DSR, Politis–White;
+  - `runner.py` + `scripts/run_sc_fut_0001.py`: gates, ledger, reports.
+- Verification:
+  - the engine and the reference agree on all fixtures and on 12,000 random days;
+  - the loader reproduces the audit's minute counts on all 1,428 MNQ sessions;
+  - mutation check: 16/17 mutants caught, and the survivor (SIGNAL_START 08:44) is equivalent;
+  - full suite **997 passed, 2 skipped**; Ruff clean.
+- An independent review (fresh agent, read-only) found 5 should-fix defects, all fixed with regression tests in `55adc2d`:
+  - a gap running to the flatten is now non-evaluable;
+  - a day is non-pairable if any control draw is non-evaluable (the old behaviour biased results toward a pass);
+  - no cash-window bars → ineligible;
+  - the stress bound is never kinder than the primary;
+  - DSR variance no longer silently 0;
+  - the dev-bars hash is checked;
+  - the loader sorts bars and rejects duplicate minutes.
+- Accepted limitation: the gates are honor-system. The ledger is an editable file, `--by Jason` is a string, and there is no lock against concurrent runs.
+- **Open for Jason before Step 3:** (A) a missing entry minute consumes that side (the engine's reading; the reviewer notes the spec could be read as re-arming); (B) the ATR close uses 15:00 CT, while the calendar's 16:00 is the Globex close.
+- `status` shows development BLOCKED only by the missing `development_authorized`. Step 3 needs Jason's explicit OK; then run `authorize development_authorized --by Jason` and `run --phase development`.
+
 ## SC-FUT-0001 FROZEN (2026-10-26; Step 1 of the approved plan)
 
 - Jason approved the 5-step plan, the three audit decisions (12:15 CT early close / 12:12 exit; void range = $0 no-trade day for ORB and control; ATR window uses NYSE sessions only), DSR at N=1/25 as a diagnostic, and keeping prop-eval deferred. Recorded in `brain/05_Reviews/SC-FUT-0001-session-audit.md`.
