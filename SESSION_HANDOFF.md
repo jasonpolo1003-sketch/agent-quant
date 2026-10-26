@@ -1,5 +1,22 @@
 # Quant Agent Brain — Session Handoff
 
+## SC-FUT-0001 practice run: NOT DEMONSTRATED; study page built (2026-10-26)
+
+- Jason confirmed interpretations A/B and authorized the development run (ledger). The run committed as `9b1fea3`.
+- **MNQ 2019–2023** (1,157 evaluable days, 1,664 trades): **$3.11/day** absolute at L3 against the $15 floor; +$5.28/day vs random entries, **p = 0.114**. Joint power is 86% at +$20/day, so this is an adequately powered negative.
+  - Missing-minute share 0.17%; same-bar share 1.7%; the verdict holds under the stress bound.
+  - By year: 2019 −$1.45, 2020 +$0.48, 2021 +$1.95, 2022 +$9.87, 2023 +$2.93.
+  - Cost ladder: L1 $5.27, L4 $0.24. DSR: N=1 0.74, N=25 0.11.
+- **2024 diagnostic:** $1.99/day, p = 0.43. **MES:** −$5.28/day.
+- The held-out read is **not** done. The gate would allow it after `held_out_authorized`, but whether to spend it is Jason's decision.
+- **Study page** (`#study`; `src/quant_brain/ui/study.py`, `RENDER.study` in `ui/static/app.js`):
+  - honesty trail, verdict meters and alarm chips;
+  - strategy-vs-luck equity with the 5–95% band of the 500 draws, and the luck histogram;
+  - by-year and cost-ladder tables;
+  - 1-minute day replay, which refuses locked-period dates.
+- The runner now saves `*.draws.npy`. The development run was re-executed at `6fcc129`; report and CSVs are byte-identical (`183f8fe`). The first replay takes ~15 s to load the minute file (cached after).
+- Verification: 1,002 passed, 2 skipped; Ruff clean. The browser extension wasn't connected, so the page was checked via its API only, not visually.
+
 ## SC-FUT-0001 Step 2 built and reviewed (2026-10-26; no real P&L)
 
 - Plan: `brain/_system/plan/phase_b_sc_fut_0001_engine.md` (approved). Fixtures were committed before the engine (`2bdbbbc`). Modules in `src/quant_brain/futures/`:
