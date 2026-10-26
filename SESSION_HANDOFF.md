@@ -1,5 +1,13 @@
 # Quant Agent Brain — Session Handoff
 
+## Repo cleanup and SC-FUT-0001 session audit (2026-10-26, later)
+
+- **Branches:** only `main` and `testing` remain (local and GitHub). Removed branches are kept as tags `archive/2026-10-26/*`; PR #13 (Cursor UI, unreviewed) was closed, tag `archive/2026-10-26/cursor-interactive-base-ui-d89c`. The `quant-agent-brain-ui` worktree was removed; its git-ignored `.hermes/` and `db/` are in `Desktop/Quant/_archive/`. The `quant-agent-brain-merge-fixes` worktree is now on `main`.
+- **PR #14** (`testing` → `main`) carries the futures work, the cockpit chart-resize fix, and the research notes. Raw copyrighted copies (PDFs, saved HTML, `source_files/`, YouTube transcripts) are git-ignored because the repo is public. The RX-0001 script is excluded from Ruff to stay byte-identical. **Merge awaits Jason**: auto mode refused to merge an unreviewed PR.
+- **Session audit** (outcome-blind; no prices or P&L): `brain/05_Reviews/SC-FUT-0001-session-audit.md`. MNQ has 1,154 dev and 252 diagnostic candidate days. Sessions with a live-window missing minute are 0.43% / 0.40%, below the 1% alarm. Gaps sit on fixed-roll days and the March 2020 halts. Calendars come from `pandas_market_calendars` 5.5.0 (cmegroup.com timed out); the library's 12:00 CT early close is overridden to **12:15 CT** (data plus CME's 2011 notice), pending Jason's confirmation.
+- Verification: **904 passed, 2 skipped**; Ruff clean.
+- Next: Jason confirms the 3 audit decisions (12:15 close; void range = $0 no-trade day; ATR window uses NYSE sessions) and merges PR #14. Then set seeds/hashes and freeze the spec.
+
 ## SC-FUT-0001 defaults approved; dev-only data partition built (2026-10-26; no freeze or ORB P&L)
 
 - Jason approved all 13 pre-freeze defaults after a plain-language walkthrough; decisions are in `brain/05_Reviews/SC-FUT-0001-prefreeze-defaults.md` § "Jason's decisions (2026-10-26)". Key picks: 1% missing-stop alarm; matched random-entry control as primary; fixed mean-5 block bootstrap with Politis–White block length as sensitivity only; the lower-CI >$15 alternative rejected; 80% power at $20/day and the $15 floor is never lowered; opposite-side entry only after the exit bar; prop-eval deferred.

@@ -1,0 +1,76 @@
+{
+  "status": "outcome_blind_coverage_audit; not frozen eligibility",
+  "inputs": {
+    "bars": "glbx-mdp3_ohlcv-1m_MES-MNQ-FUT_20190501-dev.dbn.zst",
+    "bars_sha256": "75cd9d6ac3a50970cba29fd62fb6f51ed557d004ad4c1e2071909e7fa1706fa5",
+    "roll_calendar": "brain/sources/mes_mnq/contracts/roll_calendar_2019_2026.csv",
+    "roll_calendar_sha256": "0de7de8fa4e90849d5bb86c0db3a35c9b876c4ed7cf352608ba915ccc60de0d1"
+  },
+  "calendar_source": {
+    "package": "pandas_market_calendars",
+    "version": "5.5.0",
+    "calendars": [
+      "NYSE (cash-open sessions)",
+      "CME_Equity (Globex close)"
+    ],
+    "note": "secondary, versioned rule set; official CME notices not retrieved (cmegroup.com timed out 2026-10-26)"
+  },
+  "rules": {
+    "session": "NYSE trading day (08:30 CT cash open exists)",
+    "live_window": "08:45 CT through exit minute (15:07, or CME close minus 3 min on early-close days)",
+    "atr_warmup": "each of the 14 prior NYSE sessions has >=1 bar 08:30-15:00 CT on the same dated contract",
+    "contract": "D-ROLL-01 fixed calendar roll"
+  },
+  "MNQ": {
+    "development": {
+      "nyse_cash_sessions": 1176,
+      "atr_warmup_ineligible": 17,
+      "range_incomplete": 8,
+      "candidate_sessions_atr_and_range_ok": 1154,
+      "candidate_with_any_missing_minute_in_live_window": 5,
+      "candidate_share_with_missing_live_minute": 0.0043,
+      "candidate_missing_exit_bar": 1,
+      "early_close_sessions": 9,
+      "flagged_bars_after_calendar_close": 0,
+      "no_bars_in_cash_window": 3
+    },
+    "diagnostics": {
+      "nyse_cash_sessions": 252,
+      "atr_warmup_ineligible": 0,
+      "range_incomplete": 0,
+      "candidate_sessions_atr_and_range_ok": 252,
+      "candidate_with_any_missing_minute_in_live_window": 1,
+      "candidate_share_with_missing_live_minute": 0.004,
+      "candidate_missing_exit_bar": 0,
+      "early_close_sessions": 3,
+      "flagged_bars_after_calendar_close": 0,
+      "no_bars_in_cash_window": 0
+    }
+  },
+  "MES": {
+    "development": {
+      "nyse_cash_sessions": 1176,
+      "atr_warmup_ineligible": 17,
+      "range_incomplete": 6,
+      "candidate_sessions_atr_and_range_ok": 1156,
+      "candidate_with_any_missing_minute_in_live_window": 9,
+      "candidate_share_with_missing_live_minute": 0.0078,
+      "candidate_missing_exit_bar": 1,
+      "early_close_sessions": 9,
+      "flagged_bars_after_calendar_close": 0,
+      "no_bars_in_cash_window": 3
+    },
+    "diagnostics": {
+      "nyse_cash_sessions": 252,
+      "atr_warmup_ineligible": 0,
+      "range_incomplete": 0,
+      "candidate_sessions_atr_and_range_ok": 252,
+      "candidate_with_any_missing_minute_in_live_window": 0,
+      "candidate_share_with_missing_live_minute": 0.0,
+      "candidate_missing_exit_bar": 0,
+      "early_close_sessions": 3,
+      "flagged_bars_after_calendar_close": 0,
+      "no_bars_in_cash_window": 0
+    }
+  }
+}
