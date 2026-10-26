@@ -70,4 +70,7 @@ def test_interactive_base_and_roaming_companion_are_wired():
     assert 'id="base-floor-canvas"' in APP
     assert 'id="base-replay-run-btn"' in APP
     assert "renderRoamingCompanion" in APP
+    assert 'id="master-feed-section"' in APP
+    assert 'id="master-feed-list"' in APP
+    assert 'id="master-feed-tabs"' in APP
 

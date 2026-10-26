@@ -366,6 +366,7 @@ RENDER.today = async (main) => {
         </button>
         <div class="seg" role="group" aria-label="Layout view mode">
           <button id="cockpit-btn-split" type="button" aria-pressed="true">Split View</button>
+          <button id="cockpit-btn-feed" type="button" aria-pressed="false">Feed Focus</button>
           <button id="cockpit-btn-chart" type="button" aria-pressed="false">Chart Focus</button>
           <button id="cockpit-btn-strategy" type="button" aria-pressed="false">Base Focus</button>
         </div>
@@ -401,166 +402,129 @@ RENDER.today = async (main) => {
       </div>
     </section>
 
-    <!-- Primary Above-the-Fold Grid: Left = Backtest Chart & Verdict | Right = Interactive Agent Base -->
+    <!-- Primary Above-the-Fold Workspace: Left = Unified Everything Feed | Right = Interactive Agent Base + Backtest Replay Chart -->
     <div class="overview-grid" id="cockpit-grid">
-      <!-- Left Column: Backtest Replay Chart & Strategy Metrics -->
-      <section class="box" id="cockpit-col-chart">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+      <!-- Left Column: Unified Master Feed (One Stream for Everything) -->
+      <section class="box" id="master-feed-section">
+        <div class="master-feed-controls">
+          <div>
+            <h2 style="margin:0;">Unified Everything Feed</h2>
+            <p class="muted small" style="margin:2px 0 0;">Every backtest, review, strategy card, research source, failed-run receipt, market dataset, FOMC event, decision, and commit in one place.</p>
+          </div>
           <div class="row" style="gap:8px;">
-            <h2 style="margin:0;">SPY · Connors RSI(2) Backtest Replay</h2>
-            <span id="today-replay-badge" class="badge small">In-Sample (101 trades)</span>
-          </div>
-          <div class="row" style="gap:6px;">
-            ${replaysList.length > 1 ? `<select id="today-replay-select" aria-label="Select backtest replay" style="padding:4px 8px; font-size:12px;">
-              ${replaysList.map((r) => `<option value="${esc(r.id)}">${esc(r.card_id)} Rule ${esc(r.rule_id)} · ${esc(r.symbol)} (${esc(r.phase === "held_out" ? "Held-Out" : "In-Sample")})</option>`).join("")}
-            </select>` : ""}
-            <button class="btn small" id="today-toggle-replay" type="button">Switch to Held-Out (91)</button>
-            <button class="btn small" data-go="chart" type="button">Full Chart</button>
-          </div>
-        </div>
-
-        <div id="today-chart-wrap" style="height:210px; flex:1; min-height:200px; width:100%; border-radius:var(--radius-sm); overflow:hidden; background:var(--bg); border:1px solid var(--line); position:relative;">
-          <div id="today-chart-canvas" style="width:100%; height:100%;"></div>
-          <div id="today-chart-loading" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:var(--surface); font-size:12px; color:var(--muted);">Loading SPY backtest bars…</div>
-        </div>
-
-        <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:12px;">
-          <div class="row" style="gap:6px;">
-            <button class="btn small" id="today-prev-trade" type="button">Prev Trade</button>
-            <button class="btn small" id="today-next-trade" type="button">Next Trade</button>
-            <span id="today-trade-info" class="muted">Viewing Trade 1 of 101</span>
-          </div>
-          <div class="row small muted" style="gap:12px;">
-            <span>Return: <b class="good" id="today-stat-return">${isBt ? esc(pct(isBt.total_return, 1)) : "+40.2%"}</b></span>
-            <span>Win Rate: <b id="today-stat-win">${isBt && isBt.win_rate != null ? esc(pct(isBt.win_rate, 1).replace("+", "")) : "71.3%"}</b></span>
-            <span>Sharpe: <b id="today-stat-sharpe">${isBt ? esc(fmt(isBt.sharpe, 2)) : "0.41"}</b> (vs ${isBh ? esc(fmt(isBh.sharpe, 2)) : "0.29"} B&amp;H)</span>
-            <span>Max DD: <b id="today-stat-dd">${isBt ? esc(pct(isBt.max_drawdown, 1)) : "-15.1%"}</b></span>
-          </div>
-        </div>
-
-        <div class="box-foot" style="margin-top:10px;">
-          <div class="row" style="justify-content:space-between;">
-            <span class="small muted"><b>Why rejected:</b> ${esc(activeReview?.verdict_text || "Held-out DSR 0.896 < 0.950 required gate; random-entry 94.9% < 95%.")}</span>
-            <div class="row" style="gap:10px;">
-              <button class="link small" data-go="strategies">All ${esc(totalTrials)} Trials</button>
-              <button class="link small" data-go="risk">Risk Simulators</button>
+            <input type="text" id="master-feed-search" placeholder="Search (SC-0002, SPY, FOMC, Qwen…)" aria-label="Search unified feed" style="width:210px;">
+            <div class="seg" role="group" aria-label="Feed sort order">
+              <button type="button" id="feed-sort-featured" aria-pressed="true">Featured</button>
+              <button type="button" id="feed-sort-newest" aria-pressed="false">Newest</button>
             </div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-bottom:10px; justify-content:space-between;">
+          <div class="seg" id="master-feed-tabs" role="group" aria-label="Filter feed by category"></div>
+          <span class="faint small" id="master-feed-count"></span>
+        </div>
+
+        <ul class="master-feed-list" id="master-feed-list"></ul>
+
+        <div class="box-foot" id="master-feed-foot" hidden>
+          <div class="row" style="justify-content:space-between;">
+            <span class="small muted" id="master-feed-foot-label">All project categories merged</span>
+            <button type="button" class="btn small" id="master-feed-more-btn">Show all items</button>
           </div>
         </div>
       </section>
 
-      <!-- Right Column: Interactive Visual Agent Base Map -->
-      <section class="box" id="cockpit-col-strategy" style="padding:16px;">
-        <div id="base-map-section" style="display:flex; flex-direction:column; height:100%;">
+      <!-- Right Column: Interactive Visual Agent Base + Embedded Backtest Replay Chart -->
+      <div class="stack" id="cockpit-col-right" style="gap:20px;">
+        <!-- Interactive Visual Agent Base Map -->
+        <section class="box" id="cockpit-col-strategy" style="padding:16px;">
+          <div id="base-map-section" style="display:flex; flex-direction:column; height:100%;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+              <div>
+                <h2 style="margin:0;">Interactive Agent Base</h2>
+                <p class="muted small" style="margin:2px 0 0;">Click any bot, workstation, or feed row to inspect state, or replay the latest run.</p>
+              </div>
+              <div class="row" style="gap:6px;">
+                <div class="seg" role="group" aria-label="Bot visual style">
+                  <button type="button" class="bot-style-btn" data-bot-style="droid" aria-pressed="${currentBotStyle === "droid"}">Droids</button>
+                  <button type="button" class="bot-style-btn" data-bot-style="pixel" aria-pressed="${currentBotStyle === "pixel"}">Pixel</button>
+                  <button type="button" class="bot-style-btn" data-bot-style="geometric" aria-pressed="${currentBotStyle === "geometric"}">Geo</button>
+                </div>
+                <button class="btn small primary" id="base-replay-run-btn" type="button">Replay Run</button>
+                <button class="btn small" id="base-reset-bots-btn" type="button">Reset</button>
+              </div>
+            </div>
+
+            <div class="base-stage-wrap">
+              <div class="base-floor-canvas" id="base-floor-canvas">
+                <svg class="base-paths-svg" viewBox="0 0 100 100" preserveAspectRatio="none" id="base-paths-svg"></svg>
+                <div id="base-stations-layer"></div>
+                <div id="base-bots-layer"></div>
+              </div>
+              <div class="base-inspector" id="base-inspector">
+                <div class="grow">
+                  <div class="row" style="gap:8px;">
+                    <span class="badge small" id="insp-badge">BASE</span>
+                    <b id="insp-title" style="font-size:13px;">Click any Bot or Workstation</b>
+                  </div>
+                  <p id="insp-desc" class="muted small" style="margin:3px 0 0;">Each bot represents a verified harness module. Watch them move when tasks run.</p>
+                </div>
+                <div class="row" id="insp-actions" style="gap:6px;">
+                  <button class="btn small" id="insp-ask-tutor" type="button">Ask Tutor</button>
+                  <button class="btn small" id="insp-open-page" type="button" data-go="activity">Activity</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Backtest Replay Chart & Strategy Metrics -->
+        <section class="box" id="cockpit-col-chart">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
-            <div>
-              <h2 style="margin:0;">Interactive Agent Base</h2>
-              <p class="muted small" style="margin:2px 0 0;">Click any bot or workstation to inspect state, or replay the latest run.</p>
+            <div class="row" style="gap:8px;">
+              <h2 style="margin:0;">SPY · Connors RSI(2) Backtest Replay</h2>
+              <span id="today-replay-badge" class="badge small">In-Sample (101 trades)</span>
             </div>
             <div class="row" style="gap:6px;">
-              <div class="seg" role="group" aria-label="Bot visual style">
-                <button type="button" class="bot-style-btn" data-bot-style="droid" aria-pressed="${currentBotStyle === "droid"}">Droids</button>
-                <button type="button" class="bot-style-btn" data-bot-style="pixel" aria-pressed="${currentBotStyle === "pixel"}">Pixel</button>
-                <button type="button" class="bot-style-btn" data-bot-style="geometric" aria-pressed="${currentBotStyle === "geometric"}">Geo</button>
-              </div>
-              <button class="btn small primary" id="base-replay-run-btn" type="button">Replay Run</button>
-              <button class="btn small" id="base-reset-bots-btn" type="button">Reset</button>
+              ${replaysList.length > 1 ? `<select id="today-replay-select" aria-label="Select backtest replay" style="padding:4px 8px; font-size:12px;">
+                ${replaysList.map((r) => `<option value="${esc(r.id)}">${esc(r.card_id)} Rule ${esc(r.rule_id)} · ${esc(r.symbol)} (${esc(r.phase === "held_out" ? "Held-Out" : "In-Sample")})</option>`).join("")}
+              </select>` : ""}
+              <button class="btn small" id="today-toggle-replay" type="button">Switch to Held-Out (91)</button>
+              <button class="btn small" data-go="chart" type="button">Full Chart</button>
             </div>
           </div>
 
-          <div class="base-stage-wrap">
-            <div class="base-floor-canvas" id="base-floor-canvas">
-              <svg class="base-paths-svg" viewBox="0 0 100 100" preserveAspectRatio="none" id="base-paths-svg"></svg>
-              <div id="base-stations-layer"></div>
-              <div id="base-bots-layer"></div>
+          <div id="today-chart-wrap" style="height:220px; width:100%; border-radius:var(--radius-sm); overflow:hidden; background:var(--bg); border:1px solid var(--line); position:relative;">
+            <div id="today-chart-canvas" style="width:100%; height:100%;"></div>
+            <div id="today-chart-loading" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:var(--surface); font-size:12px; color:var(--muted);">Loading SPY backtest bars…</div>
+          </div>
+
+          <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:12px;">
+            <div class="row" style="gap:6px;">
+              <button class="btn small" id="today-prev-trade" type="button">Prev Trade</button>
+              <button class="btn small" id="today-next-trade" type="button">Next Trade</button>
+              <span id="today-trade-info" class="muted">Viewing Trade 1 of 101</span>
             </div>
-            <div class="base-inspector" id="base-inspector">
-              <div class="grow">
-                <div class="row" style="gap:8px;">
-                  <span class="badge small" id="insp-badge">BASE</span>
-                  <b id="insp-title" style="font-size:13px;">Click any Bot or Workstation</b>
-                </div>
-                <p id="insp-desc" class="muted small" style="margin:3px 0 0;">Each bot represents a verified harness module. Watch them move when tasks run.</p>
-              </div>
-              <div class="row" id="insp-actions" style="gap:6px;">
-                <button class="btn small" id="insp-ask-tutor" type="button">Ask Tutor</button>
-                <button class="btn small" id="insp-open-page" type="button" data-go="activity">Activity</button>
-              </div>
+            <div class="row small muted" style="gap:12px;">
+              <span>Return: <b class="good" id="today-stat-return">${isBt ? esc(pct(isBt.total_return, 1)) : "+40.2%"}</b></span>
+              <span>Win Rate: <b id="today-stat-win">${isBt && isBt.win_rate != null ? esc(pct(isBt.win_rate, 1).replace("+", "")) : "71.3%"}</b></span>
+              <span>Sharpe: <b id="today-stat-sharpe">${isBt ? esc(fmt(isBt.sharpe, 2)) : "0.41"}</b> (vs ${isBh ? esc(fmt(isBh.sharpe, 2)) : "0.29"} B&amp;H)</span>
+              <span>Max DD: <b id="today-stat-dd">${isBt ? esc(pct(isBt.max_drawdown, 1)) : "-15.1%"}</b></span>
             </div>
           </div>
-        </div>
-      </section>
-    </div>
 
-    <!-- Lower Summary Deck: 3 Balanced Columns (What's New | Market Pulse | Macro & System Health) -->
-    <div class="overview-lower-grid">
-      <section class="box">
-        <div class="row" style="margin-bottom:10px;">
-          <h2 style="margin:0;" class="grow">What's New: Runs &amp; Commits</h2>
-          <button class="link small" data-go="activity">View all</button>
-        </div>
-        ${t.timeline.length ? `<ul class="feed">${t.timeline.slice(0, 4).map((i) => `<li>
-          <span class="when">${esc(ago(i.when))}</span>
-          <div><div class="who">${esc(i.who)} ${i.status ? status(i.status) : ""}</div>
-          <div class="what">${esc(clip(i.text, 90))} ${i.kind === "run" ? `<button class="link small" data-open-run="${esc(i.ref)}">Details</button>` : ""}</div></div></li>`).join("")}</ul>`
-        : `<p class="muted">Nothing has happened yet.</p>`}
-        <div class="box-foot">
-          <div class="row" style="justify-content:space-between;">
-            <span class="small muted">${esc(t.timeline.length)} recent events</span>
-            <button class="link small" data-go="activity">Activity Log</button>
+          <div class="box-foot" style="margin-top:10px;">
+            <div class="row" style="justify-content:space-between;">
+              <span class="small muted"><b>Why rejected:</b> ${esc(activeReview?.verdict_text || "Held-out DSR 0.896 < 0.950 required gate; random-entry 94.9% < 95%.")}</span>
+              <div class="row" style="gap:10px;">
+                <button class="link small" data-go="strategies">All ${esc(totalTrials)} Trials</button>
+                <button class="link small" data-go="risk">Risk Simulators</button>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
-
-      <section class="box">
-        <div class="row" style="margin-bottom:10px;">
-          <h2 style="margin:0;" class="grow">Market Pulse &amp; Datasets</h2>
-          <button class="link small" data-go="market">Open Screener</button>
-        </div>
-        ${topMovers.length ? `<div class="table-wrap"><table>
-          <thead><tr><th>Symbol</th><th class="num">Close</th><th class="num">1D</th><th class="num">RSI(2)</th></tr></thead>
-          <tbody>${topMovers.map((r) => `<tr class="click" data-jump-sym="${esc(r.symbol)}">
-            <td><b>${esc(r.symbol)}</b></td>
-            <td class="num">${esc(UIState.formatPrice(r.close))}</td>
-            <td class="num ${UIState.directionClass(r.change_1d_pct)}">${esc(UIState.formatPercentPoints(r.change_1d_pct, 1))}</td>
-            <td class="num">${esc(fmt(r.rsi_2, 1))}</td>
-          </tr>`).join("")}</tbody>
-        </table></div>` : `<div class="table-wrap"><table>
-          <thead><tr><th>Symbol</th><th>Range</th><th class="num">Rows</th><th>Status</th></tr></thead>
-          <tbody>${(datasetsList || []).slice(0, 7).map((ds) => `<tr class="click" data-jump-sym="${esc(ds.symbol || "SPY")}">
-            <td><b>${esc(ds.symbol || ds.dataset_id.split("-")[0])}</b></td>
-            <td class="small muted">${esc(ds.first_date || "")} to ${esc(ds.last_date || "")}</td>
-            <td class="num">${esc(fmt(ds.rows, 0))}</td>
-            <td>${status(ds.state || "unverified")}</td>
-          </tr>`).join("") || `<tr><td colspan="4" class="muted">No datasets registered.</td></tr>`}</tbody>
-        </table></div>`}
-        <div class="box-foot">
-          <div class="row" style="justify-content:space-between;">
-            <span class="small muted">${esc(totalDatasets)} EOD datasets verified</span>
-            <button class="link small" data-go="chart">Open Chart</button>
-          </div>
-        </div>
-      </section>
-
-      <section class="box">
-        <div class="row" style="margin-bottom:10px;">
-          <h2 style="margin:0;" class="grow">Macro Calendar &amp; System</h2>
-          <button class="link small" data-go="market">Calendar</button>
-        </div>
-        ${upcomingMacro.length ? `<ul class="feed">${upcomingMacro.slice(0, 3).map((ev) => `<li>
-          <span class="when">${esc(ev.date)}</span>
-          <div>
-            <div class="who">${esc(ev.title)}</div>
-            <div class="what small">${esc(clip(ev.why || ev.source || "", 70))}</div>
-          </div>
-        </li>`).join("")}</ul>` : `<p class="muted small">No upcoming calendar events listed.</p>`}
-        <div class="box-foot">
-          <div class="row" style="justify-content:space-between;">
-            <span class="small muted">Handoff: ${esc(clip(t.next || "Up to date", 50))}</span>
-            <button class="link small" data-go="setup">Setup &amp; Checks</button>
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
 
     <!-- 5-Step Epistemic Pipeline -->
@@ -581,6 +545,7 @@ RENDER.today = async (main) => {
   }));
 
   // Render Interactive Visual Agent Base Map
+  let focusFeedItemOnBase = null;
   if (BotEngine) {
     const stationsLayer = $("#base-stations-layer");
     const botsLayer = $("#base-bots-layer");
@@ -776,6 +741,30 @@ RENDER.today = async (main) => {
         paintBots();
       };
     }
+
+    focusFeedItemOnBase = (item) => {
+      stopBaseReplayTimer();
+      const bId = item.bot_id || "scout";
+      const stId = item.station_id || "scout_desk";
+      const bot = botStates[bId] || botStates.scout;
+      if (!bot) return;
+      Object.values(botStates).forEach((b) => { b.walking = false; });
+      bot.stationId = stId;
+      bot.mood = BotEngine.mapStatusToMood(item.status || "completed");
+      bot.speech = item.title;
+      bot.walking = true;
+      selectedEntity = bot.id;
+      const st = BotEngine.stationById(stId);
+      updateInspector(
+        item.badge || "FEED EVENT",
+        `${bot.name} @ ${st.label}: ${item.title}`,
+        item.summary || "",
+        st.page,
+        `Explain "${item.title}" in plain words: ${item.summary || ""}`
+      );
+      paintBots();
+      $("#cockpit-col-strategy")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    };
   }
 
   // Interactive Bot Pill
@@ -795,6 +784,7 @@ RENDER.today = async (main) => {
   }
 
   // Load and Render Embedded SPY Backtest Chart
+  let loadReplayFromFeed = null;
   const chartCanvas = $("#today-chart-canvas");
   if (chartCanvas && window.LightweightCharts) {
     let currentReplayId = "SC-0002-in-sample-A-SPY-5bps";
@@ -925,6 +915,15 @@ RENDER.today = async (main) => {
     }
 
     loadReplay(currentReplayId);
+    loadReplayFromFeed = (repId) => {
+      currentReplayId = repId;
+      if (replaySelect) replaySelect.value = repId;
+      if ($("#today-replay-badge")) {
+        $("#today-replay-badge").textContent = repId.includes("held-out") ? "Held-Out (91 trades)" : "In-Sample (101 trades)";
+      }
+      loadReplay(repId);
+      $("#cockpit-col-chart")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    };
 
     // Responsive View Switcher & Element ResizeObserver
     const chartWrap = $("#today-chart-wrap");
@@ -960,37 +959,229 @@ RENDER.today = async (main) => {
 
     // View Switching Controls
     const btnSplit = $("#cockpit-btn-split");
+    const btnFeed = $("#cockpit-btn-feed");
     const btnChart = $("#cockpit-btn-chart");
     const btnStrat = $("#cockpit-btn-strategy");
+    const feedSectionEl = $("#master-feed-section");
+    const rightColEl = $("#cockpit-col-right");
 
     const setViewMode = (mode) => {
       if (!chartCol || !stratCol) return;
-      const selected = mode === "chart" || mode === "strategy" ? mode : "split";
-      [["split", btnSplit], ["chart", btnChart], ["strategy", btnStrat]].forEach(([name, btn]) => {
+      const selected = ["chart", "strategy", "feed"].includes(mode) ? mode : "split";
+      [["split", btnSplit], ["feed", btnFeed], ["chart", btnChart], ["strategy", btnStrat]].forEach(([name, btn]) => {
         if (btn) btn.setAttribute("aria-pressed", String(name === selected));
       });
-      if (mode === "chart") {
+      if (mode === "feed") {
+        if (gridEl) gridEl.style.gridTemplateColumns = "1fr";
+        if (feedSectionEl) feedSectionEl.style.display = "flex";
+        if (rightColEl) rightColEl.style.display = "none";
+      } else if (mode === "chart") {
+        if (gridEl) gridEl.style.gridTemplateColumns = "1fr";
+        if (feedSectionEl) feedSectionEl.style.display = "none";
+        if (rightColEl) rightColEl.style.display = "grid";
         chartCol.style.display = "flex";
         stratCol.style.display = "none";
-        if (gridEl) gridEl.style.gridTemplateColumns = "1fr";
         if (chartWrap) chartWrap.style.height = "460px";
       } else if (mode === "strategy") {
+        if (gridEl) gridEl.style.gridTemplateColumns = "1fr";
+        if (feedSectionEl) feedSectionEl.style.display = "none";
+        if (rightColEl) rightColEl.style.display = "grid";
         chartCol.style.display = "none";
         stratCol.style.display = "flex";
-        if (gridEl) gridEl.style.gridTemplateColumns = "1fr";
       } else {
+        if (gridEl) gridEl.style.gridTemplateColumns = "";
+        if (feedSectionEl) feedSectionEl.style.display = "flex";
+        if (rightColEl) rightColEl.style.display = "grid";
         chartCol.style.display = "flex";
         stratCol.style.display = "flex";
-        if (gridEl) gridEl.style.gridTemplateColumns = "";
-        if (chartWrap) chartWrap.style.height = "260px";
+        if (chartWrap) chartWrap.style.height = "220px";
       }
       setTimeout(updateSizingTelemetry, 40);
     };
 
     if (btnSplit) btnSplit.onclick = () => setViewMode("split");
+    if (btnFeed) btnFeed.onclick = () => setViewMode("feed");
     if (btnChart) btnChart.onclick = () => setViewMode("chart");
     if (btnStrat) btnStrat.onclick = () => setViewMode("strategy");
   }
+
+  // Unified Master Feed Controller
+  const rawFeed = Array.isArray(t.feed) && t.feed.length
+    ? t.feed
+    : (t.timeline || []).map((i, idx) => ({
+        id: `tl-${idx}`,
+        when: i.when,
+        category: i.kind === "commit" ? "code" : "research",
+        badge: (i.kind || "event").toUpperCase(),
+        status: i.status || "completed",
+        title: i.who,
+        summary: i.text,
+        metrics: i.ref ? [i.ref] : [],
+        run_id: i.kind === "run" ? i.ref : null,
+        priority: 70,
+      }));
+
+  const FEED_CATEGORIES = [
+    { id: "all", label: "All", match: () => true },
+    { id: "backtest", label: "Backtests & Reviews", match: (x) => x.category === "backtest" },
+    { id: "research", label: "Research & Sources", match: (x) => x.category === "research" },
+    { id: "strategy", label: "Strategies & Decisions", match: (x) => x.category === "strategy" || x.category === "decision" },
+    { id: "market", label: "Market & Macro", match: (x) => x.category === "market" },
+    { id: "code", label: "Runs & Commits", match: (x) => x.category === "code" },
+  ];
+
+  let activeFeedCat = "all";
+  let activeFeedSort = "featured";
+  let feedSearchQuery = "";
+  let feedExpanded = false;
+
+  const feedTabsEl = $("#master-feed-tabs");
+  const feedListEl = $("#master-feed-list");
+  const feedCountEl = $("#master-feed-count");
+  const feedFootEl = $("#master-feed-foot");
+  const feedMoreBtn = $("#master-feed-more-btn");
+  const feedSearchEl = $("#master-feed-search");
+  const sortFeaturedBtn = $("#feed-sort-featured");
+  const sortNewestBtn = $("#feed-sort-newest");
+
+  const renderMasterFeed = () => {
+    if (!feedListEl || !feedTabsEl) return;
+
+    const q = feedSearchQuery.trim().toLowerCase();
+    const matchesSearch = (item) => {
+      if (!q) return true;
+      const hay = `${item.title || ""} ${item.summary || ""} ${item.badge || ""} ${(item.metrics || []).join(" ")} ${item.file_path || ""}`.toLowerCase();
+      return hay.includes(q);
+    };
+
+    const searchFiltered = rawFeed.filter(matchesSearch);
+
+    feedTabsEl.innerHTML = FEED_CATEGORIES.map((cat) => {
+      const cnt = searchFiltered.filter(cat.match).length;
+      return `<button type="button" data-feed-cat="${esc(cat.id)}" aria-pressed="${activeFeedCat === cat.id}">${esc(cat.label)} (${cnt})</button>`;
+    }).join("");
+
+    feedTabsEl.querySelectorAll("[data-feed-cat]").forEach((btn) => {
+      btn.onclick = () => {
+        activeFeedCat = btn.dataset.feedCat;
+        renderMasterFeed();
+      };
+    });
+
+    const catObj = FEED_CATEGORIES.find((c) => c.id === activeFeedCat) || FEED_CATEGORIES[0];
+    const filtered = searchFiltered.filter(catObj.match).slice();
+
+    if (activeFeedSort === "newest") {
+      filtered.sort((a, b) => String(b.when || "").localeCompare(String(a.when || "")));
+    } else {
+      filtered.sort((a, b) => (Number(b.priority || 0) - Number(a.priority || 0)) || String(b.when || "").localeCompare(String(a.when || "")));
+    }
+
+    const limit = feedExpanded ? filtered.length : 6;
+    const shown = filtered.slice(0, limit);
+
+    if (feedCountEl) {
+      feedCountEl.textContent = `Showing ${shown.length} of ${filtered.length} items`;
+    }
+    if (feedFootEl && feedMoreBtn) {
+      feedFootEl.hidden = filtered.length <= 6;
+      feedMoreBtn.textContent = feedExpanded ? "Show fewer items" : `Show all ${filtered.length} items`;
+    }
+
+    if (!shown.length) {
+      feedListEl.innerHTML = `<li class="empty">No items match this filter or search query.</li>`;
+      return;
+    }
+
+    feedListEl.innerHTML = shown.map((item, i) => {
+      const dateLabel = item.when ? (item.when.length > 10 ? ago(item.when) : item.when) : "";
+      const metricsHtml = (item.metrics || []).map((m) => `<span class="badge small">${esc(m)}</span>`).join("");
+      return `<li class="master-feed-row" data-feed-idx="${i}">
+        <div class="master-feed-meta">
+          <span class="badge small">${esc(item.badge || item.category)}</span>
+          <span class="master-feed-when">${esc(dateLabel)}</span>
+        </div>
+        <div class="master-feed-body">
+          <div class="master-feed-title">
+            <span>${esc(item.title)}</span>
+            ${item.status ? status(item.status) : ""}
+          </div>
+          <p class="master-feed-summary">${esc(item.summary || "")}</p>
+          ${metricsHtml ? `<div class="master-feed-metrics">${metricsHtml}</div>` : ""}
+        </div>
+        <div class="master-feed-actions">
+          ${item.replay_id ? `<button type="button" class="btn small" data-feed-replay="${esc(item.replay_id)}">Replay on Chart</button>` : ""}
+          ${item.symbol ? `<button type="button" class="btn small" data-feed-sym="${esc(item.symbol)}">Open ${esc(item.symbol)}</button>` : ""}
+          ${item.file_path ? `<button type="button" class="btn small" data-file="${esc(item.file_path)}">Read Note</button>` : ""}
+          ${item.run_id ? `<button type="button" class="btn small" data-open-run="${esc(item.run_id)}">Inspect Run</button>` : ""}
+          <button type="button" class="btn small" data-feed-base="${i}">Show on Base</button>
+          <button type="button" class="link small" data-feed-tutor="${i}">Ask Tutor</button>
+        </div>
+      </li>`;
+    }).join("");
+
+    feedListEl.querySelectorAll("[data-feed-replay]").forEach((btn) => {
+      btn.onclick = () => {
+        if (loadReplayFromFeed) loadReplayFromFeed(btn.dataset.feedReplay);
+      };
+    });
+    feedListEl.querySelectorAll("[data-feed-sym]").forEach((btn) => {
+      btn.onclick = () => {
+        if (window.CH) { CH.symbol = btn.dataset.feedSym; CH.formula = ""; saveCH(); }
+        go("chart");
+      };
+    });
+    feedListEl.querySelectorAll("[data-open-run]").forEach((btn) => {
+      btn.onclick = () => {
+        state.openRun = btn.dataset.openRun;
+        go("activity");
+      };
+    });
+    feedListEl.querySelectorAll("[data-feed-base]").forEach((btn) => {
+      btn.onclick = () => {
+        const item = shown[Number(btn.dataset.feedBase)];
+        if (item && focusFeedItemOnBase) focusFeedItemOnBase(item);
+      };
+    });
+    feedListEl.querySelectorAll("[data-feed-tutor]").forEach((btn) => {
+      btn.onclick = () => {
+        const item = shown[Number(btn.dataset.feedTutor)];
+        if (!item) return;
+        if (item.file_path) state.learn.selected.add(item.file_path);
+        if (item.run_id) state.learn.selected.add(`run:${item.run_id}`);
+        go("learn", { question: `Explain "${item.title}" in plain words: what happened, what evidence or numbers it produced, and how it fits into the project.` });
+      };
+    });
+  };
+
+  if (feedSearchEl) {
+    feedSearchEl.oninput = (e) => {
+      feedSearchQuery = e.target.value;
+      renderMasterFeed();
+    };
+  }
+  if (sortFeaturedBtn && sortNewestBtn) {
+    sortFeaturedBtn.onclick = () => {
+      activeFeedSort = "featured";
+      sortFeaturedBtn.setAttribute("aria-pressed", "true");
+      sortNewestBtn.setAttribute("aria-pressed", "false");
+      renderMasterFeed();
+    };
+    sortNewestBtn.onclick = () => {
+      activeFeedSort = "newest";
+      sortNewestBtn.setAttribute("aria-pressed", "true");
+      sortFeaturedBtn.setAttribute("aria-pressed", "false");
+      renderMasterFeed();
+    };
+  }
+  if (feedMoreBtn) {
+    feedMoreBtn.onclick = () => {
+      feedExpanded = !feedExpanded;
+      renderMasterFeed();
+    };
+  }
+
+  renderMasterFeed();
 };
 
 // ---------- Activity ----------
@@ -2155,7 +2346,7 @@ function renderRoamingCompanion() {
       { sel: ".kpi-strip", msg: "KPI Strip: 5/5 stages complete, 72 trials recorded in the ledger, and 48 verified EOD datasets." },
       { sel: "#cockpit-col-chart", msg: "SPY Backtest Replay: Step through 101 in-sample or 91 held-out trades with next-bar execution." },
       { sel: "#cockpit-col-strategy", msg: "Agent Operations Base: 5 specialist bots mapped to their workstations. Click Replay Run to animate." },
-      { sel: ".overview-lower-grid", msg: "What's New & Market Pulse: Recent commits, verified datasets, and upcoming FOMC rate decisions." },
+      { sel: "#master-feed-section", msg: "Unified Everything Feed: Every backtest, review, research source, failed-run receipt, market dataset, FOMC event, decision, and commit in one filterable stream." },
     ];
     const pick = targets[patrolIdx % targets.length];
     patrolIdx += 1;

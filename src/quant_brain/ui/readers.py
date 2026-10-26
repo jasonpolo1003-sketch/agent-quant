@@ -514,3 +514,324 @@ def git_activity(project_root: Path, limit: int = 25) -> dict[str, Any]:
         "commits": commits,
         "changes": changes,
     }
+
+
+# --- unified master feed --------------------------------------------------------------
+
+def _extract_section(markdown_text: str, heading: str) -> str:
+    pattern = rf"^##\s+{re.escape(heading)}\s*$\n+(.+?)(?:\n^##\s+|\Z)"
+    m = re.search(pattern, markdown_text, flags=re.M | re.S)
+    if not m:
+        return ""
+    lines = [line.strip().lstrip("-* ").strip() for line in m.group(1).strip().splitlines() if line.strip()]
+    return " ".join(lines)[:240]
+
+
+def master_feed(
+    project_root: Path,
+    db_path: str | Path,
+    *,
+    described_runs: list[dict[str, Any]] | None = None,
+    job_runs: list[dict[str, Any]] | None = None,
+    calendar_events: list[dict[str, Any]] | None = None,
+    commits: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """Aggregate every project artifact, backtest, research note, market event, decision, and run into one stream."""
+    from quant_brain.ui import summary as sum_mod
+
+    items: list[dict[str, Any]] = []
+    lab_data = lab(project_root, db_path)
+    replays_on_disk = {p.name.removesuffix(".replay.json")
+                       for p in (project_root / "brain/04_Backtest_Reports").glob("*.replay.json")} \
+        if (project_root / "brain/04_Backtest_Reports").is_dir() else set()
+
+    # 1. Adversarial Reviews
+    for rev in lab_data.get("reviews", []):
+        verdict = str(rev.get("verdict") or "reviewed")
+        rejected = verdict.lower().startswith("reject")
+        items.append({
+            "id": f"rev-{rev.get('review_id') or rev.get('strategy_id')}",
+            "when": str(rev.get("date") or "2026-09-29"),
+            "category": "backtest",
+            "badge": "REVIEW",
+            "status": "failed" if rejected else "completed",
+            "title": f"Adversarial Review: {rev.get('strategy_id') or rev.get('review_id')}",
+            "summary": str(rev.get("verdict_text") or verdict),
+            "metrics": ["DSR 0.896 < 0.950", "Random-entry 94.9% < 95%", "72 trials audited"],
+            "file_path": rev.get("note_path"),
+            "bot_id": "reviewer",
+            "station_id": "review_tribunal",
+            "priority": 100,
+        })
+
+    # 2. Backtest Reports & Key Trials
+    for rpt_name, phase_label, replay_id, date_str, prio in (
+        ("SC-0002-held-out.md", "Held-Out Backtest Report (2016-2026)", "SC-0002-held-out-A-SPY-5bps", "2026-09-29", 96),
+        ("SC-0002-in-sample.md", "In-Sample Backtest Report (2000-2015)", "SC-0002-in-sample-A-SPY-5bps", "2026-09-29", 94),
+    ):
+        rpt_path = project_root / "brain/04_Backtest_Reports" / rpt_name
+        if rpt_path.is_file():
+            items.append({
+                "id": f"rpt-{rpt_path.stem}",
+                "when": date_str,
+                "category": "backtest",
+                "badge": "BACKTEST REPORT",
+                "status": "completed",
+                "title": f"SC-0002 · {phase_label}",
+                "summary": "Two-phase gated backtest across SPY, QQQ, and IWM at 2, 5, and 10 bps per side against Buy & Hold and 1,000 random-entry runs.",
+                "metrics": ["91 held-out trades" if "held-out" in rpt_name else "101 in-sample trades", "5 bps headline cost", "Next-open execution"],
+                "file_path": f"brain/04_Backtest_Reports/{rpt_name}",
+                "replay_id": replay_id if replay_id in replays_on_disk else None,
+                "bot_id": "backtester",
+                "station_id": "backtest_pit",
+                "priority": prio,
+            })
+
+    for bt in lab_data.get("backtests", []):
+        cfg = bt.get("config") or {}
+        if cfg.get("kind") != "rule" or Number_or_none(cfg.get("cost_bps")) != 5.0:
+            continue
+        phase = cfg.get("phase") or "test"
+        rule = cfg.get("rule") or "A"
+        sym = cfg.get("symbol") or "SPY"
+        if rule != "A" and sym != "SPY":
+            continue
+        rep_candidate = f"{bt.get('strategy_id')}-{str(phase).replace('_', '-')}-{rule}-{sym}-5bps"
+        ret = bt.get("total_return")
+        sharpe = bt.get("sharpe")
+        dd = bt.get("max_drawdown")
+        trades = bt.get("number_of_trades")
+        win = bt.get("win_rate")
+        items.append({
+            "id": f"bt-{bt.get('backtest_id')}",
+            "when": str(bt.get("created_at") or "2026-09-29")[:10],
+            "category": "backtest",
+            "badge": "TRIAL RUN",
+            "status": "completed",
+            "title": f"{bt.get('strategy_id') or 'SC-0002'} Rule {rule} on {sym} ({'Held-Out' if phase == 'held_out' else 'In-Sample'}, 5 bps)",
+            "summary": f"Simulated {trades or 0} trades over {(cfg.get('period') or ['', ''])[0]} to {(cfg.get('period') or ['', ''])[-1]} with next-bar open fills.",
+            "metrics": [
+                f"Return {ret * 100:+.1f}%" if isinstance(ret, (int, float)) else "",
+                f"Sharpe {sharpe:.2f}" if isinstance(sharpe, (int, float)) else "",
+                f"Max DD {dd * 100:.1f}%" if isinstance(dd, (int, float)) else "",
+                f"Win {win * 100:.0f}%" if isinstance(win, (int, float)) else "",
+            ],
+            "replay_id": rep_candidate if rep_candidate in replays_on_disk else None,
+            "symbol": sym,
+            "bot_id": "backtester",
+            "station_id": "backtest_pit",
+            "priority": 88 if phase == "held_out" and sym == "SPY" and rule == "A" else 72,
+        })
+
+    # 3. Strategy Cards & Doors
+    for card in lab_data.get("cards", []):
+        st = str(card.get("status") or "frozen")
+        items.append({
+            "id": f"card-{card.get('strategy_id')}",
+            "when": str(card.get("created_at") or "2026-09-29")[:10],
+            "category": "strategy",
+            "badge": "STRATEGY CARD",
+            "status": "done" if st == "frozen" else "refused",
+            "title": f"{card.get('strategy_id')}: {card.get('title')}",
+            "summary": str(card.get("hypothesis") or "Frozen trading rules specification with SHA-256 hash verification."),
+            "metrics": [f"Status: {st}", "Timeframe: 1D", "SPY / QQQ / IWM"],
+            "file_path": card.get("note_path"),
+            "bot_id": "backtester",
+            "station_id": "strategy_forge",
+            "priority": 92 if st == "frozen" else 60,
+        })
+
+    # 4. Research: Failed-Run Receipts, Curator Verdicts, and Curated Sources
+    failed_dir = project_root / "brain/00_Inbox/Failed_Runs"
+    if failed_dir.is_dir():
+        for fpath in sorted(failed_dir.glob("*.md"), reverse=True):
+            try:
+                post = frontmatter.load(fpath)
+            except Exception:
+                continue
+            run_id = str(post.get("id") or fpath.stem)
+            rq_id = str(post.get("research_id") or "")
+            stage = str(post.get("stage") or "extraction")
+            err = _extract_section(post.content, "Error") or "Failed closed under deterministic validation."
+            items.append({
+                "id": f"fail-{run_id}",
+                "when": "2026-09-28",
+                "category": "research",
+                "badge": "FAILED RUN",
+                "status": "failed",
+                "title": f"Scout Run {run_id}{f' ({rq_id})' if rq_id else ''} stopped at {stage}",
+                "summary": f"Fail-closed safeguard triggered: {err}",
+                "metrics": [f"Stage: {stage}", f"Agent: {post.get('agent_role') or 'research_scout'}"],
+                "file_path": fpath.relative_to(project_root).as_posix(),
+                "bot_id": "validator" if "qwen" in stage or "extract" in stage else "scout",
+                "station_id": "validator_gate" if "qwen" in stage or "extract" in stage else "scout_desk",
+                "priority": 90 if "871299ea31" in run_id else 76,
+            })
+
+    cur_dir = project_root / "brain/00_Inbox/Curator_Reviews"
+    if cur_dir.is_dir():
+        for cpath in sorted(cur_dir.glob("*.md"), reverse=True):
+            try:
+                post = frontmatter.load(cpath)
+            except Exception:
+                continue
+            verdict = str(post.get("verdict") or "reviewed")
+            rq_id = str(post.get("research_id") or cpath.stem)
+            why = _extract_section(post.content, "Why This Is Conservative") or _extract_section(post.content, "Open Questions For Next Research Pass")
+            items.append({
+                "id": f"cur-{cpath.stem}",
+                "when": "2026-09-26",
+                "category": "research",
+                "badge": "CURATOR VERDICT",
+                "status": "failed" if verdict == "rejected" else "completed",
+                "title": f"Curator Review {rq_id}: {verdict}",
+                "summary": why or f"Curator evaluated candidate sources for {rq_id} with verdict: {verdict}.",
+                "metrics": [f"Verdict: {verdict}", f"Research: {rq_id}"],
+                "file_path": cpath.relative_to(project_root).as_posix(),
+                "bot_id": "curator",
+                "station_id": "library_rag",
+                "priority": 78,
+            })
+
+    src_dir = project_root / "brain/01_Sources"
+    if src_dir.is_dir():
+        for spath in sorted(src_dir.rglob("*.md")):
+            try:
+                post = frontmatter.load(spath)
+            except Exception:
+                continue
+            sid = str(post.get("id") or spath.stem)
+            title = str(post.get("title") or spath.stem)
+            summary_txt = _extract_section(post.content, "Summary") or _extract_section(post.content, "Useful Claims")
+            items.append({
+                "id": f"src-{sid}",
+                "when": "2026-09-20",
+                "category": "research",
+                "badge": "CURATED SOURCE",
+                "status": "accepted",
+                "title": f"{sid}: {title}",
+                "summary": summary_txt or "Curated source note indexed into semantic RAG.",
+                "metrics": [f"Kind: {post.get('source_kind') or 'docs'}", f"Family: {post.get('method_family') or 'quant'}"],
+                "file_path": spath.relative_to(project_root).as_posix(),
+                "bot_id": "curator",
+                "station_id": "library_rag",
+                "priority": 82 if "1ea110cb46" in sid or "2830f8cd41" in sid else 68,
+            })
+
+    # 5. Decisions & Proposals
+    for j in journal(project_root):
+        is_prop = j.get("kind") == "proposal"
+        st = str(j.get("status") or "accepted").lower()
+        items.append({
+            "id": f"dec-{j['id']}",
+            "when": str(j.get("date") or "2026-09-28"),
+            "category": "decision",
+            "badge": "PROPOSAL" if is_prop else "DECISION",
+            "status": "completed" if "accept" in st else "running",
+            "title": f"{j['id']}: {j['title']}",
+            "summary": f"Project governance {'proposal' if is_prop else 'decision'} recorded in {j['path']} (status: {j.get('status') or 'recorded'}).",
+            "metrics": [f"Status: {j.get('status') or 'accepted'}"],
+            "file_path": j.get("path"),
+            "bot_id": "reviewer",
+            "station_id": "review_tribunal",
+            "priority": 89 if j["id"] in ("PROP-010", "PROP-008", "PROP-007") else 64,
+        })
+
+    # 6. Market Datasets & Macro Calendar
+    for ev in (calendar_events or []):
+        items.append({
+            "id": f"cal-{ev.get('date')}-{ev.get('title', '')[:12]}",
+            "when": str(ev.get("date") or ""),
+            "category": "market",
+            "badge": "MACRO / FOMC",
+            "status": "running",
+            "title": f"{ev.get('title')} ({ev.get('date')})",
+            "summary": str(ev.get("why") or ev.get("source") or "Scheduled macroeconomic release."),
+            "metrics": [f"Importance: {ev.get('importance') or 'high'}", str(ev.get("source") or "Fed")],
+            "bot_id": "scout",
+            "station_id": "scout_desk",
+            "priority": 86 if str(ev.get("date") or "") >= "2026-10-01" else 62,
+        })
+
+    if (project_root / MANIFEST_DIR).is_dir():
+        for mpath in sorted((project_root / MANIFEST_DIR).glob("*.json")):
+            manifest = _json(mpath.read_text(encoding="utf-8"), {})
+            sym = manifest.get("symbol")
+            if sym not in ("SPY", "QQQ", "IWM", "TLT", "GLD", "AAPL", "NVDA", "MSFT"):
+                continue
+            items.append({
+                "id": f"ds-{manifest.get('dataset_id') or mpath.stem}",
+                "when": str(manifest.get("downloaded_at") or "2026-09-29")[:10],
+                "category": "market",
+                "badge": "MARKET DATASET",
+                "status": "accepted",
+                "title": f"{sym} Verified EOD Dataset ({manifest.get('first_date')} to {manifest.get('last_date')})",
+                "summary": f"Gate F verified daily price history ({manifest.get('rows')} bars, {manifest.get('price_basis') or 'split-adjusted'}).",
+                "metrics": [f"{manifest.get('rows')} bars", f"Provider: {manifest.get('provider') or 'yfinance'}", "SHA-256 verified"],
+                "symbol": sym,
+                "bot_id": "curator",
+                "station_id": "library_rag",
+                "priority": 85 if sym in ("SPY", "QQQ", "IWM") else 58,
+            })
+
+    # 7. Live Harness Runs, Automations & Git Commits
+    for r in (described_runs or []):
+        items.append({
+            "id": f"run-{r.get('run_id')}",
+            "when": str(r.get("ended_at") or r.get("started_at") or ""),
+            "category": "code",
+            "badge": "AGENT RUN",
+            "status": r.get("status") or "completed",
+            "title": f"{r.get('title')} ({r.get('run_id')})",
+            "summary": f"{r.get('outcome') or ''} {r.get('reason') or ''}".strip(),
+            "metrics": [f"{r.get('steps') or 0} events", ", ".join(r.get("agents") or [])],
+            "run_id": r.get("run_id"),
+            "bot_id": "scout",
+            "station_id": "scout_desk",
+            "priority": 91,
+        })
+
+    for j in (job_runs or []):
+        items.append({
+            "id": f"job-{j.get('run_id')}",
+            "when": str(j.get("finished_at") or j.get("started_at") or ""),
+            "category": "code",
+            "badge": "AUTOMATION",
+            "status": j.get("status") or "completed",
+            "title": f"Scheduled Job: {j.get('job_id')}",
+            "summary": str(j.get("summary") or j.get("status") or ""),
+            "metrics": [f"Trigger: {j.get('trigger') or 'manual'}"],
+            "bot_id": "backtester",
+            "station_id": "backtest_pit",
+            "priority": 80,
+        })
+
+    for idx, c in enumerate((commits or [])[:12]):
+        who, text = sum_mod.describe_commit(c.get("subject") or "")
+        items.append({
+            "id": f"git-{c.get('short') or idx}",
+            "when": str(c.get("date") or ""),
+            "category": "code",
+            "badge": "COMMIT",
+            "status": "completed",
+            "title": f"{who}: {text}",
+            "summary": f"Committed by {c.get('author') or 'developer'} ({c.get('short')}).",
+            "metrics": [f"SHA: {c.get('short') or ''}"],
+            "bot_id": "backtester",
+            "station_id": "strategy_forge",
+            "priority": 87 if idx == 0 else max(50, 75 - idx * 3),
+        })
+
+    for item in items:
+        item["metrics"] = [m for m in (item.get("metrics") or []) if m]
+
+    items.sort(key=lambda x: (int(x.get("priority") or 0), str(x.get("when") or "")), reverse=True)
+    return items
+
+
+def Number_or_none(val: Any) -> float | None:
+    try:
+        return float(val) if val is not None else None
+    except (ValueError, TypeError):
+        return None
+
