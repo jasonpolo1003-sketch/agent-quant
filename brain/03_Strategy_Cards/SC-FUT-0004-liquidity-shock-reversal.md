@@ -1,7 +1,10 @@
 ---
 card_id: SC-FUT-0004
-status: draft_for_review
-frozen: false
+status: frozen
+frozen: true
+frozen_at: 2026-10-27
+frozen_spec: brain/_system/futures/sc-fut-0004-spec.v1.json
+frozen_spec_sha256: d89714d03e6d93a477a926cef2490a859541c496ca177a91067a4a93912a994d
 created: 2026-10-27
 method_family: liquidity_shock_reversal
 primary: MES
@@ -9,9 +12,11 @@ second_trial: MNQ
 gate: prop evaluation simulator (Topstep 50K) first, workbench statistics second
 ---
 
-# SC-FUT-0004 — Rare liquidity-shock reversal (draft, not frozen)
+# SC-FUT-0004 — Rare liquidity-shock reversal
 
-**Draft for Jason. No results have been looked at.** Research: `brain/sources/prop_firm_same_day_ideas_2026-10-27.md` (Christensen, Oomen & Renò, "drift bursts", J. Econometrics).
+> **FROZEN 2026-10-27** by Jason before any result. Binding rules: brain/_system/futures/sc-fut-0004-spec.v1.json.
+
+**No results had been looked at when this card was frozen.** Research: `brain/sources/prop_firm_same_day_ideas_2026-10-27.md` (Christensen, Oomen & Renò, "drift bursts", J. Econometrics).
 
 ## The idea in one line
 On the rare minutes when the market lurches far faster than normal (not on a scheduled news release), wait for the lurch to stall, then bet on part of it snapping back, with a stop just beyond the extreme and out within an hour.
