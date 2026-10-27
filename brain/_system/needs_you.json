@@ -78,6 +78,19 @@
       "label": "See the Workbench",
       "page": "workbench"
     },
+    "added": "2026-10-27",
+    "done": true,
+    "resolved": "2026-10-27: verification started; independent rebuild matched to the cent (brain/05_Reviews/SC-FUT-0005-independent-review.md)"
+  },
+  {
+    "id": "sc-fut-0005-prop-size",
+    "title": "Pre-register the prop size for SC-FUT-0005 (before the exam)",
+    "why": "An independent rebuild matched the MNQ result to the cent, and slippage isn't a threat. But the frozen 1-MNQ size can't reach the $3k target in time. The worst practice day at 2 MNQ uses 63% of Topstep's $2,000 limit; at 3 MNQ, 94%.",
+    "recommendation": "Fix 2 MNQ (risk rule only) and require orders within 5 seconds of each check (a 1-minute delay costs a third of the edge). Then build simulator Phase 2 and run one locked 2025-26 exam check.",
+    "action": {
+      "label": "Read the review",
+      "url": "https://github.com/jasonpolo1003-sketch/agent-quant/blob/testing/brain/05_Reviews/SC-FUT-0005-independent-review.md"
+    },
     "added": "2026-10-27"
   }
 ]
