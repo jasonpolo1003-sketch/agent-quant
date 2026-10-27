@@ -1308,3 +1308,5 @@ body.wide .foot { display: none; }
 .badge.bad { color: var(--bad); border-color: rgba(244, 63, 94, 0.4); }
 .badge.warn { color: var(--warn); border-color: rgba(245, 158, 11, 0.4); }
 .plain h2 .count { font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--warn); color: #111; }
+tr.clickable { cursor: pointer; }
+tr.clickable:hover td { background: var(--surface-2); }
