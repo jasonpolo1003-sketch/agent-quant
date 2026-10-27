@@ -1718,14 +1718,16 @@ async function showWorkbenchRun(id) {
     <article class="box verdict">
       <p class="verdict-word ${o.cls}">${o.word}</p><p class="muted" style="margin-top:0">${esc((v.reasons || []).join("; ") || o.note)}</p>
       ${v.p_value == null ? "" : meter({ label: "Better than random entries?", value: v.p_value, text: `p = ${fmt(v.p_value, 3)} · ${money(v.vs_random_per_day)}/day better`, min: 0, max: 1, line: v.alpha, lineLabel: `p < ${fmt(v.alpha, 4)} (honesty-adjusted)`, good: "below" })}
-      ${v.per_day == null ? "" : meter({ label: "Profit per day after costs", value: v.per_day, text: `${money(v.per_day)}/day`, min: -30, max: 30, line: 15, lineLabel: "$15/day", good: "above" })}
-      <div class="row" style="margin-top:12px">${chip(v.missing_session_share <= 0.01, `data gaps ${fmt(v.missing_session_share * 100, 1)}%`)}${v.ambiguity_share == null ? "" : chip(v.ambiguity_share <= 0.1, `same-minute stops ${fmt(v.ambiguity_share * 100, 1)}%`)}<span class="faint small">${fmt(v.days, 0)} days · ${fmt(v.trades, 0)} trades</span></div>
+      ${v.per_day == null ? "" : meter({ label: "Profit per day after costs", value: v.per_day, text: `${money(v.per_day)}/day`, min: -30, max: 30, line: (v.floor_cents || 1500) / 100, lineLabel: `$${fmt((v.floor_cents || 1500) / 100, 0)}/day`, good: "above" })}
+      ${v.grade && v.grade !== "fail" ? `<p><b>Grade:</b> <span class="badge good">${esc(v.grade.toUpperCase())}</span></p>` : ""}
+      <div class="row" style="margin-top:12px">${v.sharpe_min == null ? "" : chip((v.sharpe || 0) >= v.sharpe_min, `steadiness (Sharpe) ${fmt(v.sharpe, 2)} (need ${fmt(v.sharpe_min, 1)})`)}${chip(v.missing_session_share <= 0.01, `data gaps ${fmt(v.missing_session_share * 100, 1)}%`)}${v.ambiguity_share == null ? "" : chip(v.ambiguity_share <= 0.1, `same-minute stops ${fmt(v.ambiguity_share * 100, 1)}%`)}<span class="faint small">${fmt(v.days, 0)} days · ${fmt(v.trades, 0)} trades</span></div>
     </article>
     <div class="study-grid">
       ${sliceTable("By year", "Does it hold up every year, or is one lucky year carrying it?", r.grid.years)}
       ${sliceTable("Calm vs volatile", "Each day is classed by how its recent range compares with the past year (no peeking ahead).", r.grid.regimes)}
       ${sliceTable("Trading costs", "From cheap (L1) to severe (L4). L3 is the official level.", r.grid.costs)}
-    </div>`;
+    </div>
+    ${r.always_long && r.always_long.days ? `<p class="muted small" style="margin-top:12px"><b>Plain drift check:</b> taking the same trades but always long would have made ${money(r.always_long.per_trade_day)} per trading day. If that's close to the strategy's result, the "signal" is mostly just the market drifting up into the close.</p>` : ""}`;
 }
 
 // ---------- Study: SC-FUT-0001 ----------

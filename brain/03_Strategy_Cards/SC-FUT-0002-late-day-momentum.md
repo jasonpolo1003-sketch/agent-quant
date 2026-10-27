@@ -35,7 +35,7 @@ If the market is up since yesterday's close by 2:30 pm Chicago, buy for the last
 
 ## How it is judged
 - **Main comparison (new):** the same 14:30→15:00 window with a **random direction**, 500 seeded draws per day. This asks whether the signal picks the right direction, not merely whether the last half hour is a good time.
-- **Also reported, not deciding:** the usual random-entry-time comparison, and an "always long in the last half hour" benchmark (does a plain end-of-day drift explain it?).
+- **Also reported, not deciding:** an "always long in the last half hour" benchmark (does a plain end-of-day drift explain it?). The random-entry-time comparison is deferred (see spec).
 - **Statistics:** same as SC-FUT-0001 (one-sided paired stationary bootstrap, mean block 5, B = 9,999), at the workbench's honesty-adjusted bar for the new `late_momentum` family. MES is the primary; MNQ runs the identical rule as a second trial in the same family, not an independent confirmation.
 - **Data:** practice 2019-05-01..2024-12-31 only. The 2025–26 exam stays locked (future proctor, 3 checks).
 - **Grading (decided by Jason before any result):** see the frozen banner above.

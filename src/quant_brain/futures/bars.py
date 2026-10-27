@@ -169,6 +169,7 @@ def build_days(
             exit_minute=info.exit_minute,
             stop_ticks=None if total is None else stop_from_sum(total),
             atr_tr_sum=total,
+            prev_close=prior[-1][2] if prior and prior[-1] is not None else None,
         )
 
 

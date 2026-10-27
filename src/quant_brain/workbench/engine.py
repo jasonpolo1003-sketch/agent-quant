@@ -72,6 +72,7 @@ class DayTable:
     dates: np.ndarray  # ISO strings
     status: np.ndarray
     atr: np.ndarray  # 14-TR sum (ticks), for volatility regimes
+    orb_side: np.ndarray  # first trade's direction (+1/-1), 0 if none
     orb_gross: np.ndarray
     orb_stress_gross: np.ndarray
     orb_trades: np.ndarray
@@ -104,30 +105,40 @@ def simulate(strategy: Strategy, days: list[DayInput], *, draws: int = DRAWS) ->
         if result.status == "ineligible":
             continue
         k = len(result.trades) if result.status == "traded" else 0
-        control = daily_control(day, k, draws=draws, first_fill=strategy.first_fill)
         cost = L3_ROUND_TRIP_CENTS[day.root]
-        draw_rows = control.draws or []
+        if hasattr(strategy, "matched_control"):
+            # Strategy-specific benchmark (e.g. same window, random direction); no stops,
+            # so stress equals primary and every draw is evaluable.
+            gross, taken = strategy.matched_control(day, result, draws)
+            ctrl_gross, ctrl_stress, ctrl_trades, ctrl_ok = gross, gross, taken, True
+        else:
+            control = daily_control(day, k, draws=draws, first_fill=strategy.first_fill)
+            draw_rows = control.draws or []
+            ctrl_gross = [sum(t.gross_cents for t in d.trades) for d in draw_rows] or [0] * draws
+            ctrl_stress = [d.stress_net_cents + cost * len(d.trades) for d in draw_rows] or [
+                0
+            ] * draws
+            ctrl_trades = [len(d.trades) for d in draw_rows] or [0] * draws
+            ctrl_ok = control.non_evaluable_draws == 0
         rows["dates"].append(day.trade_date.isoformat())
         rows["status"].append(result.status)
         rows["atr"].append(day.atr_tr_sum or 0)
+        rows["orb_side"].append(result.trades[0].side if result.trades else 0)
         rows["orb_gross"].append(sum(t.gross_cents for t in result.trades))
         rows["orb_stress_gross"].append(result.stress_net_cents + cost * len(result.trades))
         rows["orb_trades"].append(len(result.trades))
         rows["entry_bar_stops"].append(sum(t.entry_bar_stop for t in result.trades))
         rows["gap_trades"].append(sum(t.gap_affected for t in result.trades))
-        rows["ctrl_gross"].append(
-            [sum(t.gross_cents for t in d.trades) for d in draw_rows] or [0] * draws
-        )
-        rows["ctrl_stress_gross"].append(
-            [d.stress_net_cents + cost * len(d.trades) for d in draw_rows] or [0] * draws
-        )
-        rows["ctrl_trades"].append([len(d.trades) for d in draw_rows] or [0] * draws)
-        rows["ctrl_ok"].append(control.non_evaluable_draws == 0)
+        rows["ctrl_gross"].append(ctrl_gross)
+        rows["ctrl_stress_gross"].append(ctrl_stress)
+        rows["ctrl_trades"].append(ctrl_trades)
+        rows["ctrl_ok"].append(ctrl_ok)
     as_int = lambda key: np.array(rows[key], dtype=np.int64)  # noqa: E731
     return DayTable(
         dates=np.array(rows["dates"], dtype="<U10"),
         status=np.array(rows["status"], dtype="<U16"),
         atr=as_int("atr"),
+        orb_side=as_int("orb_side"),
         orb_gross=as_int("orb_gross"),
         orb_stress_gross=as_int("orb_stress_gross"),
         orb_trades=as_int("orb_trades"),

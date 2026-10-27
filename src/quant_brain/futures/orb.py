@@ -76,6 +76,7 @@ class DayInput:
     exit_minute: time
     stop_ticks: int | None
     atr_tr_sum: int | None = None  # sum of the 14 prior true ranges, for other stop fractions
+    prev_close: int | None = None  # previous NYSE session's regular close, same contract
 
 
 @dataclass(frozen=True)

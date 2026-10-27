@@ -8,6 +8,7 @@ tightens with every distinct trial in the strategy family (Sidak).
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ import numpy as np
 
 from quant_brain.futures import inference
 from quant_brain.workbench.engine import DayTable, read_ledger
+from quant_brain.workbench.strategies import GRADING
 
 COSTS = {
     "L1": {"MNQ": 172, "MES": 247},
@@ -28,7 +30,15 @@ GRID_REPLICATES = 1_999
 
 def honesty(root: Path, family: str) -> dict[str, Any]:
     """Distinct trials so far in a family, and the pass bar they imply."""
-    trials = len({e["fingerprint"] for e in read_ledger(root) if e["family"] == family})
+    # Count distinct strategy variations, not fingerprints: a code change re-running the same
+    # settings must not inflate the count.
+    trials = len(
+        {
+            json.dumps([e["settings"], e["market"], e["roll"]], sort_keys=True)
+            for e in read_ledger(root)
+            if e["family"] == family
+        }
+    )
     n = max(trials, 1)
     alpha = 1 - (1 - inference.ALPHA) ** (1 / n)
     return {"family": family, "trials": trials, "alpha": alpha}
@@ -97,10 +107,29 @@ def grid(table: DayTable, market: str, *, replicates: int = GRID_REPLICATES) -> 
     }
 
 
+def annual_sharpe(daily_cents: np.ndarray) -> float | None:
+    sd = daily_cents.std(ddof=1) if len(daily_cents) > 1 else 0.0
+    return None if sd == 0 else float(daily_cents.mean() / sd * np.sqrt(252))
+
+
+def grade(per_day_cents: float, tiers: list[tuple[int, str]]) -> str:
+    label = "fail"
+    for floor, name in tiers:
+        if per_day_cents >= floor:
+            label = name
+    return label
+
+
 def verdict(
-    table: DayTable, market: str, alpha: float, *, replicates: int = inference.BOOTSTRAP_DRAWS
+    table: DayTable,
+    market: str,
+    alpha: float,
+    family: str = "orb",
+    *,
+    replicates: int = inference.BOOTSTRAP_DRAWS,
 ) -> dict[str, Any]:
-    """Headline: full practice period at L3, with the family's honesty-adjusted pass bar."""
+    """Headline: full practice period at L3, the family's frozen grading and honesty-adjusted bar."""
+    rules = GRADING[family]
     good = table.evaluable
     trades = int(table.orb_trades[good].sum())
     affected = int(((table.gap_trades > 0) & good).sum() + (~good).sum())
@@ -110,20 +139,24 @@ def verdict(
         "non_evaluable_days": int((~good).sum()),
         "trades": trades,
         "alpha": alpha,
+        "floor_cents": rules["floor_cents"],
+        "sharpe_min": rules["sharpe_min"],
         "missing_session_share": missing_share,
         "ambiguity_share": float(table.entry_bar_stops[good].sum() / trades) if trades else None,
         "reasons": [],
     }
     if trades == 0 or good.sum() < 2:
-        return out | {"outcome": "inconclusive", "reasons": ["no trades"]}
+        return out | {"outcome": "inconclusive", "grade": "fail", "reasons": ["no trades"]}
 
     def decide(stress: bool) -> tuple[bool, dict]:
         orb, draws = _nets(table, market, "L3", stress=stress)
         test = inference.paired_test(orb[good], draws[good].mean(axis=1), replicates=replicates)
-        absolute = orb[good].mean()
-        return test["p_value"] < alpha and absolute >= inference.FLOOR_CENTS, test | {
-            "absolute": absolute
-        }
+        absolute = float(orb[good].mean())
+        sharpe = annual_sharpe(orb[good])
+        ok = test["p_value"] < alpha and absolute >= rules["floor_cents"]
+        if rules["sharpe_min"] is not None:
+            ok = ok and sharpe is not None and sharpe >= rules["sharpe_min"]
+        return ok, test | {"absolute": absolute, "sharpe": sharpe}
 
     passed, stats = decide(False)
     stress_passed, _ = decide(True)
@@ -137,15 +170,35 @@ def verdict(
     if outcome == "not_demonstrated":
         if stats["p_value"] >= alpha:
             out["reasons"].append(
-                f"not better than random entries (p {stats['p_value']:.3f} vs bar {alpha:.4f})"
+                f"not better than the random benchmark (p {stats['p_value']:.3f} vs bar {alpha:.4f})"
             )
-        if stats["absolute"] < inference.FLOOR_CENTS:
-            out["reasons"].append("below the $15/day floor")
+        if stats["absolute"] < rules["floor_cents"]:
+            out["reasons"].append(f"below the ${rules['floor_cents'] / 100:.0f}/day floor")
+        if rules["sharpe_min"] is not None and (stats["sharpe"] or 0) < rules["sharpe_min"]:
+            out["reasons"].append(f"Sharpe {stats['sharpe'] or 0:.2f} below {rules['sharpe_min']}")
     return out | {
         "outcome": outcome,
+        "grade": grade(stats["absolute"], rules["tiers"])
+        if outcome == "pass_to_execution_calibration"
+        else "fail",
         "per_day": stats["absolute"] / 100,
         "vs_random_per_day": stats["observed_cents"] / 100,
         "p_value": stats["p_value"],
+        "sharpe": stats["sharpe"],
+    }
+
+
+def always_long(table: DayTable, market: str) -> dict[str, Any]:
+    """Diagnostic: the same trades taken long every time (does a plain drift explain it?)."""
+    good = table.evaluable & (table.orb_trades > 0)
+    if good.sum() < 2:
+        return {}
+    long_gross = table.orb_side[good] * table.orb_gross[good]
+    net = (long_gross - COSTS["L3"][market] * table.orb_trades[good]).astype(float)
+    return {
+        "days": int(good.sum()),
+        "per_trade_day": float(net.mean() / 100),
+        "sharpe": annual_sharpe(net),
     }
 
 
@@ -160,6 +213,9 @@ def summary(
     return {
         "run": record,
         "honesty": bar,
-        "verdict": verdict(table, record["market"], bar["alpha"], replicates=replicates),
+        "verdict": verdict(
+            table, record["market"], bar["alpha"], record["family"], replicates=replicates
+        ),
+        "always_long": always_long(table, record["market"]),
         "grid": grid(table, record["market"], replicates=min(replicates, GRID_REPLICATES)),
     }
