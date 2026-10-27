@@ -170,6 +170,8 @@ def gate_problems(root: Path, phase: str, data_dir: Path) -> list[str]:
         problems.append("no held_out_authorized event after the development run")
     if _last_index(events, {"held_out_started"}) >= 0:
         problems.append("held-out already read once")
+    if _last_index(events, {"card_closed"}) >= 0:
+        problems.append("card closed by Jason; the held-out data stays unread")
     sums = data_dir / "SHA256SUMS"
     if (
         not sums.exists()
@@ -188,7 +190,12 @@ def gate_problems(root: Path, phase: str, data_dir: Path) -> list[str]:
 
 
 def authorize(root: Path, event: str, by: str) -> dict[str, Any]:
-    allowed = {"development_authorized", "held_out_authorized", "ambiguity_review_cleared"}
+    allowed = {
+        "development_authorized",
+        "held_out_authorized",
+        "ambiguity_review_cleared",
+        "card_closed",
+    }
     if event not in allowed:
         raise GateError(f"unknown authorization {event}")
     if by != "Jason":
