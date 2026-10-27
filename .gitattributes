@@ -50,3 +50,4 @@ brain/05_Reviews/SC-FUT-0001-*.md -text
 brain/sources/mes_mnq/execution_costs/execution_costs_mes_mnq.md -text
 brain/sources/mes_mnq/contracts/roll_calendar_2019_2026.csv -text
 uv.lock -text
+brain/_system/futures/sc-fut-0002-spec.v1.* -text
