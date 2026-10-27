@@ -32,6 +32,19 @@
       "label": "Read the research",
       "url": "https://github.com/jasonpolo1003-sketch/agent-quant/blob/testing/brain/sources/candidate_ideas_2026-10-26.md"
     },
+    "added": "2026-10-27",
+    "done": true,
+    "resolved": "2026-10-27: picked late-day momentum (SC-FUT-0002)"
+  },
+  {
+    "id": "sc-fut-0002-close",
+    "title": "Close SC-FUT-0002 (late-day momentum) as not demonstrated?",
+    "why": "On 2019-2024 practice data it lost money after costs on MES (-$3.93/day) and roughly broke even on MNQ (-$0.45/day). The direction signal was only slightly better than random (+$2-3/day, not significant).",
+    "recommendation": "Close it. Don't chase the volatile-days slice that looked better: that would be picking a winner after the fact.",
+    "action": {
+      "label": "See the Workbench",
+      "page": "workbench"
+    },
     "added": "2026-10-27"
   }
 ]
