@@ -1,5 +1,21 @@
 # Quant Agent Brain — Session Handoff
 
+## Backtest workbench core built (2026-10-26; plan approved: exam budget 3, MNQ/MES only)
+
+- `src/quant_brain/workbench/`:
+  - `strategies.py`: W1 plug-ins; ORB defaults = SC-FUT-0001, reproduces its dev results to the cent on sample days.
+  - `engine.py`: W7 fingerprinted, cached runs; one ledger trial per distinct run, at `brain/04_Backtest_Reports/workbench/trials.jsonl`; practice data only.
+  - `analysis.py`: W2/W5 year, backward-looking regime and L1-L4 slices with random-entry luck checks; W6 Sidak pass bar per family.
+- Supporting pieces:
+  - CLI: `scripts/workbench.py run|list`.
+  - UI: **Workbench** tab (`ui/workbench_view.py`, `RENDER.workbench`). Saved verdicts are re-judged against the current bar when shown.
+  - Engine hooks: `range_bars`, stop fraction via `atr_tr_sum`, control `first_fill`, volume roll. Frozen SC-FUT-0001 behaviour is unchanged (all fixtures, crosscheck and audit tests pass).
+- First trials (baseline ORB, 2019-2024; orb family has 2 trials, so the bar is p < 0.0253):
+  - MNQ: $2.91/day, p = 0.132.
+  - MES: -$3.77/day.
+  - Both not demonstrated.
+- Not built yet: W3 robustness nudges, W4 walk-forward, W8 exam proctor, run button in the UI, W10 paper feed.
+
 ## UI: PR #13 redesign restored as the main UI (2026-10-26)
 
 - Jason prefers the PR #13 data-terminal UI. It was merged back onto `testing` (`1e5f46b`) from tag `archive/2026-10-26/cursor-interactive-base-ui-d89c`, keeping its app.js/app.css and re-adding the Study tab. 1,004 tests pass. Serve with `.venv/Scripts/python.exe scripts/serve_terminal.py --root . --port 8765`.
