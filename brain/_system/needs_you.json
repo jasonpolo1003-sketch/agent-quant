@@ -19,6 +19,8 @@
       "label": "Read the plan",
       "url": "https://github.com/jasonpolo1003-sketch/agent-quant/blob/testing/brain/_system/plan/backtest_workbench_plan.md"
     },
-    "added": "2026-10-26"
+    "added": "2026-10-26",
+    "done": true,
+    "resolved": "2026-10-26: approved by Jason (budget 3 exam checks, MNQ/MES only)"
   }
 ]

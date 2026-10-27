@@ -1,4 +1,4 @@
-# Backtest workbench plan (proposed 2026-10-26, for Jason's approval)
+# Backtest workbench plan (approved by Jason 2026-10-26: exam budget 3, MNQ/MES only)
 
 ## Why
 Jason wants to test strategies as often as he likes, under many conditions, with each run starting from a clean slate, rather than feeling limited to one test. The trading logic stays **pure code**: no AI decides trades. The only limited resource is a final yes/no on data nobody has looked at, and this plan makes even that reusable a few times, honestly.
