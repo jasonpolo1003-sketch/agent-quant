@@ -56,3 +56,4 @@ brain/_system/futures/fomc_statement_days_2019_2024.csv -text
 brain/_system/prop/*.json -text
 brain/_system/futures/sc-fut-0005-spec.v1.* -text
 brain/_system/futures/sc-fut-0006-spec.v1.* -text
+brain/_system/futures/sc-fut-0006-hv-days.csv -text

@@ -1,1 +1,2 @@
 {"at": "2026-10-27T23:20:29+00:00", "card_id": "SC-FUT-0006", "event": "frozen", "by": "Jason", "spec_sha256": "ebf0ad5a96a59a0af6978c1855e7b99635a9172df0fd6c40a770fadb1cfa2c9e", "note": "frozen before any result; approved in chat 2026-10-27"}
+{"at": "2026-10-27T23:21:35+00:00", "card_id": "SC-FUT-0006", "event": "filter_days_built", "outcome_blind": true, "file": "brain/_system/futures/sc-fut-0006-hv-days.csv", "sha256": "7b973c7730268c5b4eb47502d298fc92f3997ccfabf53d2fa426666859142dfa", "sessions": 1428, "high_vol": 692}
