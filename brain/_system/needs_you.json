@@ -4,7 +4,21 @@
     "title": "Merge pull request #14 into main",
     "why": "main is the official copy. Everything since the cleanup (futures engine, practice run, Study page, the restored UI) is waiting in PR #14. Its tests pass.",
     "recommendation": "Merge it on GitHub.",
-    "action": {"label": "Open PR #14", "url": "https://github.com/jasonpolo1003-sketch/agent-quant/pull/14"},
+    "action": {
+      "label": "Open PR #14",
+      "url": "https://github.com/jasonpolo1003-sketch/agent-quant/pull/14"
+    },
+    "added": "2026-10-26"
+  },
+  {
+    "id": "approve-workbench-plan",
+    "title": "Approve the backtest workbench plan",
+    "why": "Lets you test strategies as often as you like on practice data, under many conditions, with an automatic honesty counter; the 2025-26 exam becomes a 3-check pass/fail proctor.",
+    "recommendation": "Approve it with a budget of 3 exam checks and MNQ/MES only for now.",
+    "action": {
+      "label": "Read the plan",
+      "url": "https://github.com/jasonpolo1003-sketch/agent-quant/blob/testing/brain/_system/plan/backtest_workbench_plan.md"
+    },
     "added": "2026-10-26"
   }
 ]
