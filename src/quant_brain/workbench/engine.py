@@ -40,6 +40,7 @@ CODE_FILES = (
     "src/quant_brain/workbench/engine.py",
     "src/quant_brain/prop/paths.py",
     "src/quant_brain/workbench/shock.py",
+    "src/quant_brain/workbench/noise.py",
 )
 EVALUABLE = ("traded", "no_trade", "void_range")
 

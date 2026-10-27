@@ -45,7 +45,10 @@ def test_n2_exit_when_back_inside_the_band():
 
 def test_n3_reverse_when_the_opposite_band_breaks():
     r = STRAT.simulate(day({**BREAKOUT, "10:29": (108, 108, 102, 102)}))
-    assert legs(r) == [(1, t("09:00"), 108, t("10:30"), 102), (-1, t("10:30"), 102, t("15:00"), 102)]
+    assert legs(r) == [
+        (1, t("09:00"), 108, t("10:30"), 102),
+        (-1, t("10:30"), 102, t("15:00"), 102),
+    ]
     assert r.net_cents == -6 * 50 - 2 * 322
 
 
@@ -63,7 +66,16 @@ def test_n6_vwap_tightens_the_stop():
     bars = {**BREAKOUT, "09:05": (108, 115, 108, 115), "10:29": (115, 115, 112, 112)}
     heavy = {f"09:{m:02d}": 1_000 for m in range(5, 60)}
     r = STRAT.simulate(day(bars, volumes=heavy))  # VWAP ~115 > upper 107.1
-    assert legs(r) == [(1, t("09:00"), 108, t("10:30"), 112)]
+    # Spec: after a VWAP exit only a reversal may happen at that check; a same-direction re-entry
+    # comes at the next check while price is still above the band, then the VWAP stop exits again.
+    # (Corrected from the first draft of this fixture to match the frozen spec, before any result.)
+    entries = ["09:00", "11:00", "12:00", "13:00", "14:00"]
+    exits = ["10:30", "11:30", "12:30", "13:30", "14:30"]
+    expected = [
+        (1, t(a), 108 if a == "09:00" else 112, t(b), 112)
+        for a, b in zip(entries, exits, strict=True)
+    ]
+    assert legs(r) == expected
 
 
 def test_n7_no_sigma_no_action():

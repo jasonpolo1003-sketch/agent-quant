@@ -78,6 +78,7 @@ class DayInput:
     atr_tr_sum: int | None = None  # sum of the 14 prior true ranges, for other stop fractions
     prev_close: int | None = None  # previous NYSE session's regular close, same contract
     context: Mapping | None = None  # strategy-specific point-in-time inputs (e.g. scales)
+    volumes: Mapping | None = None  # 1-minute volume by bar start (for VWAP)
 
 
 @dataclass(frozen=True)

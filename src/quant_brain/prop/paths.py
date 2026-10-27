@@ -29,7 +29,7 @@ def trade_extremes(bars: Mapping[time, Bar], trade: Trade, tick_cents: int) -> t
         if minute == trade.exit_minute:
             adverse = trade.exit_ticks
             bar = bars.get(minute)
-            if trade.exit_reason in ("flatten", "close", "gap_stop") or bar is None:
+            if trade.exit_reason in ("flatten", "close", "gap_stop", "signal_exit") or bar is None:
                 favourable = trade.exit_ticks  # out at the bar open
             else:  # stopped inside this bar: its favourable extreme may have come first
                 favourable = bar[1] if side > 0 else bar[2]

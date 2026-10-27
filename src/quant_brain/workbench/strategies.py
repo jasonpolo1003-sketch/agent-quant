@@ -155,14 +155,21 @@ class LateDayMomentum:
         return [c for _, c in picked], [1] * draws, [lo for lo, _ in picked]
 
 
+from quant_brain.workbench.noise import NoiseArea  # noqa: E402
 from quant_brain.workbench.shock import ShockReversal  # noqa: E402
 
 REGISTRY: dict[str, type] = {
     "orb": OpeningRangeBreakout,
     "late_momentum": LateDayMomentum,
     "shock_reversal": ShockReversal,
+    "noise_area": NoiseArea,
 }
 GRADING = {
+    "noise_area": {
+        "floor_cents": 500,
+        "tiers": [(500, "small edge"), (1000, "good"), (1500, "strong")],
+        "sharpe_min": 1.0,
+    },
     "shock_reversal": {
         "floor_cents": 500,
         "tiers": [(500, "small edge"), (1000, "good"), (1500, "strong")],
@@ -176,6 +183,8 @@ GRADING = {
     },
 }
 DESCRIPTIONS = {
+    "noise_area": "Noise-area momentum: at half-hour checks, ride a breakout beyond the normal move for that time "
+    "of day; trail it with the band or VWAP; flat at the 3:00 pm CT close.",
     "shock_reversal": "Shock reversal: after a rare 15-minute lurch (4x normal for that time of day, not FOMC), "
     "wait for one counter bar, then fade it with a stop past the extreme; out within an hour.",
     "late_momentum": "Late-day momentum: in the last 30 minutes before the 3:00 pm CT cash close, trade in the "

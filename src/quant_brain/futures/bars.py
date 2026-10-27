@@ -85,6 +85,7 @@ def read_tick_bars(path: Path, instruments: set[int]) -> pd.DataFrame:
             "high": ticks[:, 1],
             "low": ticks[:, 2],
             "close": ticks[:, 3],
+            "volume": records["volume"].astype("int64"),
         }
     )
     if frame.duplicated(["instrument_id", "minute"]).any():
@@ -99,6 +100,7 @@ class _Session:
     low: int
     close: int | None
     minutes: dict[time, Bar]
+    volumes: dict[time, int]
 
 
 def _sessions(
@@ -124,11 +126,17 @@ def _sessions(
             )
             if m.time() >= RANGE_START
         }
+        volumes = {
+            m.time(): int(v)
+            for m, v in zip(same_day["minute"], same_day["volume"], strict=True)
+            if m.time() >= RANGE_START
+        }
         out[(int(iid), day)] = _Session(
             high=int(group["high"].max()),
             low=int(group["low"].min()),
             close=int(regular["close"].iloc[-1]) if len(regular) else None,
             minutes=minutes,
+            volumes=volumes,
         )
     return out
 
@@ -170,6 +178,7 @@ def build_days(
             stop_ticks=None if total is None else stop_from_sum(total),
             atr_tr_sum=total,
             prev_close=prior[-1][2] if prior and prior[-1] is not None else None,
+            volumes={m: v for m, v in today.volumes.items() if m in bars} if today else {},
         )
 
 
