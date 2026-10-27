@@ -1,4 +1,4 @@
-# Plan: SC-FUT-0003 diversified time-series momentum (draft 2026-10-27, for review)
+# Plan: SC-FUT-0003 diversified time-series momentum (SHELVED 2026-10-27: incompatible with prop-firm no-overnight rules; see brain/05_Reviews/SC-FUT-0003-plan-reviews.md)
 
 ## Goal
 Test, honestly and once, whether classic diversified trend-following (time-series momentum) earns a real, steady edge after costs across the 29 CME futures markets we now own, as a low-turnover alternative to the two failed intraday ideas.

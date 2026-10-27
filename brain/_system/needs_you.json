@@ -46,5 +46,16 @@
       "page": "workbench"
     },
     "added": "2026-10-27"
+  },
+  {
+    "id": "change-databento-password",
+    "title": "Change your Databento password",
+    "why": "It was committed in plain text to the public GitHub repo on 2026-10-26. It's removed from the current files but still in git history.",
+    "recommendation": "Change it at databento.com (and anywhere you reused it). Optionally I can scrub git history (needs a force-push).",
+    "action": {
+      "label": "Open Databento",
+      "url": "https://databento.com/portal"
+    },
+    "added": "2026-10-27"
   }
 ]
