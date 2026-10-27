@@ -1,0 +1,33 @@
+{
+  "schema_version": "sc-fut-0005-1",
+  "card_id": "SC-FUT-0005",
+  "status": "frozen",
+  "frozen": true,
+  "frozen_at": "2026-10-27",
+  "approved_by": "Jason 2026-10-27 (no-leverage paper version, MNQ primary, 1 contract, volume roll)",
+  "source": "Zarattini, Aziz & Barbon, Beat the Market: An Effective Intraday Momentum Strategy for S&P500 ETF (SPY), SFI WP 24-97 (rules read from the paper text)",
+  "workbench_family": "noise_area",
+  "instrument": {"primary": "MNQ", "second_trial_same_family": "MES", "contracts": 1, "roll": "volume (prior-day volume roll file)"},
+  "data": {"practice_inclusive": ["2019-05-01", "2024-12-31"], "exam": "2025-01-01..2026-10-21 locked; future proctor only", "note": "practice overlaps the paper's own sample: replication check, not fresh evidence"},
+  "rule": {
+    "open": "open of the 08:30 CT bar (cash open)",
+    "move": "for check time m: |close of the bar ending at m (bar starting m-1) / open - 1|",
+    "sigma": "mean of move at the same check time over the previous 14 NYSE sessions that have both bars; at least 10 observations, else no action at that check",
+    "bands": "upper = max(open, previous regular close) x (1 + sigma); lower = min(open, previous regular close) x (1 - sigma)",
+    "checks": "HH:00 and HH:30 CT from 09:00 to 14:30 inclusive (early-close days: to 11:30); price = close of the bar ending at the check; fills at the open of the check-minute bar; a missing check-minute bar means no action at that check",
+    "entry": "flat: price > upper -> long; price < lower -> short",
+    "exit": "long: price < max(upper, VWAP) -> exit; short: price > min(lower, VWAP) -> exit; after an exit, the opposite band breached at the same check -> reverse at the same fill",
+    "vwap": "cash-hours VWAP from the 08:30 bar through the bar ending at the check, typical price (high+low+close)/3 weighted by 1-minute volume",
+    "end_of_day": "flat at the open of the 15:00 CT bar (early-close days: the 12:00 CT bar); missing flatten bar -> non-evaluable",
+    "size": "1 contract; no volatility leverage (a later, separately counted trial)",
+    "costs": "L3 once per round trip (a reversal is two round trips); L1-L4 reported"
+  },
+  "benchmarks": {"matched_control": "same trades (entry/exit times), each with a random direction, 500 draws seeded [20261026, root, yyyymmdd, 5]"},
+  "gates": {
+    "sample_floor": "at least 40 trades on MNQ, else too few to judge",
+    "prop_main": "Topstep 50K (rules sha256 219fab9df1fe39b02bf55fd38ec4b7e25e166f0fb54cc322ddf2768378aa31f7), frozen size 1 MNQ, 6-month budget, L3: first-account pass minus luck (at luck's best size) 90% range above 0 and median days to pass <= 126",
+    "workbench_supporting": "vs matched control at the noise_area family's honesty-adjusted bar; grades $5/$10/$15 per day per contract plus Sharpe >= 1.0",
+    "no_retuning": "if it fails, no variants of this rule; the next step is the multi-market or prop-goal decision"
+  },
+  "pre_registered_cost_expectation": "from the paper's own figures: MES paper-level edge ~$9-10/day vs ~$11/day L3 costs (cannot survive); MNQ ~$15/day vs ~$6/day (room)"
+}

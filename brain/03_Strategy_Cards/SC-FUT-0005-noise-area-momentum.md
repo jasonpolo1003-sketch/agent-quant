@@ -1,17 +1,22 @@
 ---
 card_id: SC-FUT-0005
-status: draft_for_review
-frozen: false
+status: frozen
+frozen: true
+frozen_at: 2026-10-27
+frozen_spec: brain/_system/futures/sc-fut-0005-spec.v1.json
+frozen_spec_sha256: 90beea10e7ba88e026b1c9e440e0abb0489726193c5fca3ba2cee58379bc85e5
 created: 2026-10-27
 method_family: noise_area_momentum
-primary: MNQ (proposed; see cost note)
+primary: MNQ
 second_trial: MES
 gate: prop evaluation simulator first, workbench statistics second
 ---
 
-# SC-FUT-0005 — Noise-area intraday momentum (draft, not frozen)
+# SC-FUT-0005 — Noise-area intraday momentum
 
-**Draft for Jason. No results have been looked at.**
+> **FROZEN 2026-10-27** by Jason before any result. Binding rules: brain/_system/futures/sc-fut-0005-spec.v1.json. If it fails, no variants: next comes the multi-market or prop-goal decision.
+
+**No results had been looked at when this card was frozen.**
 
 **Source:** Zarattini, Aziz & Barbon, "Beat the Market: An Effective Intraday Momentum Strategy for S&P500 ETF (SPY)", SFI working paper 24-97, rules read from the paper's own text. On SPY 2007–2024 they report: base Sharpe 0.61; with the band+VWAP trailing stop **1.24** (constant 100% exposure); 1.33 with volatility-scaled leverage up to 4×. About 7,668 trades in 17 years (about 1.8 per day). Costs were $0.0045 per share per side.
 
