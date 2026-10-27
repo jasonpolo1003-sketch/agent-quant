@@ -8,13 +8,16 @@ check, and fill at the open of the check-minute bar.
 
 from __future__ import annotations
 
+import csv
 import dataclasses
+import hashlib
 from dataclasses import dataclass
-from datetime import time
+from datetime import date, time
 from typing import Any
 
 import numpy as np
 
+from quant_brain.config import PROJECT_ROOT
 from quant_brain.futures import orb
 from quant_brain.futures.controls import ROOT_CODE
 from quant_brain.futures.orb import DayInput, DayResult, Trade
@@ -27,6 +30,27 @@ EARLY_LAST_CHECK = time(11, 30)
 CLOSE = time(15, 0)
 EARLY_CLOSE = time(12, 0)
 NOISE_SEED = 20261026
+# SC-FUT-0006: trade only on these days (built outcome-blind by scripts/build_hv_days.py).
+DAY_FILTERS = {
+    "sc-fut-0006-hv": (
+        "brain/_system/futures/sc-fut-0006-hv-days.csv",
+        "7b973c7730268c5b4eb47502d298fc92f3997ccfabf53d2fa426666859142dfa",
+    )
+}
+
+
+def filter_days(name: str) -> frozenset[date]:
+    """Trade dates allowed by a pinned day filter; refuses a file whose hash changed."""
+    rel, pinned = DAY_FILTERS[name]
+    path = PROJECT_ROOT / rel
+    if hashlib.sha256(path.read_bytes()).hexdigest() != pinned:
+        raise ValueError(f"{rel} does not match its pinned sha256")
+    with path.open(encoding="utf-8", newline="") as handle:
+        return frozenset(
+            date.fromisoformat(r["trade_date"])
+            for r in csv.DictReader(handle)
+            if r["high_vol"] == "True"
+        )
 
 
 def _n(m: time) -> int:
@@ -46,10 +70,18 @@ def _checks(early: bool) -> list[int]:
 class NoiseArea:
     lookback_sessions: int = 14
     min_observations: int = 10
+    day_filter: str = ""
     family: str = dataclasses.field(default="noise_area", init=False)
 
+    def __post_init__(self) -> None:
+        if self.day_filter and self.day_filter not in DAY_FILTERS:
+            raise ValueError(f"unknown day_filter {self.day_filter!r}")
+
     def settings(self) -> dict[str, Any]:
-        return {"lookback_sessions": self.lookback_sessions, "stop": "band_or_vwap", "size": 1}
+        out = {"lookback_sessions": self.lookback_sessions, "stop": "band_or_vwap", "size": 1}
+        if self.day_filter:  # absent for SC-FUT-0005, so its fingerprint inputs are unchanged
+            out["day_filter"] = self.day_filter
+        return out
 
     @property
     def first_fill(self) -> time:
@@ -72,6 +104,7 @@ class NoiseArea:
 
     def prepare_all(self, days: list[DayInput]) -> list[DayInput]:
         """Attach sigma per check: the mean move over the previous 14 sessions only."""
+        allowed = filter_days(self.day_filter) if self.day_filter else None
         history: list[dict[int, float]] = []
         out = []
         for day in days:
@@ -81,13 +114,16 @@ class NoiseArea:
                 values = [h[n] for h in past if n in h]
                 if len(values) >= self.min_observations:
                     sigma[n] = float(np.mean(values))
-            out.append(dataclasses.replace(day, context={"sigma": sigma}))
+            skip = allowed is not None and day.trade_date not in allowed
+            out.append(dataclasses.replace(day, context={"sigma": sigma, "skip": skip}))
             if day.bars:
                 history.append(self._moves(day))
         return out
 
     def _legs(self, day: DayInput) -> tuple[str, list[dict]]:
         """Planned legs [{side, entry_at, entry, exit_at, exit, reason}] or a non-evaluable status."""
+        if (day.context or {}).get("skip"):
+            return "no_trade", []
         sigma = (day.context or {}).get("sigma") or {}
         first = day.bars.get(OPEN)
         if first is None or day.prev_close is None:

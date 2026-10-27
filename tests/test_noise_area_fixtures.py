@@ -124,3 +124,23 @@ def test_sigma_uses_only_previous_sessions():
     changed = [*days[:21], dataclasses.replace(days[21], bars={}), *days[22:]]
     assert STRAT.prepare_all(changed)[20].context["sigma"][9 * 60] == s
     assert time(9, 0) == time(9, 0)
+
+
+def test_sc_fut_0006_filtered_day_does_not_trade_and_others_are_unchanged():
+    hv = NoiseArea(day_filter="sc-fut-0006-hv")
+    breakout = day({**BREAKOUT, "10:10": (108, 120, 108, 120)})
+    assert (
+        legs(hv.simulate(dataclasses.replace(breakout, context={"sigma": SIGMA, "skip": True})))
+        == []
+    )
+    assert legs(hv.simulate(breakout)) == legs(STRAT.simulate(breakout))
+    assert "day_filter" not in STRAT.settings()
+    assert hv.settings()["day_filter"] == "sc-fut-0006-hv"
+
+
+def test_sc_fut_0006_day_list_matches_its_pin():
+    from quant_brain.workbench.noise import filter_days
+
+    days = filter_days("sc-fut-0006-hv")
+    assert len(days) == 692
+    assert date(2022, 6, 13) in days or date(2022, 6, 14) in days

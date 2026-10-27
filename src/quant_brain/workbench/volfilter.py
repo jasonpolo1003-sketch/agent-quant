@@ -12,6 +12,7 @@ import statistics
 from bisect import bisect_left
 from collections.abc import Iterable
 from datetime import date
+from itertools import pairwise
 
 WINDOW = 20
 LOOKBACK = 252
@@ -33,7 +34,7 @@ def front_returns(rows: Iterable[tuple[date, str, float, int]]) -> list[tuple[da
     previous: dict[tuple[str, date], float] = {}
     for contract, bars in by_contract.items():
         bars.sort()
-        for (_, before), (day, _) in zip(bars, bars[1:], strict=False):
+        for (_, before), (day, _) in pairwise(bars):
             previous[(contract, day)] = before
     closes = {(c, d): close for c, bars in by_contract.items() for d, close in bars}
     out = []
