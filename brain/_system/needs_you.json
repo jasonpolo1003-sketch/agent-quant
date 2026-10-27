@@ -68,5 +68,16 @@
       "page": "workbench"
     },
     "added": "2026-10-27"
+  },
+  {
+    "id": "sc-fut-0005-next",
+    "title": "SC-FUT-0005 passed the workbench on MNQ: approve the verification plan?",
+    "why": "MNQ: +$11.49/day after costs, beats random direction with p=0.0001, Sharpe 1.31, 5 of 6 years positive. It failed the prop gate only at the frozen 1-contract size.",
+    "recommendation": "Before any money: independent rebuild and adversarial review, a pre-registered prop size, simulator Phase 2 (payouts), then one locked 2025-26 exam check.",
+    "action": {
+      "label": "See the Workbench",
+      "page": "workbench"
+    },
+    "added": "2026-10-27"
   }
 ]
