@@ -14,6 +14,7 @@ import hashlib
 import json
 import sys
 from datetime import UTC, datetime
+from pathlib import Path
 
 from quant_brain.config import BRAIN_DIR, PROJECT_ROOT
 from quant_brain.prop import replay
@@ -47,7 +48,11 @@ def main() -> int:
         "--horizon", type=int, default=126, help="fee budget in trading days (6 months)"
     )
     parser.add_argument("--level", default="L3")
+    parser.add_argument(
+        "--rules", type=Path, default=RULES, help="prop rules JSON (default: Topstep 50K)"
+    )
     args = parser.parse_args()
+    rules_path = args.rules if args.rules.is_absolute() else PROJECT_ROOT / args.rules
 
     matches = [e for e in engine.read_ledger(PROJECT_ROOT) if e["fingerprint"].startswith(args.run)]
     if len(matches) != 1:
@@ -61,7 +66,7 @@ def main() -> int:
     table = engine.DayTable.load(cache)
     if "orb_low" not in table.__dict__ or table.orb_low.size == 0:
         raise SystemExit("cached table predates intraday lows; re-run the workbench trial")
-    rules = Rules.from_json(RULES)
+    rules = Rules.from_json(rules_path)
     settings = {
         "size": args.size,
         "horizon": args.horizon,
@@ -70,7 +75,7 @@ def main() -> int:
     }
     fp = _sha(
         cache.read_bytes(),
-        RULES.read_bytes(),
+        rules_path.read_bytes(),
         *[(PROJECT_ROOT / f).read_bytes() for f in SIM_CODE],
         json.dumps(settings, sort_keys=True).encode(),
     )
@@ -90,7 +95,7 @@ def main() -> int:
         result |= {
             "workbench_trial": trial,
             "simulator_fingerprint": fp,
-            "rules_file": str(RULES.relative_to(PROJECT_ROOT)),
+            "rules_file": str(rules_path.relative_to(PROJECT_ROOT)),
         }
         OUT.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(result, indent=2, default=float) + "\n", encoding="utf-8")
