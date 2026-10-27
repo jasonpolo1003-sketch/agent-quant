@@ -85,15 +85,18 @@ def test_matched_control_is_random_direction_on_the_same_trade():
         }
     )
     r = STRAT.simulate(d)
-    gross, taken = STRAT.matched_control(d, r, 500)
+    gross, taken, lows = STRAT.matched_control(d, r, 500)
     assert set(gross) == {500, -500} and taken == [1] * 500
+    # same direction never went underwater; flipped, its worst is minus the original best
+    assert {(g, lo) for g, lo in zip(gross, lows, strict=True)} == {(500, 0), (-500, -500)}
     assert 200 < gross.count(500) < 300
-    assert STRAT.matched_control(d, r, 500) == (gross, taken)
+    assert STRAT.matched_control(d, r, 500) == (gross, taken, lows)
     assert (
         STRAT.matched_control(dataclasses.replace(d, trade_date=date(2020, 1, 3)), r, 500)[0]
         != gross
     )
     assert STRAT.matched_control(d, dataclasses.replace(r, status="no_trade", trades=[]), 500) == (
+        [0] * 500,
         [0] * 500,
         [0] * 500,
     )
@@ -109,6 +112,7 @@ def _table(orb_net_cents, rng):
         atr=np.zeros(n, int),
         orb_side=np.ones(n, int),
         orb_gross=gross,
+        orb_low=np.minimum(gross, 0),
         orb_stress_gross=gross,
         orb_trades=np.ones(n, int),
         entry_bar_stops=np.zeros(n, int),
@@ -117,6 +121,7 @@ def _table(orb_net_cents, rng):
         ctrl_stress_gross=ctrl,
         ctrl_trades=np.ones((n, 500), int),
         ctrl_ok=np.ones(n, bool),
+        ctrl_low=np.minimum(ctrl, 0),
     )
 
 

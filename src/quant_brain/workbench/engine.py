@@ -21,7 +21,8 @@ import numpy as np
 
 from quant_brain.config import PROJECT_ROOT
 from quant_brain.futures.controls import DRAWS, daily_control
-from quant_brain.futures.orb import L3_ROUND_TRIP_CENTS, DayInput
+from quant_brain.futures.orb import L3_ROUND_TRIP_CENTS, TICK_CENTS, DayInput
+from quant_brain.prop import paths
 from quant_brain.workbench.strategies import Strategy
 
 WORKBENCH = "brain/04_Backtest_Reports/workbench"
@@ -37,6 +38,7 @@ CODE_FILES = (
     "src/quant_brain/futures/session_audit.py",
     "src/quant_brain/workbench/strategies.py",
     "src/quant_brain/workbench/engine.py",
+    "src/quant_brain/prop/paths.py",
 )
 EVALUABLE = ("traded", "no_trade", "void_range")
 
@@ -74,6 +76,7 @@ class DayTable:
     atr: np.ndarray  # 14-TR sum (ticks), for volatility regimes
     orb_side: np.ndarray  # first trade's direction (+1/-1), 0 if none
     orb_gross: np.ndarray
+    orb_low: np.ndarray  # lowest intraday equity, cents per contract, gross (prop simulator)
     orb_stress_gross: np.ndarray
     orb_trades: np.ndarray
     entry_bar_stops: np.ndarray
@@ -82,6 +85,7 @@ class DayTable:
     ctrl_stress_gross: np.ndarray
     ctrl_trades: np.ndarray
     ctrl_ok: np.ndarray  # every draw evaluable
+    ctrl_low: np.ndarray  # days x draws lowest intraday equity, gross
 
     @property
     def evaluable(self) -> np.ndarray:
@@ -106,11 +110,13 @@ def simulate(strategy: Strategy, days: list[DayInput], *, draws: int = DRAWS) ->
             continue
         k = len(result.trades) if result.status == "traded" else 0
         cost = L3_ROUND_TRIP_CENTS[day.root]
+        tick = TICK_CENTS[day.root]
         if hasattr(strategy, "matched_control"):
             # Strategy-specific benchmark (e.g. same window, random direction); no stops,
             # so stress equals primary and every draw is evaluable.
-            gross, taken = strategy.matched_control(day, result, draws)
+            gross, taken, lows = strategy.matched_control(day, result, draws)
             ctrl_gross, ctrl_stress, ctrl_trades, ctrl_ok = gross, gross, taken, True
+            ctrl_low = lows
         else:
             control = daily_control(day, k, draws=draws, first_fill=strategy.first_fill)
             draw_rows = control.draws or []
@@ -120,11 +126,26 @@ def simulate(strategy: Strategy, days: list[DayInput], *, draws: int = DRAWS) ->
             ] * draws
             ctrl_trades = [len(d.trades) for d in draw_rows] or [0] * draws
             ctrl_ok = control.non_evaluable_draws == 0
+            ctrl_low = (
+                [
+                    # never kinder than the missing-minute stress bound
+                    min(paths.day_path(day.bars, d.trades, tick)[0], s)
+                    for d, s in zip(draw_rows, ctrl_stress, strict=True)
+                ]
+                if draw_rows
+                else [0] * draws
+            )
         rows["dates"].append(day.trade_date.isoformat())
         rows["status"].append(result.status)
         rows["atr"].append(day.atr_tr_sum or 0)
         rows["orb_side"].append(result.trades[0].side if result.trades else 0)
         rows["orb_gross"].append(sum(t.gross_cents for t in result.trades))
+        rows["orb_low"].append(
+            min(
+                paths.day_path(day.bars, result.trades, tick)[0],
+                result.stress_net_cents + cost * len(result.trades),
+            )
+        )
         rows["orb_stress_gross"].append(result.stress_net_cents + cost * len(result.trades))
         rows["orb_trades"].append(len(result.trades))
         rows["entry_bar_stops"].append(sum(t.entry_bar_stop for t in result.trades))
@@ -133,6 +154,7 @@ def simulate(strategy: Strategy, days: list[DayInput], *, draws: int = DRAWS) ->
         rows["ctrl_stress_gross"].append(ctrl_stress)
         rows["ctrl_trades"].append(ctrl_trades)
         rows["ctrl_ok"].append(ctrl_ok)
+        rows["ctrl_low"].append(ctrl_low)
     as_int = lambda key: np.array(rows[key], dtype=np.int64)  # noqa: E731
     return DayTable(
         dates=np.array(rows["dates"], dtype="<U10"),
@@ -140,6 +162,7 @@ def simulate(strategy: Strategy, days: list[DayInput], *, draws: int = DRAWS) ->
         atr=as_int("atr"),
         orb_side=as_int("orb_side"),
         orb_gross=as_int("orb_gross"),
+        orb_low=as_int("orb_low"),
         orb_stress_gross=as_int("orb_stress_gross"),
         orb_trades=as_int("orb_trades"),
         entry_bar_stops=as_int("entry_bar_stops"),
@@ -148,6 +171,7 @@ def simulate(strategy: Strategy, days: list[DayInput], *, draws: int = DRAWS) ->
         ctrl_stress_gross=as_int("ctrl_stress_gross").reshape(-1, draws),
         ctrl_trades=as_int("ctrl_trades").reshape(-1, draws),
         ctrl_ok=np.array(rows["ctrl_ok"], dtype=bool),
+        ctrl_low=as_int("ctrl_low").reshape(-1, draws),
     )
 
 

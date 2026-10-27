@@ -17,6 +17,7 @@ import numpy as np
 from quant_brain.futures import orb
 from quant_brain.futures.controls import ROOT_CODE
 from quant_brain.futures.orb import DayInput, DayResult, Trade
+from quant_brain.prop import paths
 
 
 class Strategy(Protocol):
@@ -137,18 +138,21 @@ class LateDayMomentum:
 
     def matched_control(
         self, day: DayInput, result: DayResult, draws: int
-    ) -> tuple[list[int], list[int]]:
-        """Same trade, random direction: (gross cents, trades) per draw; zeros if no trade."""
+    ) -> tuple[list[int], list[int], list[int]]:
+        """Same trade, random direction: (gross cents, trades, day low cents) per draw."""
         if result.status != "traded":
-            return [0] * draws, [0] * draws
+            return [0] * draws, [0] * draws, [0] * draws
         t = result.trades[0]
-        move = (t.exit_ticks - t.entry_ticks) * orb.TICK_CENTS[day.root]
         stamp = int(day.trade_date.strftime("%Y%m%d"))
         rng = np.random.Generator(
             np.random.PCG64(np.random.SeedSequence([MATCHED_SEED, ROOT_CODE[day.root], stamp, 2]))
         )
         signs = rng.integers(0, 2, size=draws) * 2 - 1
-        return [int(s * move) for s in signs], [1] * draws
+        worst, best = paths.trade_extremes(day.bars, t, orb.TICK_CENTS[day.root])
+        same = (min(worst, t.gross_cents), t.gross_cents)
+        flip = paths.flipped_path(worst, best, t.gross_cents)
+        picked = [same if s * t.side > 0 else flip for s in signs]
+        return [c for _, c in picked], [1] * draws, [lo for lo, _ in picked]
 
 
 REGISTRY: dict[str, type] = {"orb": OpeningRangeBreakout, "late_momentum": LateDayMomentum}
