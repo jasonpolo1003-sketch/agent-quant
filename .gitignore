@@ -33,3 +33,6 @@ brain/sources/**/*.html
 brain/sources/youtube_inbox/*.md
 !brain/sources/youtube_inbox/_INDEX.md
 !brain/sources/youtube_inbox/_reading_list.md
+
+# Workbench run cache (rebuildable from code + settings; the trials ledger is tracked)
+brain/04_Backtest_Reports/workbench/cache/
