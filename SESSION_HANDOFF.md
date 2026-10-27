@@ -1,5 +1,17 @@
 # Quant Agent Brain — Session Handoff
 
+## SC-FUT-0005 independent rebuild + adversarial review (2026-10-27, late)
+
+- `scripts/sc_fut_0005_independent_rebuild.py` (no `quant_brain` imports; `databento_dbn` decode; own volume roll) matches the workbench on all 1,424 MNQ practice days, to the cent; MES too. Run: `FILL=open|sigclose|plus2|delay1|worst .venv/Scripts/python.exe -I scripts/sc_fut_0005_independent_rebuild.py <dev 1m dbn> brain/_system/futures/session-calendar.v1.csv brain/sources/mes_mnq/contracts/roll_volume_check.csv <out.csv> MNQ`.
+- Findings: `brain/05_Reviews/SC-FUT-0005-independent-review.md`.
+  - Sign-flip p = 0.0001.
+  - Break-even slippage 12.8 ticks/side.
+  - One-minute delay: $7.94/day (-31%).
+  - Best 20 days = 76% of profit.
+  - Risk-only sizing points to 2 MNQ.
+- Excluded from Ruff as a review receipt (like RX-0001). `needs_you.json`: `sc-fut-0005-prop-size` added.
+- **Next:** Jason pre-registers the size; simulator Phase 2; one locked exam check.
+
 ## Prop-goal pivot and evaluation simulator Phase 1 (2026-10-27)
 
 - **Ideas tried:**
