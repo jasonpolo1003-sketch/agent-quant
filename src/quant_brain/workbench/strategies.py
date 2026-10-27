@@ -155,8 +155,19 @@ class LateDayMomentum:
         return [c for _, c in picked], [1] * draws, [lo for lo, _ in picked]
 
 
-REGISTRY: dict[str, type] = {"orb": OpeningRangeBreakout, "late_momentum": LateDayMomentum}
+from quant_brain.workbench.shock import ShockReversal  # noqa: E402
+
+REGISTRY: dict[str, type] = {
+    "orb": OpeningRangeBreakout,
+    "late_momentum": LateDayMomentum,
+    "shock_reversal": ShockReversal,
+}
 GRADING = {
+    "shock_reversal": {
+        "floor_cents": 500,
+        "tiers": [(500, "small edge"), (1000, "good"), (1500, "strong")],
+        "sharpe_min": 1.0,
+    },
     "orb": {"floor_cents": 1500, "tiers": [(1500, "pass")], "sharpe_min": None},
     "late_momentum": {
         "floor_cents": 500,
@@ -165,6 +176,8 @@ GRADING = {
     },
 }
 DESCRIPTIONS = {
+    "shock_reversal": "Shock reversal: after a rare 15-minute lurch (4x normal for that time of day, not FOMC), "
+    "wait for one counter bar, then fade it with a stop past the extreme; out within an hour.",
     "late_momentum": "Late-day momentum: in the last 30 minutes before the 3:00 pm CT cash close, trade in the "
     "direction the market has moved since yesterday's close (forced hedging flows).",
     "orb": "Opening-range breakout: trade a break of the first N minutes' range after the 8:30 CT open, "

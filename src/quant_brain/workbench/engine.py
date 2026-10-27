@@ -39,6 +39,7 @@ CODE_FILES = (
     "src/quant_brain/workbench/strategies.py",
     "src/quant_brain/workbench/engine.py",
     "src/quant_brain/prop/paths.py",
+    "src/quant_brain/workbench/shock.py",
 )
 EVALUABLE = ("traded", "no_trade", "void_range")
 
@@ -103,6 +104,8 @@ class DayTable:
 
 def simulate(strategy: Strategy, days: list[DayInput], *, draws: int = DRAWS) -> DayTable:
     rows: dict[str, list] = {k: [] for k in DayTable.__dataclass_fields__}
+    if hasattr(strategy, "prepare_all"):  # cross-day, point-in-time inputs (past sessions only)
+        days = strategy.prepare_all(days)
     for raw in days:
         day = strategy.prepare(raw)
         result = strategy.simulate(day)

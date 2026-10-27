@@ -30,7 +30,12 @@ def test_x1_down_shock_confirmed_long_held_60_minutes():
     r = STRAT.simulate(day({**DOWN_SHOCK, "09:50": (99, 110, 99, 110)}))
     tr = r.trades[0]
     # entry 09:42 open 99; extreme low 96 -> stop 95 (4 ticks); exit 10:42 open 110
-    assert (tr.side, tr.entry_minute, tr.entry_ticks, tr.stop_level_ticks) == (1, t("09:42"), 99, 95)
+    assert (tr.side, tr.entry_minute, tr.entry_ticks, tr.stop_level_ticks) == (
+        1,
+        t("09:42"),
+        99,
+        95,
+    )
     assert (tr.exit_minute, tr.exit_ticks, r.net_cents) == (t("10:42"), 110, 11 * 125 - 622)
 
 
@@ -89,7 +94,12 @@ def test_x11_missing_exit_bar_non_evaluable():
 
 
 def test_x12_only_the_first_shock_counts():
-    bars = {**DOWN_SHOCK, "09:50": (99, 99, 99, 99), "11:00": (99, 99, 80, 81), "11:01": (81, 90, 81, 90)}
+    bars = {
+        **DOWN_SHOCK,
+        "09:50": (99, 99, 99, 99),
+        "11:00": (99, 99, 80, 81),
+        "11:01": (81, 90, 81, 90),
+    }
     r = STRAT.simulate(day(bars))
     assert len(r.trades) == 1 and r.trades[0].entry_minute == t("09:42")
 
@@ -116,5 +126,5 @@ def test_scale_uses_only_previous_sessions():
     prepared = STRAT.prepare_all(days)
     assert prepared[30].context["scale"] == {}  # fewer than 40 prior sessions
     s60 = prepared[65].context["scale"][10 * 60]
-    future_changed = days[:66] + [dataclasses.replace(days[66], bars={})] + days[67:]
+    future_changed = [*days[:66], dataclasses.replace(days[66], bars={}), *days[67:]]
     assert STRAT.prepare_all(future_changed)[65].context["scale"][10 * 60] == s60
