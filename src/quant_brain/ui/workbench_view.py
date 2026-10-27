@@ -23,11 +23,28 @@ def _result(root: Path, fingerprint: str) -> dict[str, Any] | None:
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
 
 
+def _current(root: Path, r: dict[str, Any] | None, family: str) -> dict[str, Any]:
+    """The saved verdict judged against the family's pass bar as it stands now.
+
+    The bar only tightens as trials are added, so a saved pass can become a fail."""
+    v = dict((r or {}).get("verdict", {}))
+    if not v:
+        return v
+    alpha = analysis.honesty(root, family)["alpha"]
+    if v.get("outcome") == "pass_to_execution_calibration" and (v.get("p_value") or 1) >= alpha:
+        v["outcome"] = "not_demonstrated"
+        v["reasons"] = [
+            *v.get("reasons", []),
+            "the pass bar tightened after more variations were tried",
+        ]
+    return v | {"alpha": alpha}
+
+
 def listing(root: Path) -> dict[str, Any]:
     trials = []
     for e in reversed(engine.read_ledger(root)):
         r = _result(root, e["fingerprint"])
-        v = (r or {}).get("verdict", {})
+        v = _current(root, r, e["family"])
         trials.append(
             {
                 "id": e["fingerprint"],
@@ -57,4 +74,7 @@ def result(root: Path, fingerprint: str) -> dict[str, Any]:
     r = _result(root, fingerprint)
     if r is None:
         raise WorkbenchError("no saved result for that run")
-    return r
+    family = (r.get("run") or {}).get("family") or next(
+        (e["family"] for e in engine.read_ledger(root) if e["fingerprint"] == fingerprint), ""
+    )
+    return r | {"verdict": _current(root, r, family)}
