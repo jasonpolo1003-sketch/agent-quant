@@ -126,11 +126,15 @@ def _sessions(
             )
             if m.time() >= RANGE_START
         }
-        volumes = {
-            m.time(): int(v)
-            for m, v in zip(same_day["minute"], same_day["volume"], strict=True)
-            if m.time() >= RANGE_START
-        }
+        volumes = (
+            {
+                m.time(): int(v)
+                for m, v in zip(same_day["minute"], same_day["volume"], strict=True)
+                if m.time() >= RANGE_START
+            }
+            if "volume" in same_day
+            else {}
+        )
         out[(int(iid), day)] = _Session(
             high=int(group["high"].max()),
             low=int(group["low"].min()),

@@ -93,7 +93,8 @@ def selected_contracts(
     """[(first trade date, contract)], ordered. D-ROLL-01 by default; `volume_roll_date`
     (prior-day volume roll) with the volume-check file."""
     with roll_csv.open(encoding="utf-8") as handle:
-        rows = [r for r in csv.DictReader(handle) if r["root"] == root]
+        # Rolls that have not happened yet have no volume-roll date; skip them.
+        rows = [r for r in csv.DictReader(handle) if r["root"] == root and r.get(column)]
     rows.sort(key=lambda r: r[column])
     schedule = [(date.min, rows[0]["from_contract"])]
     schedule += [(date.fromisoformat(r[column]), r["to_contract"]) for r in rows]
