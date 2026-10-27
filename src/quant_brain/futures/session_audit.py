@@ -87,13 +87,16 @@ def instrument_for(mappings: dict, symbol: str, day: date) -> int | None:
     return None
 
 
-def selected_contracts(roll_csv: Path, root: str) -> list[tuple[date, str]]:
-    """D-ROLL-01: [(first trade date, contract)], ordered."""
+def selected_contracts(
+    roll_csv: Path, root: str, column: str = "roll_trade_date"
+) -> list[tuple[date, str]]:
+    """[(first trade date, contract)], ordered. D-ROLL-01 by default; `volume_roll_date`
+    (prior-day volume roll) with the volume-check file."""
     with roll_csv.open(encoding="utf-8") as handle:
         rows = [r for r in csv.DictReader(handle) if r["root"] == root]
-    rows.sort(key=lambda r: r["roll_trade_date"])
+    rows.sort(key=lambda r: r[column])
     schedule = [(date.min, rows[0]["from_contract"])]
-    schedule += [(date.fromisoformat(r["roll_trade_date"]), r["to_contract"]) for r in rows]
+    schedule += [(date.fromisoformat(r[column]), r["to_contract"]) for r in rows]
     return schedule
 
 

@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 import zstandard
 
-from quant_brain.futures.orb import Bar, DayInput, stop_distance_ticks
+from quant_brain.futures.orb import Bar, DayInput, stop_from_sum, true_range_sum
 from quant_brain.futures.session_audit import (
     CHICAGO,
     RECORD,
@@ -142,11 +142,12 @@ def build_days(
     root: str,
     start: date,
     end: date,
+    roll_column: str = "roll_trade_date",
 ) -> Iterator[DayInput]:
     """One DayInput per calendar session in [start, end], in order."""
     by_date = {c.trade_date: c for c in calendar}
     sessions = _sessions(frame, by_date)
-    schedule = selected_contracts(roll_csv, root)
+    schedule = selected_contracts(roll_csv, root, roll_column)
     order = [c.trade_date for c in calendar]
     for position, day in enumerate(order):
         if not start <= day <= end:
@@ -160,12 +161,14 @@ def build_days(
             s = sessions.get((iid, d))
             prior.append(None if s is None or s.close is None else (s.high, s.low, s.close))
         bars = {m: b for m, b in today.minutes.items() if m <= info.exit_minute} if today else {}
+        total = true_range_sum(prior)
         yield DayInput(
             trade_date=day,
             root=root,
             bars=bars,
             exit_minute=info.exit_minute,
-            stop_ticks=stop_distance_ticks(prior),
+            stop_ticks=None if total is None else stop_from_sum(total),
+            atr_tr_sum=total,
         )
 
 
