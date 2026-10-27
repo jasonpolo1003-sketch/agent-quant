@@ -14,6 +14,7 @@
   - MNQ: $2.91/day, p = 0.132.
   - MES: -$3.77/day.
   - Both not demonstrated.
+- 2026-10-26: Researched next MNQ/MES intraday candidates (2019-2024 only): late-day hedging-flow momentum first; opening-gap fade and negative-jump reversal secondary. Reviewed and filed as `brain/sources/candidate_ideas_2026-10-26.md` (citations spot-checked; one paper could not be confirmed).
 - Not built yet: W3 robustness nudges, W4 walk-forward, W8 exam proctor, run button in the UI, W10 paper feed.
 
 ## UI: PR #13 redesign restored as the main UI (2026-10-26)

@@ -22,5 +22,16 @@
     "added": "2026-10-26",
     "done": true,
     "resolved": "2026-10-26: approved by Jason (budget 3 exam checks, MNQ/MES only)"
+  },
+  {
+    "id": "pick-next-idea",
+    "title": "Pick the next strategy to test",
+    "why": "Research ranked late-day momentum (last 30 minutes follow the day's direction, driven by forced hedging) first, gap fade second, jump reversal third.",
+    "recommendation": "Test late-day momentum on MES first with bare rules, plus a matched random-direction benchmark. Decide its $/day goal before seeing results.",
+    "action": {
+      "label": "Read the research",
+      "url": "https://github.com/jasonpolo1003-sketch/agent-quant/blob/testing/brain/sources/candidate_ideas_2026-10-26.md"
+    },
+    "added": "2026-10-27"
   }
 ]
