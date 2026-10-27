@@ -3,7 +3,7 @@
 - Created: 2026-10-22 by quantam
 - URL: https://databento.com/login
 - Email/login: jasonpolo1003@gmail.com
-- Password: 12HnY6DY9Apa3w!7a
+- Password: (removed 2026-10-27; never store passwords in the repo)
 - User ID: LFTQGLMY
 - Status: active (email verified, card added for identity check only, no charges). API key in portal at https://databento.com/portal/keys (also on bot computer, not in repo).
 - Rule: NO data downloads without Jason approval; only free cost checks.
