@@ -1,5 +1,28 @@
 # Quant Agent Brain — Session Handoff
 
+## Prop-goal pivot and evaluation simulator Phase 1 (2026-10-27)
+
+- **Ideas tried:**
+  - SC-FUT-0002 (late-day momentum) was frozen and tested in the workbench: not demonstrated. MES lost $3.93/day; MNQ lost $0.45/day; the edge vs random was +$2-3/day, and costs swamped it. Closing awaits Jason.
+  - SC-FUT-0003 (diversified TSMOM) was planned, reviewed by engineering and trader agents, and **shelved**. Prop firms (Topstep/Apex) require being flat by 3:10 pm CT. Reviews: `brain/05_Reviews/SC-FUT-0003-plan-reviews.md`.
+  - Data was bought anyway: 28-market daily bars 2010-2024, $39.44 from Databento free credits. Stored in `Quant/data/databento/daily_.../`.
+- **Jason's priority** is prop firm first, with same-day strategies only. Verified rules and the next idea (rare liquidity-shock reversal): `brain/sources/prop_firm_same_day_ideas_2026-10-27.md`. Topstep's API works in Combine and XFA, not Live; Apex bans bots.
+- **Simulator plan:** `brain/_system/plan/prop_eval_simulator_plan.md`, revised after two reviews (`brain/05_Reviews/prop-eval-simulator-plan-reviews.md`).
+- **Phase 1 built** (`src/quant_brain/prop/`; rules in `brain/_system/prop/topstep_50k.json`; CLI `scripts/prop_eval.py`):
+  - intraday lows for the strategy and every control draw;
+  - the EOD-trailing floor with lock;
+  - consistency at 55%;
+  - fees and resets;
+  - a paired, non-wrapping bootstrap;
+  - walk-forward with censoring.
+- **Key finding:** with resets, even random trading passes about 99% of the time within 6 months at 5 micros. The gate is therefore the **first-account pass rate** versus luck at luck's best size, and Phase 2 (payouts, net cash) remains essential.
+- **Security:** the Databento password had been committed to the public repo. It is removed from current files but still in history. Jason has been told to rotate it; history scrubbing is optional and needs a force-push.
+- **Next:**
+  - validation replay of SC-FUT-0001/0002 (running);
+  - P7 UI panel;
+  - Phase 2 (XFA payouts) after the rules are confirmed;
+  - then draft SC-FUT-0004 (shock reversal).
+
 ## Backtest workbench core built (2026-10-26; plan approved: exam budget 3, MNQ/MES only)
 
 - `src/quant_brain/workbench/`:
