@@ -1,5 +1,20 @@
 # Quant Agent Brain — Session Handoff
 
+## SC-FUT-0006 high-volatility filter: NOT DEMONSTRATED (2026-10-27, latest)
+
+- **Card and spec:** `brain/03_Strategy_Cards/SC-FUT-0006-noise-area-high-vol.md`; spec `brain/_system/futures/sc-fut-0006-spec.v1.json`, frozen in 425c881 before any result.
+- **Filter:**
+  - code `src/quant_brain/workbench/volfilter.py` (tests `tests/test_volfilter.py`);
+  - day list `brain/_system/futures/sc-fut-0006-hv-days.csv`, built by `scripts/build_hv_days.py` from NQ daily bars;
+  - pinned by sha256 in `noise.py` `DAY_FILTERS`, used via the plug-in setting `day_filter`.
+- **Results** (ledger `brain/04_Backtest_Reports/SC-FUT-0006.trials.jsonl`):
+  - workbench $4.82/day, Sharpe 0.71;
+  - prop at 3 MNQ (no-lock rules): 24.6% vs luck 15.4%, gate fail;
+  - calm days beat volatile days for SC-FUT-0005.
+- **Prop rules:** new `brain/_system/prop/topstep_50k_nolock.json` (Topstep states the MLL lock for the XFA only); `scripts/prop_eval.py --rules`.
+- **Next:** Jason picks one every-day SC-FUT-0005 size for the exam, or adds markets first.
+
+
 ## SC-FUT-0005 independent rebuild + adversarial review (2026-10-27, late)
 
 - `scripts/sc_fut_0005_independent_rebuild.py` (no `quant_brain` imports; `databento_dbn` decode; own volume roll) matches the workbench on all 1,424 MNQ practice days, to the cent; MES too. Run: `FILL=open|sigclose|plus2|delay1|worst .venv/Scripts/python.exe -I scripts/sc_fut_0005_independent_rebuild.py <dev 1m dbn> brain/_system/futures/session-calendar.v1.csv brain/sources/mes_mnq/contracts/roll_volume_check.csv <out.csv> MNQ`.
