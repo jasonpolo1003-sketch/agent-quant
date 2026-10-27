@@ -1,43 +1,45 @@
-# Plan: prop-evaluation simulator (draft 2026-10-27, for review)
+# Plan: prop-evaluation simulator (revised 2026-10-27 after two independent reviews)
+
+Reviews: `brain/05_Reviews/prop-eval-simulator-plan-reviews.md`.
 
 ## Goal
-Answer the question Jason actually cares about: **if this exact code traded a Topstep 50K evaluation, how often would it pass, how fast, at what cost, and would it keep earning payouts afterwards?** This becomes the main gate for prop-goal strategies, ahead of Sharpe and $/day. It is useful before any winner exists: run SC-FUT-0001 and SC-FUT-0002 through it, and a random no-edge strategy, to see what "passing by luck" looks like.
+Answer Jason's real question: **if this exact code traded a Topstep 50K account, would it make more money than it costs, more reliably than a no-edge version of itself?** This becomes the main gate for prop-goal strategies.
 
-## Why it matters
-A $2,000 trailing drawdown that counts open trades can end an account on one bad day, even for a strategy that is profitable on average. A no-edge strategy also passes some of the time: a fair coin walk between +$3,000 and −$2,000 passes about 40% of the time before costs. So "it passed" means nothing unless it passes clearly more often than luck.
+## Main output and success definition (for Jason to confirm)
+- **Primary:** net cash per attempt over a fixed horizon = 90% of payouts − subscriptions − resets − activation. Also report the chance net cash > $0 and the most cash at risk.
+- **Luck comparison:** the identical simulation of the strategy's random-direction version on the same resampled histories, **at the random version's own best size**.
+- **Pass:** paired net-cash difference vs random has a lower 90% bound above $0, at a size frozen before results, **and** median time to first payout ≤ Jason's fee horizon. Every rate is reported with a range and the number of independent trades.
 
-## Rules config (versioned, sourced)
-`brain/_system/prop/topstep_50k.json`, with source links and the date checked:
-- start $50,000; target +$3,000;
-- maximum loss limit (MLL) $2,000, trailing from the highest end-of-day balance, enforced intraday on equity including open positions, locking at the starting balance;
-- 50 micros maximum;
-- flat by 3:10 pm CT;
-- $49/month; reset $49; XFA activation $149;
-- XFA payout: 5 winning days of at least $150; 90/10 split.
+## Phases
+- **Phase 1, the evaluation (Combine) only:**
+  - pass/fail/censored rates;
+  - days to pass;
+  - fees and resets per pass.
 
-Fields we haven't verified (consistency rules, minimum days, XFA MLL behaviour, scaling plan) are marked `unverified` and must be confirmed from Topstep's help centre before results count. Other firms come later as other config files.
+  Payout outputs are marked `not_estimable`. 3-4 sessions.
+- **Phase 2, the funded account (XFA) and payouts:**
+  - caps of 50% of balance and $2,000/$3,000;
+  - the $0 lock after the first payout;
+  - both payout paths;
+  - the scaling table.
 
-## Engineering build
-| # | Piece | Notes |
+  Built only after these are confirmed on Topstep's pages. Promotion to Live ends the bot run (no API in Live). 2-3 sessions.
+
+## Build (Phase 1)
+| # | Piece | Key requirement |
 |---|---|---|
-| S1 | **Rules config + loader** | Schema with required fields; unverified fields block "official" results. |
-| S2 | **Intraday path per day** | Extend the workbench run to store, per trade in order: net P&L and **worst open loss** (from 1-minute highs/lows while in the trade) and best open gain, plus costs. One-minute bars can't tell which came first inside a minute, so assume **adverse first** (conservative), as in the existing hand-worked simulator fixtures (`brain/_system/futures/simulator-handworked-fixtures.md`, F1–F9). |
-| S3 | **Account state machine** | Pure functions: balance, trailing floor, intraday breach check, end-of-day update, target check, fees and resets, then the XFA phase (payout eligibility, payouts, floor behaviour). |
-| S4 | **Two ways to replay history** | (a) Historical walk-forward: start an evaluation on every practice day and run forward on the real sequence. (b) Bootstrap: resample whole days in blocks (stationary, mean block 5), 10,000 paths. Report both. |
-| S5 | **Luck baseline** | The same simulator on the strategy's matched random benchmark (same days, times, sizes; random direction) gives the pass rate a no-edge version gets. The strategy must clearly beat it. |
-| S6 | **Sizing** | Fixed 1, 2, 3, 5 micros (no tuning after results), never max size; all sizes shown, with the chosen size frozen per card. |
-| S7 | **Outputs** | Pass probability; fail probability (and from a single day); median days to pass; expected fees/resets per pass; XFA payout probability and expected payouts in N days; worst open loss distribution. The same luck-baseline numbers sit side by side. |
-| S8 | **Verification** | F1–F9 fixtures; property tests (bigger size never lowers risk of a breach; zero-edge walk ≈ gambler's-ruin math); an independent reference; replay SC-FUT-0001/0002 as known no-edge cases. |
-| S9 | **UI** | Workbench run page gets a "Prop evaluation" panel: pass chance vs luck, days to pass, cost per pass, payout odds. |
+| P1 | Rules config `topstep_50k.json` | Sourced and dated. 55% Combine consistency target, no minimum days, 3:10 CT flat, $2k trailing MLL enforced intraday on open P&L and locking at start balance, fees. Unverified fields block official results. |
+| P2 | Per-day path data | Computed **inside `run_trade`**: day net, **lowest equity of the day** (realized + current open loss; never the stop-bar low beyond the stop or the flatten-bar low; gap stops at the gap fill) and best open gain, per contract at gross. Stored **for the strategy and every control draw** (flip uses best gain). Non-evaluable or ineligible days are kept, with stress bounds, and count toward the fee calendar. |
+| P3 | State machine | Pure functions. Target judged on end-of-day balance and the consistency rule. "Adverse first" = failure wins within a minute (fixture F4). Volatility-scaled stop slippage. Optional bot-failure scenario. |
+| P4 | Replays | Historical walk-forward with censored attempts reported. Non-wrapping, regime-aware bootstrap (longer blocks) with one control draw per day on the same indices. Confidence ranges by resampling start blocks. |
+| P5 | Fingerprint and ledger | Hash of day data + rules config + simulator code + seed. Every gate run counts as a trial. Size frozen per card. |
+| P6 | Verification | F1–F9 plus new fixtures: stop-bar low past stop, flatten-bar low, gap stop, two trades/day, lock moment, censoring, zero-variance baseline. Corrected properties: earlier breach at larger size with target and lock off; gambler's ruin only with a fixed floor. A slow independent minute-by-minute replay must match on random days. SC-FUT-0001/0002 replayed as known no-edge cases. |
+| P7 | UI | A "Prop evaluation" panel: net cash vs luck, pass/fail/censored, days to pass, cost per pass. |
 
-## Decisions Jason makes (before results)
-1. Firm/account: Topstep 50K Combine to XFA.
-2. Sizes to report (proposal 1/2/3/5 micros).
-3. Horizon: how many months of fees he's willing to spend per attempt.
-4. Success definition: for example, pass rate clearly above the luck baseline AND expected payouts over 6 months exceed expected fees, at a frozen size.
+## Decisions for Jason (before results)
+1. Fee horizon: how many months to fund one attempt (proposal: 6).
+2. Sizes to report: 1/2/3/5 micros, one frozen per strategy.
+3. Confirm the success definition above.
 
 ## Known limits
-1-minute data can't order events inside a minute (handled conservatively); stop slippage in fast markets; rule changes over time; simulated fills are not live fills; XFA rules may differ from what's verified.
-
-## Estimate
-3–4 sessions including verification.
+Within-minute ordering (handled conservatively), gap fills and liquidation beyond the limit, rule changes over time, simulated vs live fills, bot outages.
