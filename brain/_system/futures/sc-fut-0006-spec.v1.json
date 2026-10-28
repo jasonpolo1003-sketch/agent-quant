@@ -1,0 +1,33 @@
+{
+  "schema_version": "sc-fut-0006-1",
+  "card_id": "SC-FUT-0006",
+  "status": "frozen",
+  "frozen": true,
+  "frozen_at": "2026-10-27",
+  "approved_by": "Jason 2026-10-27 (\"let's go ahead and test it\": SC-FUT-0005 only on high-volatility days, 3 MNQ)",
+  "parent": "SC-FUT-0005 (frozen spec sha256 90beea10e7ba88e026b1c9e440e0abb0489726193c5fca3ba2cee58379bc85e5); every trading rule is unchanged",
+  "why": "SC-FUT-0005's profit is concentrated (best 20 days = 76%) and the source literature finds intraday momentum strongest when volatility is high. Prop accounts cap the downside at the fee, so concentrating size on the days with the larger edge may pass faster.",
+  "workbench_family": "noise_area",
+  "instrument": {"market": "MNQ", "roll": "volume", "size_on_trading_days": 3, "size_other_days": 0},
+  "data": {"practice_inclusive": ["2019-05-01", "2024-12-31"], "exam": "2025-01-01..2026-10-21 locked; one proctor check only after Jason's OK"},
+  "filter": {
+    "source": "NQ daily bars (GLBX.MDP3 ohlcv-1d, UTC days), Quant/data/databento/daily_2010-06-06_2024-12-31, equity_indexes file",
+    "front": "per UTC date, the NQ outright (no spreads) with the highest volume; weekend-dated bars dropped",
+    "return": "ln(close / previous close of the SAME contract); a contract's first bar has no return",
+    "vol": "V(d) = sample std (ddof 1) of the last 20 returns up to and including bar date d",
+    "known_before_open": "for trade date t use d* = the last bar date strictly before t (that bar ends 00:00 UTC on t, before the 08:30 CT open)",
+    "high_vol_day": "V(d*) > median of V over the 252 bar dates before d* (needs 252 values, always true in 2019-24 given 2010 data)",
+    "artifact": "brain/_system/futures/sc-fut-0006-hv-days.csv, built by scripts/build_hv_days.py before any SC-FUT-0006 result; its sha256 is recorded in the ledger at build time"
+  },
+  "rule": "On high-volatility days: the SC-FUT-0005 frozen rule exactly (noise bands, HH:00/HH:30 checks, band/VWAP trailing stop, flat at 15:00 CT). Other days: no trade.",
+  "costs": "L3 per contract per round trip; L1-L4 reported",
+  "benchmarks": {"matched_control": "the SC-FUT-0005 control (same legs, random direction per leg) on the same filtered days"},
+  "gates": {
+    "sample_floor": "at least 300 MNQ trades in practice, checked outcome-blind before results; else too few to judge",
+    "workbench": "vs matched control at the noise_area family's honesty-adjusted bar (this is the family's 3rd trial)",
+    "prop_primary": "Topstep 50K with NO max-loss lock in the Combine (brain/_system/prop/topstep_50k_nolock.json; conservative reading of the help centre checked 2026-10-27), 3 MNQ, 6-month budget, L3: first-account pass minus luck (at luck's best size) 90% range above 0 AND median trading days to pass <= 63 (3 months)",
+    "prop_sensitivity": "same with the original lock-at-start rules file; reported, not used for the verdict",
+    "comparison_reported": "SC-FUT-0005 every day at 1 MNQ on the same rules (the no-lock file), so the filter's value is visible",
+    "no_retuning": "the 20-day window, 252-day median, threshold and size are fixed; if it fails, no variants of the filter"
+  }
+}

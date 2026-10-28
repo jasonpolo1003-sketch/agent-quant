@@ -1,0 +1,224 @@
+{
+ "126": {
+  "1": {
+   "strategy": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.138,
+    "pass_rate_with_resets": 0.1385,
+    "median_days_to_pass": 100.0,
+    "mean_fees": 287.434,
+    "fees_per_pass": 2075.335740072202,
+    "mean_resets": 0.0125,
+    "censored_share": 0.0
+   },
+   "luck": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.0345,
+    "pass_rate_with_resets": 0.0415,
+    "median_days_to_pass": 93.0,
+    "mean_fees": 315.315,
+    "fees_per_pass": 7597.951807228916,
+    "mean_resets": 0.491,
+    "censored_share": 0.0
+   }
+  },
+  "2": {
+   "strategy": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.4815,
+    "pass_rate_with_resets": 0.6015,
+    "median_days_to_pass": 72.0,
+    "mean_fees": 250.831,
+    "fees_per_pass": 417.0091438071488,
+    "mean_resets": 0.386,
+    "censored_share": 0.0
+   },
+   "luck": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.166,
+    "pass_rate_with_resets": 0.3525,
+    "median_days_to_pass": 70.0,
+    "mean_fees": 339.7415,
+    "fees_per_pass": 963.8056737588653,
+    "mean_resets": 1.7055,
+    "censored_share": 0.0
+   }
+  },
+  "3": {
+   "strategy": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.427,
+    "pass_rate_with_resets": 0.7635,
+    "median_days_to_pass": 55.0,
+    "mean_fees": 239.806,
+    "fees_per_pass": 314.0877537655534,
+    "mean_resets": 0.9685,
+    "censored_share": 0.0
+   },
+   "luck": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.1715,
+    "pass_rate_with_resets": 0.58,
+    "median_days_to_pass": 59.0,
+    "mean_fees": 361.3015,
+    "fees_per_pass": 622.9336206896552,
+    "mean_resets": 2.866,
+    "censored_share": 0.0
+   }
+  },
+  "4": {
+   "strategy": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.355,
+    "pass_rate_with_resets": 0.8715,
+    "median_days_to_pass": 45.0,
+    "mean_fees": 239.8795,
+    "fees_per_pass": 275.24899598393574,
+    "mean_resets": 1.589,
+    "censored_share": 0.0
+   },
+   "luck": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.1635,
+    "pass_rate_with_resets": 0.722,
+    "median_days_to_pass": 52.0,
+    "mean_fees": 376.516,
+    "fees_per_pass": 521.4903047091412,
+    "mean_resets": 3.7515,
+    "censored_share": 0.0
+   }
+  },
+  "5": {
+   "strategy": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.266,
+    "pass_rate_with_resets": 0.897,
+    "median_days_to_pass": 41.0,
+    "mean_fees": 264.012,
+    "fees_per_pass": 294.32775919732444,
+    "mean_resets": 2.312,
+    "censored_share": 0.0
+   },
+   "luck": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.1625,
+    "pass_rate_with_resets": 0.797,
+    "median_days_to_pass": 44.0,
+    "mean_fees": 390.4565,
+    "fees_per_pass": 489.9077791718946,
+    "mean_resets": 4.452,
+    "censored_share": 0.0
+   }
+  },
+  "6": {
+   "strategy": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.241,
+    "pass_rate_with_resets": 0.9285,
+    "median_days_to_pass": 37.0,
+    "mean_fees": 272.7585,
+    "fees_per_pass": 293.76252019386106,
+    "mean_resets": 2.7245,
+    "censored_share": 0.0
+   },
+   "luck": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.1465,
+    "pass_rate_with_resets": 0.8535,
+    "median_days_to_pass": 41.0,
+    "mean_fees": 407.484,
+    "fees_per_pass": 477.427065026362,
+    "mean_resets": 5.0715,
+    "censored_share": 0.0
+   }
+  },
+  "8": {
+   "strategy": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.1945,
+    "pass_rate_with_resets": 0.939,
+    "median_days_to_pass": 34.0,
+    "mean_fees": 324.821,
+    "fees_per_pass": 345.92225772097976,
+    "mean_resets": 3.962,
+    "censored_share": 0.0
+   },
+   "luck": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.138,
+    "pass_rate_with_resets": 0.8925,
+    "median_days_to_pass": 38.0,
+    "mean_fees": 467.313,
+    "fees_per_pass": 523.6,
+    "mean_resets": 6.5395,
+    "censored_share": 0.0
+   }
+  },
+  "10": {
+   "strategy": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.167,
+    "pass_rate_with_resets": 0.9455,
+    "median_days_to_pass": 30.0,
+    "mean_fees": 368.627,
+    "fees_per_pass": 389.87519830777364,
+    "mean_resets": 4.9965,
+    "censored_share": 0.0
+   },
+   "luck": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.105,
+    "pass_rate_with_resets": 0.8995,
+    "median_days_to_pass": 34.0,
+    "mean_fees": 526.603,
+    "fees_per_pass": 585.4396887159533,
+    "mean_resets": 7.8805,
+    "censored_share": 0.0
+   }
+  },
+  "15": {
+   "strategy": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.0945,
+    "pass_rate_with_resets": 0.9085,
+    "median_days_to_pass": 36.0,
+    "mean_fees": 612.794,
+    "fees_per_pass": 674.5118326912493,
+    "mean_resets": 9.665,
+    "censored_share": 0.0
+   },
+   "luck": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.0755,
+    "pass_rate_with_resets": 0.9045,
+    "median_days_to_pass": 35.0,
+    "mean_fees": 713.9545,
+    "fees_per_pass": 789.3360972913212,
+    "mean_resets": 11.6675,
+    "censored_share": 0.0
+   }
+  },
+  "20": {
+   "strategy": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.058,
+    "pass_rate_with_resets": 0.868,
+    "median_days_to_pass": 39.0,
+    "mean_fees": 862.0325,
+    "fees_per_pass": 993.125,
+    "mean_resets": 14.4645,
+    "censored_share": 0.0
+   },
+   "luck": {
+    "attempts": 2000,
+    "first_account_pass_rate": 0.0625,
+    "pass_rate_with_resets": 0.872,
+    "median_days_to_pass": 36.0,
+    "mean_fees": 915.565,
+    "fees_per_pass": 1049.959862385321,
+    "mean_resets": 15.6485,
+    "censored_share": 0.0
+   }
+  }
+ }
+}

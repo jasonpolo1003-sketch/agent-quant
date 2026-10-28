@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.test-tmp/
+data/
+*.egg-info/
+.env
+reports/*.csv
+reports/*.html
+reports/
+config/intake.toml
+config/quant-artifacts.json
+reports/intake-*.json
+reports/intake-*.md
+reports/intake-*.png
+reports/browser-retained-*.md

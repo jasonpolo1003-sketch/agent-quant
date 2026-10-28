@@ -1,0 +1,156 @@
+{
+  "combine_rules": {
+    "start": 50000,
+    "target": 3000,
+    "max_loss": 2000,
+    "lock_at_start": true,
+    "trailing": true,
+    "consistency": 0.55,
+    "subscription": 49,
+    "reset": 49,
+    "days_per_month": 21
+  },
+  "xfa_rules": {
+    "path": "standard",
+    "max_loss": 2000,
+    "split": 0.9,
+    "min_payout": 125,
+    "payout_share": 0.5,
+    "cap": 4000,
+    "winning_days": 5,
+    "winning_day_min": 150,
+    "trading_days": 3,
+    "largest_day_share": 0.4,
+    "activation": 149
+  },
+  "horizon_days": 42,
+  "daily_loss_limit": 1000,
+  "cost_level": "L3",
+  "frozen_size": 3,
+  "luck_best_size": 1,
+  "by_size": {
+    "1": {
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -98.0,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.0,
+        "net_cash_5th_percentile": -98.0,
+        "mean_payouts": 0.0,
+        "mean_fees": 98.0,
+        "chance_any_payout": 0.0,
+        "median_days_to_first_payout": null,
+        "mean_xfas_closed": 0.0
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -98.246,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.0,
+        "net_cash_5th_percentile": -98.0,
+        "mean_payouts": 0.0,
+        "mean_fees": 98.246,
+        "chance_any_payout": 0.0,
+        "median_days_to_first_payout": null,
+        "mean_xfas_closed": 0.0
+      }
+    },
+    "2": {
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -99.85100525,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.001,
+        "net_cash_5th_percentile": -98.0,
+        "mean_payouts": 1.11899475,
+        "mean_fees": 100.97,
+        "chance_any_payout": 0.002,
+        "median_days_to_first_payout": 35.0,
+        "mean_xfas_closed": 0.0025
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -102.0995,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.0,
+        "net_cash_5th_percentile": -147.0,
+        "mean_payouts": 0.0,
+        "mean_fees": 102.0995,
+        "chance_any_payout": 0.0,
+        "median_days_to_first_payout": null,
+        "mean_xfas_closed": 0.0015
+      }
+    },
+    "3": {
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -111.65640975,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.0,
+        "net_cash_5th_percentile": -147.0,
+        "mean_payouts": 0.11459025000000005,
+        "mean_fees": 111.771,
+        "chance_any_payout": 0.0005,
+        "median_days_to_first_payout": 26.0,
+        "mean_xfas_closed": 0.0165
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -114.06223,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.0015,
+        "net_cash_5th_percentile": -147.0,
+        "mean_payouts": 1.04427,
+        "mean_fees": 115.1065,
+        "chance_any_payout": 0.002,
+        "median_days_to_first_payout": 31.5,
+        "mean_xfas_closed": 0.005
+      }
+    },
+    "5": {
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -145.03854875000002,
+        "median_net_cash": -147.0,
+        "chance_net_cash_positive": 0.004,
+        "net_cash_5th_percentile": -247.0,
+        "mean_payouts": 2.89495125,
+        "mean_fees": 147.9335,
+        "chance_any_payout": 0.005,
+        "median_days_to_first_payout": 33.5,
+        "mean_xfas_closed": 0.051
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -141.611689375,
+        "median_net_cash": -147.0,
+        "chance_net_cash_positive": 0.0075,
+        "net_cash_5th_percentile": -245.0,
+        "mean_payouts": 7.970810625000001,
+        "mean_fees": 149.5825,
+        "chance_any_payout": 0.008,
+        "median_days_to_first_payout": 29.5,
+        "mean_xfas_closed": 0.0255
+      }
+    }
+  },
+  "net_cash_minus_luck_90ci": [
+    -21.36250083333333,
+    -6.966166666666663
+  ],
+  "phase2_gate": "fail",
+  "workbench_trial": {
+    "at": "2026-10-27T02:33:07+00:00",
+    "code": "5c0895942f2a69a051cb029e1edd62678bc3f11df19968ad1fa3dbf77a766ac8",
+    "days": 1425,
+    "family": "late_momentum",
+    "fingerprint": "4a046bbcd891a88c32ab0abeea8ee49fbaabb08a346352d9d1c4d90ed28239ad",
+    "market": "MES",
+    "roll": "fixed",
+    "settings": {
+      "window_minutes": 30
+    }
+  },
+  "simulator_fingerprint": "53e0d69534e8f060d3bde5a0e0ff4c1db12971721fe60528ef54a5a7eb141099",
+  "rules_file": "brain\\_system\\prop\\topstep_50k.json"
+}

@@ -1,0 +1,12 @@
+# Copy to intake.toml (ignored); replace paths explicitly. No secrets.
+inbox = 'C:/path/to/vault/Projects/Quant Agent Brain/Research Inbox'
+output = 'C:/path/to/vault/Projects/Quant Agent Brain/Automation/Research intake status.md'
+max_files = 100
+max_seconds = 90
+stability_seconds = 1.0
+refresh_fred = false
+# Optional original-note deep link; vault name and path relative to that vault.
+# obsidian_vault = 'Research Vault'
+# obsidian_inbox = 'Projects/Research Inbox'
+# quant_root = 'C:/path/to/quant-agent-brain'
+# quant_manifest = 'C:/path/to/library/config/quant-artifacts.json'

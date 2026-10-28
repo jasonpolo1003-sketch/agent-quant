@@ -33,6 +33,7 @@ from quant_brain.ui import (
     summary,
     tutor,
     winsched,
+    workbench_view,
 )
 from quant_brain.ui import home as home_page
 from quant_brain.ui.backends import BACKENDS, BackendError, get_backend
@@ -412,6 +413,17 @@ def create_app(config: TerminalConfig) -> FastAPI:
     @app.get("/api/home-plain")
     def home_plain():
         return home_page.home(root)
+
+    @app.get("/api/workbench")
+    def workbench_list():
+        return workbench_view.listing(root)
+
+    @app.get("/api/workbench/result")
+    def workbench_result(id: str):
+        try:
+            return workbench_view.result(root, id)
+        except workbench_view.WorkbenchError as exc:
+            raise HTTPException(404, str(exc)) from exc
 
     @app.get("/api/study")
     def study_overview():

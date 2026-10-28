@@ -4,7 +4,104 @@
     "title": "Merge pull request #14 into main",
     "why": "main is the official copy. Everything since the cleanup (futures engine, practice run, Study page, the restored UI) is waiting in PR #14. Its tests pass.",
     "recommendation": "Merge it on GitHub.",
-    "action": {"label": "Open PR #14", "url": "https://github.com/jasonpolo1003-sketch/agent-quant/pull/14"},
+    "action": {
+      "label": "Open PR #14",
+      "url": "https://github.com/jasonpolo1003-sketch/agent-quant/pull/14"
+    },
     "added": "2026-10-26"
+  },
+  {
+    "id": "approve-workbench-plan",
+    "title": "Approve the backtest workbench plan",
+    "why": "Lets you test strategies as often as you like on practice data, under many conditions, with an automatic honesty counter; the 2025-26 exam becomes a 3-check pass/fail proctor.",
+    "recommendation": "Approve it with a budget of 3 exam checks and MNQ/MES only for now.",
+    "action": {
+      "label": "Read the plan",
+      "url": "https://github.com/jasonpolo1003-sketch/agent-quant/blob/testing/brain/_system/plan/backtest_workbench_plan.md"
+    },
+    "added": "2026-10-26",
+    "done": true,
+    "resolved": "2026-10-26: approved by Jason (budget 3 exam checks, MNQ/MES only)"
+  },
+  {
+    "id": "pick-next-idea",
+    "title": "Pick the next strategy to test",
+    "why": "Research ranked late-day momentum (last 30 minutes follow the day's direction, driven by forced hedging) first, gap fade second, jump reversal third.",
+    "recommendation": "Test late-day momentum on MES first with bare rules, plus a matched random-direction benchmark. Decide its $/day goal before seeing results.",
+    "action": {
+      "label": "Read the research",
+      "url": "https://github.com/jasonpolo1003-sketch/agent-quant/blob/testing/brain/sources/candidate_ideas_2026-10-26.md"
+    },
+    "added": "2026-10-27",
+    "done": true,
+    "resolved": "2026-10-27: picked late-day momentum (SC-FUT-0002)"
+  },
+  {
+    "id": "sc-fut-0002-close",
+    "title": "Close SC-FUT-0002 (late-day momentum) as not demonstrated?",
+    "why": "On 2019-2024 practice data it lost money after costs on MES (-$3.93/day) and roughly broke even on MNQ (-$0.45/day). The direction signal was only slightly better than random (+$2-3/day, not significant).",
+    "recommendation": "Close it. Don't chase the volatile-days slice that looked better: that would be picking a winner after the fact.",
+    "action": {
+      "label": "See the Workbench",
+      "page": "workbench"
+    },
+    "added": "2026-10-27"
+  },
+  {
+    "id": "change-databento-password",
+    "title": "Change your Databento password",
+    "why": "It was committed in plain text to the public GitHub repo on 2026-10-26. It's removed from the current files but still in git history.",
+    "recommendation": "Change it at databento.com (and anywhere you reused it). Optionally I can scrub git history (needs a force-push).",
+    "action": {
+      "label": "Open Databento",
+      "url": "https://databento.com/portal"
+    },
+    "added": "2026-10-27"
+  },
+  {
+    "id": "sc-fut-0004-close",
+    "title": "Close SC-FUT-0004 (shock reversal) as not demonstrated?",
+    "why": "274 MES trades, 2019-2024: lost about $2/day after costs, every single year, worse than random direction, and 0% chance of passing a Topstep account at 2 micros.",
+    "recommendation": "Close it. Don't flip it to 'follow the shock': that's picking after results, and the numbers say it would still lose after costs.",
+    "action": {
+      "label": "See the Workbench",
+      "page": "workbench"
+    },
+    "added": "2026-10-27"
+  },
+  {
+    "id": "sc-fut-0005-next",
+    "title": "SC-FUT-0005 passed the workbench on MNQ: approve the verification plan?",
+    "why": "MNQ: +$11.49/day after costs, beats random direction with p=0.0001, Sharpe 1.31, 5 of 6 years positive. It failed the prop gate only at the frozen 1-contract size.",
+    "recommendation": "Before any money: independent rebuild and adversarial review, a pre-registered prop size, simulator Phase 2 (payouts), then one locked 2025-26 exam check.",
+    "action": {
+      "label": "See the Workbench",
+      "page": "workbench"
+    },
+    "added": "2026-10-27",
+    "done": true,
+    "resolved": "2026-10-27: verification started; independent rebuild matched to the cent (brain/05_Reviews/SC-FUT-0005-independent-review.md)"
+  },
+  {
+    "id": "sc-fut-0005-prop-size",
+    "title": "Pre-register the prop size for SC-FUT-0005 (before the exam)",
+    "why": "SC-FUT-0006 (high-volatility days only, 3 MNQ) failed: the calm days were the better half. Trading SC-FUT-0005 every day looked better in the simulator at 2-3 MNQ (no-lock rules: 48% / 43% first-account pass vs 17% luck; median 72 / 55 trading days), but those sizes were seen after results, so only the locked 2025-26 exam can judge one.",
+    "recommendation": "Pre-register ONE every-day size (2 or 3 MNQ) and orders within 5 s of each check, then spend one exam check on it. Or add markets first.",
+    "action": {
+      "label": "Read the review",
+      "url": "https://github.com/jasonpolo1003-sketch/agent-quant/blob/testing/brain/05_Reviews/SC-FUT-0005-independent-review.md"
+    },
+    "added": "2026-10-27"
+  },
+  {
+    "id": "sc-fut-0005-two-month-verdict",
+    "title": "SC-FUT-0005 can't pay out within 2 months: choose the next direction",
+    "why": "Under every frozen sizing rule it loses $105-212 over 42 days (mostly fees). Only 1.5-5% of runs reach a payout. It beats luck, but its ~$11 per contract per day is too slow to pass the $3,000 Combine and earn payout days in 2 months, and bigger sizes break the risk limit.",
+    "recommendation": "Don't spend the exam check. Either accept a longer window (about 3-4 months) for this strategy, or look for a faster/bigger edge (more markets, or several same-day rules on the data we own).",
+    "action": {
+      "label": "Read the result",
+      "url": "https://github.com/jasonpolo1003-sketch/agent-quant/blob/testing/brain/05_Reviews/SC-FUT-0005-sizing-policies-2026-10-28.md"
+    },
+    "added": "2026-10-28"
   }
 ]

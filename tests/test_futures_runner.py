@@ -203,3 +203,13 @@ def test_replaced_dev_bars_file_is_refused(repo):
     assert not any("minute-bar" in p for p in runner.gate_problems(root, "development", dev))
     (dev / runner.DEV_BARS).write_bytes(b"swapped")
     assert any("minute-bar" in p for p in runner.gate_problems(root, "development", dev))
+
+
+def test_closed_card_blocks_the_held_out_read(repo):
+    root, _, raw = repo
+    runner.authorize(root, "development_authorized", "Jason")
+    _fake_dev_completion(root)
+    runner.authorize(root, "held_out_authorized", "Jason")
+    assert runner.gate_problems(root, "held_out", raw) == []
+    runner.authorize(root, "card_closed", "Jason")
+    assert any("card closed" in p for p in runner.gate_problems(root, "held_out", raw))

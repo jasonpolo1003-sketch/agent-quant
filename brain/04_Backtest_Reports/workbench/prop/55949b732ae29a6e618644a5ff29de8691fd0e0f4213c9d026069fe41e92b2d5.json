@@ -1,0 +1,145 @@
+{
+  "rules": {
+    "start": 50000,
+    "target": 3000,
+    "max_loss": 2000,
+    "lock_at_start": true,
+    "trailing": true,
+    "consistency": 0.55,
+    "subscription": 49,
+    "reset": 49,
+    "days_per_month": 21
+  },
+  "horizon_days": 126,
+  "cost_level": "L3",
+  "frozen_size": 1,
+  "luck_best_size": 5,
+  "by_size": {
+    "1": {
+      "strategy": {
+        "attempts": 2000,
+        "first_account_pass_rate": 0.0095,
+        "pass_rate_with_resets": 0.01,
+        "median_days_to_pass": 98.5,
+        "mean_fees": 305.956,
+        "fees_per_pass": 30595.6,
+        "mean_resets": 0.2565,
+        "censored_share": 0.0
+      },
+      "luck": {
+        "attempts": 2000,
+        "first_account_pass_rate": 0.0,
+        "pass_rate_with_resets": 0.0,
+        "median_days_to_pass": null,
+        "mean_fees": 305.27,
+        "fees_per_pass": null,
+        "mean_resets": 0.23,
+        "censored_share": 0.0
+      }
+    },
+    "2": {
+      "strategy": {
+        "attempts": 2000,
+        "first_account_pass_rate": 0.1215,
+        "pass_rate_with_resets": 0.182,
+        "median_days_to_pass": 74.0,
+        "mean_fees": 333.3715,
+        "fees_per_pass": 1831.7115384615386,
+        "mean_resets": 1.183,
+        "censored_share": 0.0
+      },
+      "luck": {
+        "attempts": 2000,
+        "first_account_pass_rate": 0.0235,
+        "pass_rate_with_resets": 0.033,
+        "median_days_to_pass": 75.5,
+        "mean_fees": 347.4345,
+        "fees_per_pass": 10528.318181818182,
+        "mean_resets": 1.1605,
+        "censored_share": 0.0
+      }
+    },
+    "3": {
+      "strategy": {
+        "attempts": 2000,
+        "first_account_pass_rate": 0.1495,
+        "pass_rate_with_resets": 0.401,
+        "median_days_to_pass": 67.0,
+        "mean_fees": 347.2875,
+        "fees_per_pass": 866.0536159600997,
+        "mean_resets": 2.025,
+        "censored_share": 0.0
+      },
+      "luck": {
+        "attempts": 2000,
+        "first_account_pass_rate": 0.0495,
+        "pass_rate_with_resets": 0.119,
+        "median_days_to_pass": 70.5,
+        "mean_fees": 386.9285,
+        "fees_per_pass": 3251.5,
+        "mean_resets": 2.1565,
+        "censored_share": 0.0
+      }
+    },
+    "5": {
+      "strategy": {
+        "attempts": 2000,
+        "first_account_pass_rate": 0.165,
+        "pass_rate_with_resets": 0.6685,
+        "median_days_to_pass": 53.0,
+        "mean_fees": 375.2665,
+        "fees_per_pass": 561.3560209424083,
+        "mean_resets": 3.53,
+        "censored_share": 0.0
+      },
+      "luck": {
+        "attempts": 2000,
+        "first_account_pass_rate": 0.0685,
+        "pass_rate_with_resets": 0.324,
+        "median_days_to_pass": 63.5,
+        "mean_fees": 446.684,
+        "fees_per_pass": 1378.6543209876543,
+        "mean_resets": 3.9275,
+        "censored_share": 0.0
+      }
+    }
+  },
+  "first_account_pass_minus_luck_90ci": [
+    -0.1,
+    -0.02933333333333337
+  ],
+  "walk_forward": {
+    "attempts": 1410,
+    "first_account_pass_rate": 0.012056737588652482,
+    "pass_rate_with_resets": 0.012056737588652482,
+    "median_days_to_pass": 114.0,
+    "mean_fees": 290.8375886524823,
+    "fees_per_pass": 24122.41176470588,
+    "mean_resets": 0.16028368794326242,
+    "censored_share": 0.07801418439716312,
+    "finished_attempts": 1300,
+    "pass_rate_finished": 0.013076923076923076,
+    "effective_n": 11,
+    "pass_rate_90ci": [
+      0.0006301555903579087,
+      0.21779329743065345
+    ]
+  },
+  "phase1_gate": "fail",
+  "note": "Phase 1: evaluation only; payouts not estimable until Phase 2.",
+  "workbench_trial": {
+    "at": "2026-10-27T02:42:30+00:00",
+    "code": "5c0895942f2a69a051cb029e1edd62678bc3f11df19968ad1fa3dbf77a766ac8",
+    "days": 1410,
+    "family": "orb",
+    "fingerprint": "dc851d9b023267d898702c7eb8dbf93b3336cbaefacdeb5e87d01c5632c9e43b",
+    "market": "MES",
+    "roll": "fixed",
+    "settings": {
+      "range_bars": 15,
+      "stop_fraction": "0.10"
+    }
+  },
+  "simulator_fingerprint": "55949b732ae29a6e618644a5ff29de8691fd0e0f4213c9d026069fe41e92b2d5",
+  "rules_file": "brain\\_system\\prop\\topstep_50k.json"
+}

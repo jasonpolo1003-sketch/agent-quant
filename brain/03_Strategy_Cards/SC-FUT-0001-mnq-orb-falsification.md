@@ -1,10 +1,12 @@
 ---
 card_id: SC-FUT-0001
-status: frozen
+status: closed_not_demonstrated
 frozen: true
 frozen_at: 2026-10-26
 frozen_spec: brain/_system/futures/sc-fut-0001-spec.v1.json
 frozen_spec_sha256: e19f190733245181312ee56a6d21cab1b1bd594ee8d8ec9298b07c6c52f730fb
+closed_at: 2026-10-26
+closed_reason: not demonstrated on the development run; held-out left unread
 created: 2026-10-25
 method_family: opening_range_breakout
 primary: MNQ

@@ -204,3 +204,8 @@ def test_f19_stress_bound_never_kinder_than_primary(simulate):
     trade = r.trades[0]
     assert (trade.exit_reason, trade.exit_ticks) == ("gap_stop", 100)
     assert trade.stress_exit_ticks == 100 and r.stress_net_cents == r.net_cents == -872
+
+
+def test_general_stop_formula_matches_frozen_ten_percent_rule():
+    for total in range(0, 20_000):
+        assert orb.stop_from_sum(total) == max(1, (2 * total + 140) // 280), total

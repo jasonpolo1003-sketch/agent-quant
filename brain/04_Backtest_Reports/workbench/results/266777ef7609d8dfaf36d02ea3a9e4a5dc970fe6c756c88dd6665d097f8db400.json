@@ -1,0 +1,155 @@
+{
+  "run": {
+    "at": "2026-10-28T16:29:59+00:00",
+    "fingerprint": "266777ef7609d8dfaf36d02ea3a9e4a5dc970fe6c756c88dd6665d097f8db400",
+    "family": "noise_area",
+    "settings": {
+      "lookback_sessions": 14,
+      "stop": "band_or_vwap",
+      "size": 1
+    },
+    "market": "MNQ",
+    "roll": "volume",
+    "code": "73e3747466348ed00ea1d90916d794196b4f8869eba2446491da2d93ca039d2c",
+    "days": 1425
+  },
+  "honesty": {
+    "family": "noise_area",
+    "trials": 4,
+    "alpha": 0.012741455098566168
+  },
+  "verdict": {
+    "days": 1425,
+    "non_evaluable_days": 0,
+    "trades": 1274,
+    "alpha": 0.012741455098566168,
+    "floor_cents": 500,
+    "sharpe_min": 1.0,
+    "missing_session_share": 0.0,
+    "ambiguity_share": 0.0,
+    "reasons": [],
+    "outcome": "pass_to_execution_calibration",
+    "grade": "good",
+    "per_day": 11.485066666666667,
+    "vs_random_per_day": 14.149267368421052,
+    "p_value": 0.0001,
+    "sharpe": 1.3087924933293258
+  },
+  "always_long": {
+    "days": 851,
+    "per_trade_day": 0.3997884841363102,
+    "sharpe": 0.035113413270199165
+  },
+  "grid": {
+    "costs": {
+      "L1": {
+        "days": 1425,
+        "trades": 1274,
+        "per_day": 12.826119298245615,
+        "vs_random_per_day": 14.149267368421052,
+        "p_value": 0.0005,
+        "beat_share_of_random": 1.0
+      },
+      "L2": {
+        "days": 1425,
+        "trades": 1274,
+        "per_day": 12.379101754385966,
+        "vs_random_per_day": 14.149267368421052,
+        "p_value": 0.0005,
+        "beat_share_of_random": 1.0
+      },
+      "L3": {
+        "days": 1425,
+        "trades": 1274,
+        "per_day": 11.485066666666667,
+        "vs_random_per_day": 14.149267368421052,
+        "p_value": 0.0005,
+        "beat_share_of_random": 1.0
+      },
+      "L4": {
+        "days": 1425,
+        "trades": 1274,
+        "per_day": 9.69699649122807,
+        "vs_random_per_day": 14.149267368421052,
+        "p_value": 0.0005,
+        "beat_share_of_random": 1.0
+      }
+    },
+    "years": {
+      "2019": {
+        "days": 167,
+        "trades": 144,
+        "per_day": -1.5220359281437126,
+        "vs_random_per_day": 1.4972095808383232,
+        "p_value": 0.3315,
+        "beat_share_of_random": 0.652
+      },
+      "2020": {
+        "days": 253,
+        "trades": 223,
+        "per_day": 8.379209486166008,
+        "vs_random_per_day": 11.312656126482214,
+        "p_value": 0.0285,
+        "beat_share_of_random": 0.918
+      },
+      "2021": {
+        "days": 252,
+        "trades": 224,
+        "per_day": 7.4353968253968254,
+        "vs_random_per_day": 9.930539682539681,
+        "p_value": 0.055,
+        "beat_share_of_random": 0.912
+      },
+      "2022": {
+        "days": 251,
+        "trades": 254,
+        "per_day": 15.709641434262949,
+        "vs_random_per_day": 18.302860557768923,
+        "p_value": 0.0285,
+        "beat_share_of_random": 0.932
+      },
+      "2023": {
+        "days": 250,
+        "trades": 214,
+        "per_day": 15.561679999999999,
+        "vs_random_per_day": 18.317368,
+        "p_value": 0.002,
+        "beat_share_of_random": 0.996
+      },
+      "2024": {
+        "days": 252,
+        "trades": 215,
+        "per_day": 19.02063492063492,
+        "vs_random_per_day": 21.32823015873016,
+        "p_value": 0.015,
+        "beat_share_of_random": 0.98
+      }
+    },
+    "regimes": {
+      "calm": {
+        "days": 399,
+        "trades": 362,
+        "per_day": 6.647518796992481,
+        "vs_random_per_day": 9.151478696741854,
+        "p_value": 0.035,
+        "beat_share_of_random": 0.936
+      },
+      "normal": {
+        "days": 297,
+        "trades": 263,
+        "per_day": 20.90282828282828,
+        "vs_random_per_day": 23.5846734006734,
+        "p_value": 0.0035,
+        "beat_share_of_random": 0.992
+      },
+      "volatile": {
+        "days": 479,
+        "trades": 435,
+        "per_day": 12.30542797494781,
+        "vs_random_per_day": 14.924292275574114,
+        "p_value": 0.012,
+        "beat_share_of_random": 0.988
+      }
+    }
+  }
+}

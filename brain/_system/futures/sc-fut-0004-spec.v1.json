@@ -1,0 +1,40 @@
+{
+  "schema_version": "sc-fut-0004-1",
+  "card_id": "SC-FUT-0004",
+  "status": "frozen",
+  "frozen": true,
+  "frozen_at": "2026-10-27",
+  "approved_by": "Jason 2026-10-27 (all proposed rules, 2-micro prop size)",
+  "source": "Christensen, Oomen & Reno, The drift burst hypothesis, Journal of Econometrics; brain/sources/prop_firm_same_day_ideas_2026-10-27.md",
+  "workbench_family": "shock_reversal",
+  "instrument": {"primary": "MES", "second_trial_same_family": "MNQ", "roll": "D-ROLL-01 fixed"},
+  "data": {"practice_inclusive": ["2019-05-01", "2024-12-31"], "exam": "2025-01-01..2026-10-21 locked; future proctor only"},
+  "rule": {
+    "days": "NYSE cash sessions in session-calendar.v1.csv; early-close days: signals 09:15 to 11:30, flat at the session's exit minute",
+    "window": "a shock may be detected and an entry made only between 09:15 and 14:30 CT (entry fill minute <= 14:30)",
+    "move": "M(t) = close(t) - close(t-15) in ticks, t = 1-minute bar; both bars must exist and be on the same session",
+    "scale": "S(tod) = root mean square of M at the same minute-of-day over the previous 60 eligible sessions (point-in-time; at least 40 observations, else no signal)",
+    "shock": "|M(t)| >= 4 * S(tod); direction = sign(M(t)); only the first shock of the day counts",
+    "news_exclusion": "on FOMC statement days (pinned list) no shock may be detected and no entry made after 12:45 CT",
+    "confirmation": "within the 10 bars after the shock bar, the first bar whose close is against the shock (close > open after a down-shock; close < open after an up-shock); none -> no trade that day",
+    "entry": "open of the bar after the confirmation bar, opposite the shock; missing bar -> no trade",
+    "stop": "1 tick beyond the most extreme price from the start of the 15-minute window to the confirmation bar (low for a down-shock long, high for an up-shock short); fills as in SC-FUT-0001 (stop level, or the open if a bar gaps through; touch on the entry bar counts)",
+    "exit": "open of the bar 60 minutes after entry, the stop, or the normal flatten (15:07 CT; early close per calendar), whichever comes first; missing exit bar -> non-evaluable",
+    "max_trades_per_day": 1,
+    "costs": "L3 primary; L1-L4 reported; prop simulation also at L4"
+  },
+  "benchmarks": {
+    "matched_control": "same day, same entry minute, same stop distance mirrored to the other side, same exit rule; random direction; 500 draws seeded [20261026, root, yyyymmdd, 4]",
+    "diagnostic": "always fade (the strategy itself) vs always follow the shock"
+  },
+  "gates": {
+    "sample_floor": "if the rule produces fewer than 40 MES trades in practice, report 'too few to judge' and stop; no loosening",
+    "prop_main": "Topstep 50K (rules file sha256 219fab9df1fe39b02bf55fd38ec4b7e25e166f0fb54cc322ddf2768378aa31f7), frozen size 2 micros, 6-month budget (126 trading days), L3: first-account pass rate minus luck (at luck's best size) has a 90% range above 0 and median days to pass <= 126; also reported at L4",
+    "workbench_supporting": "vs matched control at the shock_reversal family's honesty-adjusted bar; by year, regime, cost level",
+    "phase_2": "payouts and net cash once built"
+  },
+  "pinned": {
+    "fomc_statement_days": {"file": "brain/_system/futures/fomc_statement_days_2019_2024.csv", "sha256": "ca4badd0f950a22ba082003aa659ed2c6cf44f8d659c4239b1b2a9474656e52f"},
+    "prop_rules": {"file": "brain/_system/prop/topstep_50k.json", "sha256": "219fab9df1fe39b02bf55fd38ec4b7e25e166f0fb54cc322ddf2768378aa31f7"}
+  }
+}

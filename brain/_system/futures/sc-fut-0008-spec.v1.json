@@ -1,0 +1,41 @@
+{
+  "schema_version": "sc-fut-0008-1",
+  "card_id": "SC-FUT-0008",
+  "status": "frozen",
+  "frozen": true,
+  "frozen_at": "2026-10-28",
+  "approved_by": "Jason 2026-10-28 (bigger-edge plan, step B3: \"go with plans A and B\")",
+  "parent": "SC-FUT-0005 (noise-area momentum, band/VWAP trailing stop), unchanged parameters",
+  "workbench_family": "noise_area",
+  "written_before": "any strategy result on ZN, M6E or MGC. Inputs used: the SC-FUT-0005 rule, published session hours, Topstep fees, and the sizes file below (volatility only). SC-FUT-0007's failure was known; nothing here was tuned on it.",
+  "markets": {
+    "MNQ": "existing SC-FUT-0005 run (08:30-15:00 CT)",
+    "ZN": "10-year note, full contract, 07:20-14:00 CT",
+    "M6E": "micro euro on 6E prices, 07:20-14:00 CT",
+    "MGC": "micro gold on GC prices, 07:20-12:30 CT",
+    "ZC": "DROPPED before any result: Databento refused the ZC download (402, free credits used up; nothing charged), 2026-10-28"
+  },
+  "sleeve_sizes": {"MNQ": 2, "ZN": 2, "M6E": 13, "MGC": 5},
+  "rule": "SC-FUT-0005 exactly (14-session sigma, bands from max/min(open, previous close), checks every 30 min from open + 30 to close - 30, VWAP stop, reverse at the same check, flat at the session close), per market; no per-market parameters",
+  "data": {
+    "practice_inclusive": ["2019-05-01", "2024-12-31"],
+    "source": "C:/Users/jason/Projects/Quant/data/databento/multi_2019-05-01_2024-12-31 (outrights, manifest-hashed); MNQ dev partition",
+    "days": "frozen session calendar minus early-close days (extra markets); volume roll",
+    "exam": "2025-01-01.. not bought for the extra markets; any exam needs Jason's approval and new data"
+  },
+  "costs": "L3 = Topstep fees (help centre, 2026-10-28, higher figure where pages conflict) + 4 ticks of the traded contract per round trip: ZN $65.80, M6E $6.00, MGC $5.92, ZC $55.28, MNQ $3.22",
+  "sizes": {
+    "rule": "MNQ 2 contracts; others round(2 x MNQ median session range $ / market median session range $), dropped if 0",
+    "file": "brain/_system/futures/sc-fut-0008-sizes.json",
+    "file_sha256": "c85de967f8a81b4f44cf469d844dabefe86c9ddea432a1de8dc7a485daf73ec5"
+  },
+  "benchmarks": {"matched_control": "per market, SC-FUT-0005's random-direction control (seed [20261026, root code, yyyymmdd, 5]); the book's luck = every sleeve's random draw summed on the same day"},
+  "gates": {
+    "cash_gate": "portfolio.evaluate on all sleeves at the frozen sizes in one account: 42-day Combine -> XFA lifecycle, Topstep 50K + $1,000 DLL, L3, day low = sum of sleeve lows (pessimistic). PASS needs all three: mean net cash > $0; lower 90% bound of (net cash - luck net cash) > $0; payout chance within the stated range",
+    "stated_payout_range": [0.15, 0.70],
+    "cells": "2 pricing plans x 2 payout paths = 4 cells, each one trial; the card passes if at least one cell passes",
+    "per_market": "each market's workbench result (vs its random control, $/day, Sharpe) is reported, not gated; markets are never dropped or resized after results",
+    "no_retuning": "no other sessions, sizes or market sets on this card; a failure is recorded as is"
+  },
+  "honesty": "noise_area family: 3 new distinct workbench trials (ZN, M6E, MGC) + 4 prop cash cells"
+}

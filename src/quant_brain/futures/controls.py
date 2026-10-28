@@ -10,6 +10,7 @@ the mean of the evaluable draws.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import time
 
 import numpy as np
 
@@ -25,7 +26,7 @@ from quant_brain.futures.orb import (
 
 DRAW_SEED = 20261026
 DRAWS = 500
-ROOT_CODE = {"MNQ": 1, "MES": 2}
+ROOT_CODE = {"MNQ": 1, "MES": 2, "ZN": 3, "M6E": 4, "MGC": 5, "ZC": 6}
 FIRST_FILL = add_minutes(SIGNAL_START, 1)  # 08:46, the earliest ORB fill
 
 
@@ -58,14 +59,14 @@ def day_generator(day: DayInput, seed: int = DRAW_SEED) -> np.random.Generator:
     )
 
 
-def _draw(day: DayInput, k: int, rng: np.random.Generator) -> Draw:
+def _draw(day: DayInput, k: int, rng: np.random.Generator, first_fill: time) -> Draw:
     cutoff = entry_cutoff(day.exit_minute)
     trades: list[Trade] = []
     rejections = not_taken = 0
     previous_exit = None
     for _ in range(k):
         candidates = [
-            m for m in minute_span(FIRST_FILL, cutoff) if previous_exit is None or m > previous_exit
+            m for m in minute_span(first_fill, cutoff) if previous_exit is None or m > previous_exit
         ]
         fill = None
         while candidates:
@@ -102,14 +103,19 @@ def _draw(day: DayInput, k: int, rng: np.random.Generator) -> Draw:
 
 
 def daily_control(
-    day: DayInput, k: int, *, seed: int = DRAW_SEED, draws: int = DRAWS
+    day: DayInput,
+    k: int,
+    *,
+    seed: int = DRAW_SEED,
+    draws: int = DRAWS,
+    first_fill: time = FIRST_FILL,
 ) -> ControlResult:
     if k == 0:
         return ControlResult(0, 0.0, 0.0, 0, 0, 0, 0, [])
     if day.stop_ticks is None:
         raise ValueError("controls require an eligible day with a stop distance")
     rng = day_generator(day, seed)
-    results = [_draw(day, k, rng) for _ in range(draws)]
+    results = [_draw(day, k, rng, first_fill) for _ in range(draws)]
     good = [d for d in results if d.evaluable]
     return ControlResult(
         k=k,

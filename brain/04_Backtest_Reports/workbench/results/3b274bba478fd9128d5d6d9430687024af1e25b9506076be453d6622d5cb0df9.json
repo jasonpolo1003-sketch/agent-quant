@@ -1,0 +1,161 @@
+{
+  "run": {
+    "at": "2026-10-27T05:13:47+00:00",
+    "fingerprint": "3b274bba478fd9128d5d6d9430687024af1e25b9506076be453d6622d5cb0df9",
+    "family": "shock_reversal",
+    "settings": {
+      "threshold": 4.0,
+      "lookback_sessions": 60,
+      "window": 15,
+      "confirm_bars": 10,
+      "hold_minutes": 60
+    },
+    "market": "MES",
+    "roll": "fixed",
+    "code": "c4904ef30586250dab0caa89ba3bc18345a877f6f70fc9da03c5f4545270b01f",
+    "days": 1425
+  },
+  "honesty": {
+    "family": "shock_reversal",
+    "trials": 1,
+    "alpha": 0.050000000000000044
+  },
+  "verdict": {
+    "days": 1425,
+    "non_evaluable_days": 0,
+    "trades": 274,
+    "alpha": 0.050000000000000044,
+    "floor_cents": 500,
+    "sharpe_min": 1.0,
+    "missing_session_share": 0.0,
+    "ambiguity_share": 0.19343065693430658,
+    "reasons": [
+      "not better than the random benchmark (p 0.984 vs bar 0.0500)",
+      "below the $5/day floor",
+      "Sharpe -1.35 below 1.0"
+    ],
+    "outcome": "not_demonstrated",
+    "grade": "fail",
+    "per_day": -2.0249333333333333,
+    "vs_random_per_day": -1.2845947368421053,
+    "p_value": 0.984,
+    "sharpe": -1.3480689024174746
+  },
+  "always_long": {
+    "days": 274,
+    "per_trade_day": -9.709963503649636,
+    "sharpe": -2.87107781123131
+  },
+  "grid": {
+    "costs": {
+      "L1": {
+        "days": 1425,
+        "trades": 274,
+        "per_day": -1.303880701754386,
+        "vs_random_per_day": -1.2845947368421053,
+        "p_value": 0.9825,
+        "beat_share_of_random": 0.008
+      },
+      "L2": {
+        "days": 1425,
+        "trades": 274,
+        "per_day": -1.5442315789473684,
+        "vs_random_per_day": -1.2845947368421053,
+        "p_value": 0.9825,
+        "beat_share_of_random": 0.008
+      },
+      "L3": {
+        "days": 1425,
+        "trades": 274,
+        "per_day": -2.0249333333333333,
+        "vs_random_per_day": -1.2845947368421053,
+        "p_value": 0.9825,
+        "beat_share_of_random": 0.008
+      },
+      "L4": {
+        "days": 1425,
+        "trades": 274,
+        "per_day": -2.9863368421052634,
+        "vs_random_per_day": -1.2845947368421053,
+        "p_value": 0.9825,
+        "beat_share_of_random": 0.008
+      }
+    },
+    "years": {
+      "2019": {
+        "days": 167,
+        "trades": 22,
+        "per_day": -1.957125748502994,
+        "vs_random_per_day": -1.3241167664670659,
+        "p_value": 0.908,
+        "beat_share_of_random": 0.092
+      },
+      "2020": {
+        "days": 253,
+        "trades": 59,
+        "per_day": -3.6293675889328063,
+        "vs_random_per_day": -2.4695355731225295,
+        "p_value": 0.9235,
+        "beat_share_of_random": 0.096
+      },
+      "2021": {
+        "days": 252,
+        "trades": 56,
+        "per_day": -1.273095238095238,
+        "vs_random_per_day": -0.6926091269841269,
+        "p_value": 0.7585,
+        "beat_share_of_random": 0.288
+      },
+      "2022": {
+        "days": 251,
+        "trades": 48,
+        "per_day": -1.8767330677290837,
+        "vs_random_per_day": -0.7617729083665339,
+        "p_value": 0.693,
+        "beat_share_of_random": 0.308
+      },
+      "2023": {
+        "days": 250,
+        "trades": 34,
+        "per_day": -1.67592,
+        "vs_random_per_day": -1.64214,
+        "p_value": 0.941,
+        "beat_share_of_random": 0.052
+      },
+      "2024": {
+        "days": 252,
+        "trades": 55,
+        "per_day": -1.704761904761905,
+        "vs_random_per_day": -0.8267857142857143,
+        "p_value": 0.7245,
+        "beat_share_of_random": 0.244
+      }
+    },
+    "regimes": {
+      "calm": {
+        "days": 414,
+        "trades": 58,
+        "per_day": -0.8321497584541063,
+        "vs_random_per_day": -0.6532608695652173,
+        "p_value": 0.828,
+        "beat_share_of_random": 0.198
+      },
+      "normal": {
+        "days": 371,
+        "trades": 66,
+        "per_day": -3.158409703504043,
+        "vs_random_per_day": -2.4384366576819407,
+        "p_value": 0.987,
+        "beat_share_of_random": 0.004
+      },
+      "volatile": {
+        "days": 390,
+        "trades": 89,
+        "per_day": -1.8264871794871795,
+        "vs_random_per_day": 0.01596153846153846,
+        "p_value": 0.5005,
+        "beat_share_of_random": 0.512
+      }
+    }
+  }
+}

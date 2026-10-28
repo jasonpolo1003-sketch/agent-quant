@@ -1,0 +1,213 @@
+{
+  "spec": "brain\\_system\\futures\\sc-fut-0007-spec.v1.json",
+  "spec_sha256": "bbd29ed1327937db5f6e26d0b1770c604479293050ab1208a84520146fc872ff",
+  "sleeves": [
+    {
+      "at": "2026-10-28T16:21:16+00:00",
+      "code": "19634e6c560f4855081ed6b25a8efa70e26fe3a1076d45a3feb05df35d8108e9",
+      "days": 1425,
+      "family": "noise_area",
+      "fingerprint": "6dc9a56f7816985ae22518365969df9172eb42e6a9a3cd6ece23425e5da27d56",
+      "market": "MNQ",
+      "roll": "volume",
+      "settings": {
+        "lookback_sessions": 14,
+        "pyramid": {
+          "max_units": 4,
+          "step": "1 x sigma x open, stop orders"
+        },
+        "size": 1,
+        "stop": "band_or_vwap"
+      },
+      "size": 1
+    }
+  ],
+  "settings": {
+    "paths": 2000,
+    "outer": 40,
+    "inner": 300
+  },
+  "cells": [
+    {
+      "horizon_days": 42,
+      "daily_loss_limit": 1000,
+      "days": 1425,
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -112.278171,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.0015,
+        "net_cash_5th_percentile": -196.0,
+        "mean_payouts": 0.9538289999999999,
+        "mean_fees": 113.232,
+        "chance_any_payout": 0.0015,
+        "median_days_to_first_payout": 31.0,
+        "mean_xfas_closed": 0.003
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -113.6205745,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.0005,
+        "net_cash_5th_percentile": -149.44999999999987,
+        "mean_payouts": 0.3804254999999999,
+        "mean_fees": 114.001,
+        "chance_any_payout": 0.001,
+        "median_days_to_first_payout": 29.0,
+        "mean_xfas_closed": 0.005
+      },
+      "net_cash_minus_luck_90ci": [
+        -7.045991500000018,
+        4.621210166666659
+      ],
+      "stated_payout_range": [
+        0.03,
+        0.3
+      ],
+      "checks": {
+        "mean_net_cash_positive": false,
+        "beats_luck": false,
+        "payout_chance_in_stated_range": false
+      },
+      "gate": "fail",
+      "plan": "standard",
+      "payout_path": "standard"
+    },
+    {
+      "horizon_days": 42,
+      "daily_loss_limit": 1000,
+      "days": 1425,
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -113.183,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.0,
+        "net_cash_5th_percentile": -196.0,
+        "mean_payouts": 0.0,
+        "mean_fees": 113.183,
+        "chance_any_payout": 0.0,
+        "median_days_to_first_payout": null,
+        "mean_xfas_closed": 0.002
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -113.71446499999999,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.0005,
+        "net_cash_5th_percentile": -196.0,
+        "mean_payouts": 0.26203499999999996,
+        "mean_fees": 113.9765,
+        "chance_any_payout": 0.0005,
+        "median_days_to_first_payout": 33.0,
+        "mean_xfas_closed": 0.0045
+      },
+      "net_cash_minus_luck_90ci": [
+        -6.7732051666666555,
+        3.8015700000000026
+      ],
+      "stated_payout_range": [
+        0.03,
+        0.3
+      ],
+      "checks": {
+        "mean_net_cash_positive": false,
+        "beats_luck": false,
+        "payout_chance_in_stated_range": false
+      },
+      "gate": "fail",
+      "plan": "standard",
+      "payout_path": "consistency"
+    },
+    {
+      "horizon_days": 42,
+      "daily_loss_limit": 1000,
+      "days": 1425,
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -205.433671,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.0015,
+        "net_cash_5th_percentile": -285.0,
+        "mean_payouts": 0.9538289999999999,
+        "mean_fees": 206.3875,
+        "chance_any_payout": 0.0015,
+        "median_days_to_first_payout": 31.0,
+        "mean_xfas_closed": 0.003
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -209.6645745,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.001,
+        "net_cash_5th_percentile": -285.0,
+        "mean_payouts": 0.3804254999999999,
+        "mean_fees": 210.045,
+        "chance_any_payout": 0.001,
+        "median_days_to_first_payout": 29.0,
+        "mean_xfas_closed": 0.005
+      },
+      "net_cash_minus_luck_90ci": [
+        -5.492674999999996,
+        13.02684683333332
+      ],
+      "stated_payout_range": [
+        0.03,
+        0.3
+      ],
+      "checks": {
+        "mean_net_cash_positive": false,
+        "beats_luck": false,
+        "payout_chance_in_stated_range": false
+      },
+      "gate": "fail",
+      "plan": "no_activation_fee",
+      "payout_path": "standard"
+    },
+    {
+      "horizon_days": 42,
+      "daily_loss_limit": 1000,
+      "days": 1425,
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -206.2925,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.0,
+        "net_cash_5th_percentile": -285.0,
+        "mean_payouts": 0.0,
+        "mean_fees": 206.2925,
+        "chance_any_payout": 0.0,
+        "median_days_to_first_payout": null,
+        "mean_xfas_closed": 0.002
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -209.735465,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.0005,
+        "net_cash_5th_percentile": -285.0,
+        "mean_payouts": 0.26203499999999996,
+        "mean_fees": 209.9975,
+        "chance_any_payout": 0.0005,
+        "median_days_to_first_payout": 33.0,
+        "mean_xfas_closed": 0.0045
+      },
+      "net_cash_minus_luck_90ci": [
+        -5.921654000000013,
+        10.558901333333335
+      ],
+      "stated_payout_range": [
+        0.03,
+        0.3
+      ],
+      "checks": {
+        "mean_net_cash_positive": false,
+        "beats_luck": false,
+        "payout_chance_in_stated_range": false
+      },
+      "gate": "fail",
+      "plan": "no_activation_fee",
+      "payout_path": "consistency"
+    }
+  ],
+  "selected": null
+}

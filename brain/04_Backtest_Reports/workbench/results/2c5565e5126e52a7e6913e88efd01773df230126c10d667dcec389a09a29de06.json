@@ -1,0 +1,153 @@
+{
+  "run": {
+    "at": "2026-10-28T16:57:26+00:00",
+    "fingerprint": "2c5565e5126e52a7e6913e88efd01773df230126c10d667dcec389a09a29de06",
+    "family": "noise_area",
+    "settings": {
+      "lookback_sessions": 14,
+      "stop": "band_or_vwap",
+      "size": 1
+    },
+    "market": "M6E",
+    "roll": "volume",
+    "code": "89b59e7b07999742a34529b21a4719aecd244bfbb5c74565c524ef175d5f835f",
+    "days": 1416
+  },
+  "honesty": {
+    "family": "noise_area",
+    "trials": 6,
+    "alpha": 0.008512444610847103
+  },
+  "verdict": {
+    "days": 1416,
+    "non_evaluable_days": 0,
+    "trades": 1265,
+    "alpha": 0.008512444610847103,
+    "floor_cents": 500,
+    "sharpe_min": 1.0,
+    "missing_session_share": 0.0,
+    "ambiguity_share": 0.0,
+    "reasons": [
+      "not better than the random benchmark (p 0.293 vs bar 0.0085)",
+      "below the $5/day floor",
+      "Sharpe -3.27 below 1.0"
+    ],
+    "outcome": "not_demonstrated",
+    "grade": "fail",
+    "per_day": -5.035444915254237,
+    "vs_random_per_day": 0.3276230790960452,
+    "p_value": 0.2934,
+    "sharpe": -3.2748748339253835
+  },
+  "always_long": {
+    "days": 827,
+    "per_trade_day": -9.249492140266021,
+    "sharpe": -4.872318431296865
+  },
+  "grid": {
+    "costs": {
+      "L1": {
+        "days": 1416,
+        "trades": 1265,
+        "per_day": -1.6853389830508474,
+        "vs_random_per_day": 0.3276230790960452,
+        "p_value": 0.2925,
+        "beat_share_of_random": 0.714
+      },
+      "L2": {
+        "days": 1416,
+        "trades": 1265,
+        "per_day": -2.8020409604519774,
+        "vs_random_per_day": 0.3276230790960452,
+        "p_value": 0.2925,
+        "beat_share_of_random": 0.714
+      },
+      "L3": {
+        "days": 1416,
+        "trades": 1265,
+        "per_day": -5.035444915254237,
+        "vs_random_per_day": 0.3276230790960452,
+        "p_value": 0.2925,
+        "beat_share_of_random": 0.714
+      },
+      "L4": {
+        "days": 1416,
+        "trades": 1265,
+        "per_day": -9.502252824858758,
+        "vs_random_per_day": 0.3276230790960452,
+        "p_value": 0.2925,
+        "beat_share_of_random": 0.714
+      }
+    },
+    "years": {
+      "2019": {
+        "days": 167,
+        "trades": 128,
+        "per_day": -2.790898203592814,
+        "vs_random_per_day": 1.8622007185628746,
+        "p_value": 0.0455,
+        "beat_share_of_random": 0.946
+      },
+      "2020": {
+        "days": 251,
+        "trades": 231,
+        "per_day": -6.547290836653386,
+        "vs_random_per_day": -1.0914820717131473,
+        "p_value": 0.818,
+        "beat_share_of_random": 0.256
+      },
+      "2021": {
+        "days": 251,
+        "trades": 229,
+        "per_day": -5.289402390438247,
+        "vs_random_per_day": 0.13432972111553731,
+        "p_value": 0.44,
+        "beat_share_of_random": 0.538
+      },
+      "2022": {
+        "days": 250,
+        "trades": 250,
+        "per_day": -6.7822000000000005,
+        "vs_random_per_day": -0.7086285600000006,
+        "p_value": 0.626,
+        "beat_share_of_random": 0.348
+      },
+      "2023": {
+        "days": 248,
+        "trades": 204,
+        "per_day": -1.7978629032258064,
+        "vs_random_per_day": 3.108978306451613,
+        "p_value": 0.025,
+        "beat_share_of_random": 0.968
+      },
+      "2024": {
+        "days": 249,
+        "trades": 223,
+        "per_day": -6.231646586345381,
+        "vs_random_per_day": -0.8060139759036145,
+        "p_value": 0.767,
+        "beat_share_of_random": 0.21
+      }
+    },
+    "regimes": {
+      "calm": {
+        "days": 1166,
+        "trades": 1063,
+        "per_day": -5.254210977701543,
+        "vs_random_per_day": 0.21334234991423684,
+        "p_value": 0.3675,
+        "beat_share_of_random": 0.624
+      },
+      "normal": {
+        "days": 0,
+        "trades": 0,
+        "note": "too few days"
+      },
+      "volatile": {
+        "days": 0,
+        "trades": 0,
+        "note": "too few days"
+      }
+    }
+  }
+}

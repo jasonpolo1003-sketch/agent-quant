@@ -1,0 +1,25 @@
+name: Data Library CI
+
+on:
+  pull_request:
+  push:
+    branches: [testing, main]
+    paths:
+      - 'apps/personal-data-library/**'
+      - '.github/workflows/data-library.yml'
+
+jobs:
+  data-library:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/personal-data-library
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+      - name: Sync isolated library environment
+        run: uv sync --python 3.13 --locked
+      - name: Run offline source-only tests
+        run: uv run pytest -q --junitxml=reports/pytest-ci.xml
+      - name: Compile source
+        run: uv run python -m compileall -q app.py src scripts

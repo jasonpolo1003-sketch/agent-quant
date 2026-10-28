@@ -9,6 +9,7 @@ const PAGES = [
   { id: "activity", label: "Activity" },
   { id: "strategies", label: "Lab" },
   { id: "study", label: "Study" },
+  { id: "workbench", label: "Workbench" },
   { id: "risk", label: "Risk Center" },
   { id: "market", label: "Screener" },
   { id: "live", label: "Live Feed" },
@@ -86,7 +87,7 @@ function clearCharts() { while (charts.length) { try { charts.pop().remove(); } 
 
 // ---------- navigation ----------
 // The bar shows the few pages that answer "what's going on"; the rest sit under More.
-const MAIN_TABS = ["home", "study", "chart", "learn"];
+const MAIN_TABS = ["home", "workbench", "study", "chart", "learn"];
 function buildTabs() {
   const tab = (p) => `<button type="button" data-page="${p.id}">${p.label}</button>`;
   const rest = PAGES.filter((p) => !MAIN_TABS.includes(p.id));
@@ -1660,6 +1661,74 @@ RENDER.home = async (main) => {
       <p class="faint small">"Not demonstrated" means the test found no reliable edge. It is a real result, not a failure of the process.</p></section>`;
   main.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => go(b.dataset.go)));
 };
+
+// ---------- Workbench: unlimited practice testing ----------
+const settingsText = (s) => Object.entries(s || {}).map(([k, v]) => `${k.replace(/_/g, " ")} ${v}`).join(", ") || "default settings";
+const pBar = (p, alpha) => (p == null ? "-" : `p ${fmt(p, 3)} <span class="faint">(bar ${fmt(alpha, 4)})</span>`);
+
+function heatCell(v) {
+  if (v == null) return `<td class="num faint">-</td>`;
+  const a = Math.min(1, Math.abs(v) / 20);
+  const bg = v >= 0 ? `rgba(16,185,129,${0.12 + 0.5 * a})` : `rgba(244,63,94,${0.12 + 0.5 * a})`;
+  return `<td class="num" style="background:${bg}">${money(v)}</td>`;
+}
+
+function sliceTable(title, note, rows) {
+  return `<div class="box"><h3>${title}</h3><p class="faint small">${note}</p><div class="table-wrap"><table>
+    <tr><th></th><th class="num">Days</th><th class="num">Per day</th><th class="num">vs random</th><th class="num">Beat random</th></tr>
+    ${Object.entries(rows).map(([k, r]) => `<tr><td>${esc(k)}</td><td class="num">${fmt(r.days, 0)}</td>${heatCell(r.per_day)}${heatCell(r.vs_random_per_day)}<td class="num">${r.beat_share_of_random == null ? "-" : Math.round(r.beat_share_of_random * 100) + "%"}</td></tr>`).join("")}
+  </table></div></div>`;
+}
+
+RENDER.workbench = async (main) => {
+  const d = await api("/api/workbench");
+  const W = (state.workbench = state.workbench || { open: null });
+  const intro = "Test any strategy as often as you like on practice data (2019–2024), across markets, years, calm vs volatile periods and trading costs. Every run starts clean from saved code. The locked 2025–26 exam is never touched here.";
+  const honesty = d.honesty.map((h) => `<div class="box need"><p class="card-title">${esc(h.family.toUpperCase())}: ${plural(h.trials, "variation")} tried</p>
+      <p class="muted">${esc(h.about)}</p>
+      <p>Pass bar is now <b>p &lt; ${fmt(h.alpha, 4)}</b>. Every new variation makes it a little stricter, so a lucky winner from lots of tries can't sneak through.</p></div>`).join("");
+  const rows = d.trials.map((t) => {
+    const o = OUTCOME[t.outcome] || { word: t.outcome ? t.outcome : "running", cls: "" };
+    return `<tr data-wb="${esc(t.id)}" class="clickable"><td><span class="badge ${o.cls}">${esc(o.word)}</span></td><td>${esc(t.market)}</td><td>${esc(settingsText(t.settings))}</td><td>${esc(t.roll)} roll</td>
+      ${heatCell(t.per_day)}${heatCell(t.vs_random_per_day)}<td class="num">${pBar(t.p_value, t.alpha)}</td><td class="faint small">${esc(t.at.slice(0, 10))}</td></tr>`;
+  }).join("");
+  main.innerHTML = `${head("Workbench", intro)}
+    <section>${honesty || ""}</section>
+    <section><h2>Every run</h2>
+      ${d.trials.length ? `<div class="box"><div class="table-wrap"><table>
+        <tr><th>Verdict</th><th>Market</th><th>Settings</th><th>Contract switch</th><th class="num">Per day (L3)</th><th class="num">vs random</th><th class="num">Luck test</th><th>When</th></tr>${rows}</table></div></div>
+        <p class="faint small">Click a run for the full breakdown. Green = made money; red = lost. "vs random" compares with 500 random entries per day using the same stop and costs.</p>`
+        : `<div class="empty"><h3>No runs yet</h3>The first runs are being computed.</div>`}
+      ${more("How to run a new test", `<p class="small muted">For now new tests are started from a terminal (or ask your agent). Each distinct setting is one more variation.</p><pre class="mono small">${esc(d.how_to_run)}</pre>`)}
+    </section>
+    <section id="wb-detail"></section>`;
+  main.querySelectorAll("[data-wb]").forEach((tr) => (tr.onclick = () => { W.open = tr.dataset.wb; showWorkbenchRun(W.open); }));
+  if (W.open && d.trials.some((t) => t.id === W.open)) showWorkbenchRun(W.open);
+  else if (d.trials.length && d.trials[0].outcome) showWorkbenchRun(d.trials[0].id);
+};
+
+async function showWorkbenchRun(id) {
+  const box = $("#wb-detail");
+  box.innerHTML = `<p class="faint">Loading…</p>`;
+  let r;
+  try { r = await api(`/api/workbench/result?id=${encodeURIComponent(id)}`); }
+  catch (e) { box.innerHTML = `<p class="muted">${esc(e.message)}</p>`; return; }
+  const v = r.verdict, run = r.run, o = OUTCOME[v.outcome] || { word: v.outcome, cls: "", note: "" };
+  box.innerHTML = `<h2>${esc(run.market)} · ${esc(settingsText(run.settings))} · ${esc(run.roll)} roll</h2>
+    <article class="box verdict">
+      <p class="verdict-word ${o.cls}">${o.word}</p><p class="muted" style="margin-top:0">${esc((v.reasons || []).join("; ") || o.note)}</p>
+      ${v.p_value == null ? "" : meter({ label: "Better than random entries?", value: v.p_value, text: `p = ${fmt(v.p_value, 3)} · ${money(v.vs_random_per_day)}/day better`, min: 0, max: 1, line: v.alpha, lineLabel: `p < ${fmt(v.alpha, 4)} (honesty-adjusted)`, good: "below" })}
+      ${v.per_day == null ? "" : meter({ label: "Profit per day after costs", value: v.per_day, text: `${money(v.per_day)}/day`, min: -30, max: 30, line: (v.floor_cents || 1500) / 100, lineLabel: `$${fmt((v.floor_cents || 1500) / 100, 0)}/day`, good: "above" })}
+      ${v.grade && v.grade !== "fail" ? `<p><b>Grade:</b> <span class="badge good">${esc(v.grade.toUpperCase())}</span></p>` : ""}
+      <div class="row" style="margin-top:12px">${v.sharpe_min == null ? "" : chip((v.sharpe || 0) >= v.sharpe_min, `steadiness (Sharpe) ${fmt(v.sharpe, 2)} (need ${fmt(v.sharpe_min, 1)})`)}${chip(v.missing_session_share <= 0.01, `data gaps ${fmt(v.missing_session_share * 100, 1)}%`)}${v.ambiguity_share == null ? "" : chip(v.ambiguity_share <= 0.1, `same-minute stops ${fmt(v.ambiguity_share * 100, 1)}%`)}<span class="faint small">${fmt(v.days, 0)} days · ${fmt(v.trades, 0)} trades</span></div>
+    </article>
+    <div class="study-grid">
+      ${sliceTable("By year", "Does it hold up every year, or is one lucky year carrying it?", r.grid.years)}
+      ${sliceTable("Calm vs volatile", "Each day is classed by how its recent range compares with the past year (no peeking ahead).", r.grid.regimes)}
+      ${sliceTable("Trading costs", "From cheap (L1) to severe (L4). L3 is the official level.", r.grid.costs)}
+    </div>
+    ${r.always_long && r.always_long.days ? `<p class="muted small" style="margin-top:12px"><b>Plain drift check:</b> taking the same trades but always long would have made ${money(r.always_long.per_trade_day)} per trading day. If that's close to the strategy's result, the "signal" is mostly just the market drifting up into the close.</p>` : ""}`;
+}
 
 // ---------- Study: SC-FUT-0001 ----------
 const OUTCOME = {

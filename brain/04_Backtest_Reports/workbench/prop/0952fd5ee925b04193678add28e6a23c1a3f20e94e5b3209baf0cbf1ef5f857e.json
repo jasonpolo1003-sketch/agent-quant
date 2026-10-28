@@ -1,0 +1,146 @@
+{
+  "rules": {
+    "start": 50000,
+    "target": 3000,
+    "max_loss": 2000,
+    "lock_at_start": true,
+    "trailing": true,
+    "consistency": 0.55,
+    "subscription": 49,
+    "reset": 49,
+    "days_per_month": 21
+  },
+  "horizon_days": 126,
+  "cost_level": "L4",
+  "frozen_size": 1,
+  "luck_best_size": 3,
+  "by_size": {
+    "1": {
+      "strategy": {
+        "attempts": 2000,
+        "first_account_pass_rate": 0.108,
+        "pass_rate_with_resets": 0.108,
+        "median_days_to_pass": 99.0,
+        "mean_fees": 289.149,
+        "fees_per_pass": 2677.3055555555557,
+        "mean_resets": 0.019,
+        "censored_share": 0.0
+      },
+      "luck": {
+        "attempts": 2000,
+        "first_account_pass_rate": 0.026,
+        "pass_rate_with_resets": 0.0315,
+        "median_days_to_pass": 93.0,
+        "mean_fees": 318.7205,
+        "fees_per_pass": 10118.111111111111,
+        "mean_resets": 0.547,
+        "censored_share": 0.0
+      }
+    },
+    "2": {
+      "strategy": {
+        "attempts": 2000,
+        "first_account_pass_rate": 0.4265,
+        "pass_rate_with_resets": 0.549,
+        "median_days_to_pass": 72.0,
+        "mean_fees": 258.23,
+        "fees_per_pass": 470.36429872495444,
+        "mean_resets": 0.4135,
+        "censored_share": 0.0
+      },
+      "luck": {
+        "attempts": 2000,
+        "first_account_pass_rate": 0.1495,
+        "pass_rate_with_resets": 0.322,
+        "median_days_to_pass": 71.0,
+        "mean_fees": 346.3075,
+        "fees_per_pass": 1075.4891304347825,
+        "mean_resets": 1.779,
+        "censored_share": 0.0
+      }
+    },
+    "3": {
+      "strategy": {
+        "attempts": 2000,
+        "first_account_pass_rate": 0.42,
+        "pass_rate_with_resets": 0.739,
+        "median_days_to_pass": 56.0,
+        "mean_fees": 243.3095,
+        "fees_per_pass": 329.24154262516913,
+        "mean_resets": 0.9405,
+        "censored_share": 0.0
+      },
+      "luck": {
+        "attempts": 2000,
+        "first_account_pass_rate": 0.1675,
+        "pass_rate_with_resets": 0.5575,
+        "median_days_to_pass": 61.0,
+        "mean_fees": 364.9765,
+        "fees_per_pass": 654.6663677130044,
+        "mean_resets": 2.8745,
+        "censored_share": 0.0
+      }
+    },
+    "5": {
+      "strategy": {
+        "attempts": 2000,
+        "first_account_pass_rate": 0.3205,
+        "pass_rate_with_resets": 0.907,
+        "median_days_to_pass": 41.0,
+        "mean_fees": 237.6745,
+        "fees_per_pass": 262.0446527012128,
+        "mean_resets": 1.8055,
+        "censored_share": 0.0
+      },
+      "luck": {
+        "attempts": 2000,
+        "first_account_pass_rate": 0.163,
+        "pass_rate_with_resets": 0.7915,
+        "median_days_to_pass": 45.0,
+        "mean_fees": 377.349,
+        "fees_per_pass": 476.75173720783323,
+        "mean_resets": 4.1435,
+        "censored_share": 0.0
+      }
+    }
+  },
+  "first_account_pass_minus_luck_90ci": [
+    -0.17333333333333334,
+    0.09366666666666666
+  ],
+  "walk_forward": {
+    "attempts": 1425,
+    "first_account_pass_rate": 0.1368421052631579,
+    "pass_rate_with_resets": 0.1368421052631579,
+    "median_days_to_pass": 99.0,
+    "mean_fees": 278.1824561403509,
+    "fees_per_pass": 2032.871794871795,
+    "mean_resets": 0.0,
+    "censored_share": 0.0687719298245614,
+    "finished_attempts": 1327,
+    "pass_rate_finished": 0.146948003014318,
+    "effective_n": 11,
+    "pass_rate_90ci": [
+      0.04458309195767757,
+      0.3887213173305732
+    ]
+  },
+  "phase1_gate": "fail",
+  "note": "Phase 1: evaluation only; payouts not estimable until Phase 2.",
+  "workbench_trial": {
+    "at": "2026-10-27T14:50:12+00:00",
+    "code": "b8c60908fcfcadeafc7d5c308ef5619112931f1ccc85555cdbc4294fdb93343f",
+    "days": 1425,
+    "family": "noise_area",
+    "fingerprint": "c3ebff0a7ea94294e05cf3b1a6a9daeda61240ccb2ba0fdb5c89f8051e992202",
+    "market": "MNQ",
+    "roll": "volume",
+    "settings": {
+      "lookback_sessions": 14,
+      "size": 1,
+      "stop": "band_or_vwap"
+    }
+  },
+  "simulator_fingerprint": "0952fd5ee925b04193678add28e6a23c1a3f20e94e5b3209baf0cbf1ef5f857e",
+  "rules_file": "brain\\_system\\prop\\topstep_50k.json"
+}

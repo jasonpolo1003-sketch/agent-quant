@@ -1,0 +1,153 @@
+{
+  "run": {
+    "at": "2026-10-28T16:57:17+00:00",
+    "fingerprint": "8db72043e94912adb332a7ee0973d27f43b84a7f1f5209f297df788a7039f664",
+    "family": "noise_area",
+    "settings": {
+      "lookback_sessions": 14,
+      "stop": "band_or_vwap",
+      "size": 1
+    },
+    "market": "ZN",
+    "roll": "volume",
+    "code": "89b59e7b07999742a34529b21a4719aecd244bfbb5c74565c524ef175d5f835f",
+    "days": 1416
+  },
+  "honesty": {
+    "family": "noise_area",
+    "trials": 5,
+    "alpha": 0.010206218313011495
+  },
+  "verdict": {
+    "days": 1416,
+    "non_evaluable_days": 0,
+    "trades": 1339,
+    "alpha": 0.010206218313011495,
+    "floor_cents": 500,
+    "sharpe_min": 1.0,
+    "missing_session_share": 0.0,
+    "ambiguity_share": 0.0,
+    "reasons": [
+      "not better than the random benchmark (p 0.185 vs bar 0.0102)",
+      "below the $5/day floor",
+      "Sharpe -5.08 below 1.0"
+    ],
+    "outcome": "not_demonstrated",
+    "grade": "fail",
+    "per_day": -58.97742231638418,
+    "vs_random_per_day": 3.4977326412429375,
+    "p_value": 0.1853,
+    "sharpe": -5.0774001059367535
+  },
+  "always_long": {
+    "days": 851,
+    "per_trade_day": -108.89411280846063,
+    "sharpe": -8.0913394758763
+  },
+  "grid": {
+    "costs": {
+      "L1": {
+        "days": 1416,
+        "trades": 1339,
+        "per_day": -14.65614406779661,
+        "vs_random_per_day": 3.4977326412429375,
+        "p_value": 0.188,
+        "beat_share_of_random": 0.786
+      },
+      "L2": {
+        "days": 1416,
+        "trades": 1339,
+        "per_day": -29.42675141242938,
+        "vs_random_per_day": 3.4977326412429375,
+        "p_value": 0.188,
+        "beat_share_of_random": 0.786
+      },
+      "L3": {
+        "days": 1416,
+        "trades": 1339,
+        "per_day": -58.97742231638418,
+        "vs_random_per_day": 3.4977326412429375,
+        "p_value": 0.188,
+        "beat_share_of_random": 0.786
+      },
+      "L4": {
+        "days": 1416,
+        "trades": 1339,
+        "per_day": -118.0787641242938,
+        "vs_random_per_day": 3.4977326412429375,
+        "p_value": 0.188,
+        "beat_share_of_random": 0.786
+      }
+    },
+    "years": {
+      "2019": {
+        "days": 167,
+        "trades": 137,
+        "per_day": -42.190419161676644,
+        "vs_random_per_day": 12.623787065868262,
+        "p_value": 0.0955,
+        "beat_share_of_random": 0.84
+      },
+      "2020": {
+        "days": 251,
+        "trades": 241,
+        "per_day": -63.80051792828685,
+        "vs_random_per_day": -0.5782101195219133,
+        "p_value": 0.5585,
+        "beat_share_of_random": 0.492
+      },
+      "2021": {
+        "days": 251,
+        "trades": 253,
+        "per_day": -61.09494023904383,
+        "vs_random_per_day": 5.211687250996016,
+        "p_value": 0.2155,
+        "beat_share_of_random": 0.72
+      },
+      "2022": {
+        "days": 250,
+        "trades": 244,
+        "per_day": -63.970479999999995,
+        "vs_random_per_day": -0.32242855999999676,
+        "p_value": 0.509,
+        "beat_share_of_random": 0.492
+      },
+      "2023": {
+        "days": 248,
+        "trades": 230,
+        "per_day": -50.187298387096774,
+        "vs_random_per_day": 11.794038790322583,
+        "p_value": 0.125,
+        "beat_share_of_random": 0.86
+      },
+      "2024": {
+        "days": 249,
+        "trades": 234,
+        "per_day": -66.98152610441767,
+        "vs_random_per_day": -4.669478955823293,
+        "p_value": 0.724,
+        "beat_share_of_random": 0.296
+      }
+    },
+    "regimes": {
+      "calm": {
+        "days": 1166,
+        "trades": 1118,
+        "per_day": -58.88323327615781,
+        "vs_random_per_day": 4.478974013722126,
+        "p_value": 0.153,
+        "beat_share_of_random": 0.814
+      },
+      "normal": {
+        "days": 0,
+        "trades": 0,
+        "note": "too few days"
+      },
+      "volatile": {
+        "days": 0,
+        "trades": 0,
+        "note": "too few days"
+      }
+    }
+  }
+}

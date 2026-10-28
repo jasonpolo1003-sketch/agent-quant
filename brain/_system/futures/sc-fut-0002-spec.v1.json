@@ -1,0 +1,35 @@
+{
+  "schema_version": "sc-fut-0002-1",
+  "card_id": "SC-FUT-0002",
+  "status": "frozen",
+  "frozen": true,
+  "frozen_at": "2026-10-27",
+  "approved_by": "Jason 2026-10-27 (grading scale, defaults: skip early closes, no stop, MES primary)",
+  "source": "Baltussen, Da, Lammers & Martens (2021), Hedging demand and market intraday momentum, JFE 142(1):377-403",
+  "workbench_family": "late_momentum",
+  "instrument": {"primary": "MES", "second_trial_same_family": "MNQ", "contracts": 1, "roll": "D-ROLL-01 fixed"},
+  "data": {"practice_inclusive": ["2019-05-01", "2024-12-31"], "exam": "2025-01-01..2026-10-21 locked; only via the future 3-check pass/fail proctor"},
+  "rule": {
+    "days": "NYSE cash sessions in session-calendar.v1.csv; early-close days take no trade ($0)",
+    "prior_close": "close of the last bar starting before 15:00 CT on the previous NYSE session, same dated contract",
+    "signal": "close of the 14:29 CT bar minus prior_close; > 0 long, < 0 short, 0 no trade; missing 14:29 bar or prior close -> no trade ($0)",
+    "entry": "open of the 14:30 CT bar; missing -> skip ($0)",
+    "exit": "open of the 15:00 CT bar; missing -> non-evaluable",
+    "stop": "none",
+    "costs": "L3 once per round trip (MES 622 cents, MNQ 322); L1-L4 reported"
+  },
+  "benchmarks": {
+    "primary_matched_control": "same 14:30->15:00 trade with a random direction, 500 draws per day, numpy PCG64 seeded [20261026, root(MES=2,MNQ=1), yyyymmdd, 2]; daily control = mean of draws",
+    "diagnostic": "always long 14:30->15:00 (end-of-day drift)",
+    "deferred": "random entry-time comparison (not in the first run)"
+  },
+  "inference": {
+    "test": "one-sided paired stationary bootstrap vs matched control, mean block 5, B=9,999, seed 20261027, null-centred, (k+1)/(B+1)",
+    "alpha": "workbench honesty-adjusted bar for family late_momentum (Sidak over distinct trials)",
+    "sharpe_min_annual": 1.0,
+    "sharpe_definition": "mean / sd of daily L3 net over evaluable days x sqrt(252)",
+    "grades_cents_per_day": {"fail": "< 500", "small_edge": "500-999", "good": "1000-1499", "strong": ">= 1500"},
+    "pass_requires": "p < alpha AND annual Sharpe >= 1.0 AND per_day >= 500 cents; otherwise grade = fail regardless of $/day",
+    "alarms": "missing-bar non-evaluable share > 1% -> inconclusive"
+  }
+}

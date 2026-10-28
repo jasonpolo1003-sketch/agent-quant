@@ -1,0 +1,41 @@
+{
+  "id": "PROP-SIZING-v1",
+  "frozen": "2026-10-28",
+  "approved_by": "Jason, 2026-10-28 (\"go with it\" on the Phase 2 plan, Q6)",
+  "applies_to": "SC-FUT-0005 noise-area momentum, MNQ, workbench practice data 2019-05..2024-12 only",
+  "written_before": "any SC-FUT-0005 Phase 2 (cash) result. Inputs used: the worst practice day at 1 MNQ ($629, independent review 2026-10-27) and Topstep's published thresholds; no cash or pass-rate result chooses a number below.",
+  "stress_day_loss_per_contract_usd": 629,
+  "max_contracts": 5,
+  "cushion": "equity at the start of the day minus the account's current loss floor (Combine or XFA)",
+  "policies": {
+    "P1_fixed_2": {"size": "2 every day", "dll": false, "profit_stop_usd": null},
+    "P2_fixed_3": {"size": "3 every day", "dll": false, "profit_stop_usd": null},
+    "P3_cushion": {
+      "size": "clamp(floor(cushion / 629), 1, 5): the worst practice day must fit inside the cushion; size drops after losses and grows once the floor locks",
+      "dll": false,
+      "profit_stop_usd": null
+    },
+    "P4_cushion_dll": {
+      "size": "as P3",
+      "dll": true,
+      "note": "$1,000 daily loss limit set at Combine purchase: caps the day, carried into the XFA, doubles payout caps",
+      "profit_stop_usd": null
+    },
+    "P5_cushion_dll_stop": {
+      "size": "as P3",
+      "dll": true,
+      "profit_stop_usd": 1500,
+      "profit_stop_scope": "Combine only: flatten and stop for the day once the day's P&L reaches +$1,500, keeping the best day under the 55% consistency line ($1,650 of the $3,000 target). Off in the XFA."
+    }
+  },
+  "grid": {
+    "plans": ["standard", "no_activation_fee"],
+    "payout_paths": ["standard", "consistency"],
+    "horizon_days": 42,
+    "cost_level": "L3"
+  },
+  "luck": "each policy x plan x path is applied unchanged to the random-direction control on the same resampled days",
+  "selection_rule": "among the 20 cells, pick the one with the highest lower 90% bound of (net cash - luck net cash); ties broken by the shorter median days to first payout. A cell is eligible only if its lower bound is > $0 and its median first payout is <= 42 days. If no cell is eligible, no size is chosen and the exam check is not spent.",
+  "trials": "every cell is one ledger trial (20); the family's honesty counter rises by 20",
+  "exam": "only the selected cell is run once on 2025-26, and only after Jason's go-ahead"
+}

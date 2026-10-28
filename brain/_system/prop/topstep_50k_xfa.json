@@ -1,0 +1,50 @@
+{
+  "firm": "Topstep",
+  "account": "50K Express Funded Account (XFA)",
+  "checked": "2026-10-28",
+  "sources": [
+    "https://help.topstep.com/en/articles/8284215-express-funded-account-parameters (2026-08-05)",
+    "https://help.topstep.com/en/articles/8284233-topstep-payout-policy (read 2026-10-28)",
+    "https://help.topstep.com/en/articles/8284204-what-is-the-maximum-loss-limit (2026-09-18)",
+    "https://help.topstep.com/en/articles/8284208-consistency-at-topstep (2026-09-17)",
+    "https://help.topstep.com/en/articles/10490293-daily-loss-limit-in-the-trading-combine-and-express-funded-account (2026-06-30)",
+    "https://help.topstep.com/en/articles/8284217-express-funded-account-activation (2026-09-24)",
+    "https://help.topstep.com/en/articles/8284223-what-is-the-scaling-plan (2026-07-16)"
+  ],
+  "start_balance_usd": 0,
+  "max_loss_limit_usd": 2000,
+  "max_loss_limit_mode": "starts at -$2,000, trails the end-of-day balance, enforced intraday including open positions; locks at $0 once the balance reaches +$2,000; set to $0 after a payout",
+  "profit_split_trader": 0.9,
+  "min_payout_usd": 125,
+  "payout_share_of_balance": 0.5,
+  "paths": {
+    "standard": {
+      "winning_days": 5,
+      "winning_day_min_usd": 150,
+      "needs_profit_since_last_payout": true,
+      "cap_usd": 2000,
+      "cap_with_dll_usd": 4000
+    },
+    "consistency": {
+      "trading_days": 3,
+      "largest_day_max_share": 0.4,
+      "cap_usd": 3000,
+      "cap_with_dll_usd": 6000
+    }
+  },
+  "max_xfas": 5,
+  "back2funded_usd": 599,
+  "assumptions": [
+    "a payout is requested at the end of the first eligible day, for the largest allowed amount",
+    "the XFA starts trading the day after the Combine passes",
+    "a breached XFA is not reactivated (Back2Funded off by default); the bot starts a new Combine on the next day",
+    "the higher payout caps apply only when the $1,000 DLL was set at Combine purchase (limited-time offer, no end date stated)",
+    "the payout path is chosen at activation and never changes"
+  ],
+  "unverified": {
+    "scaling_plan_tiers": "published only as a chart image; the text says a 50K XFA starts on a 2-lot (20 micros). Not binding below 20 micros; sizes above that are blocked",
+    "payout_cap_conflict": "the XFA Parameters table shows $5,000/$6,000 (150K figures); the Payout Policy table by account size shows $2,000/$3,000 for 50K, used here"
+  },
+  "max_micro_contracts_verified": 20,
+  "live_promotion": "no automation in a Live Funded Account; promotion closes all XFAs, so a bot run ends there (not simulated)"
+}

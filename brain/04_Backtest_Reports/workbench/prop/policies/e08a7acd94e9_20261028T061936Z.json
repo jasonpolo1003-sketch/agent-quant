@@ -1,0 +1,1377 @@
+{
+  "menu": "brain\\_system\\prop\\sizing-policies.v1.json",
+  "menu_sha256": "af94e59a206cf988f0e6aa974d7dccd50d86732eece09b7f3231836eb0659180",
+  "workbench_trial": {
+    "at": "2026-10-28T06:14:44+00:00",
+    "code": "2ab64be42487a623ef2e53fa6982e810c146231cb49eea98cda3391209411faa",
+    "days": 1425,
+    "family": "noise_area",
+    "fingerprint": "e08a7acd94e921268eac39a68c7f58bfb537476326fef15777deb7766137f427",
+    "market": "MNQ",
+    "roll": "volume",
+    "settings": {
+      "lookback_sessions": 14,
+      "size": 1,
+      "stop": "band_or_vwap"
+    }
+  },
+  "settings": {
+    "paths": 2000,
+    "outer": 40,
+    "inner": 300
+  },
+  "cells": [
+    {
+      "policy": {
+        "name": "P1_fixed_2",
+        "fixed": 2,
+        "dll": false,
+        "profit_stop": null,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "standard",
+      "payout_path": "standard",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 49,
+        "reset": 49,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "standard",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 2000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 149
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -111.3883335,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.014,
+        "net_cash_5th_percentile": -247.0,
+        "mean_payouts": 9.6256665,
+        "mean_fees": 121.014,
+        "chance_any_payout": 0.015,
+        "median_days_to_first_payout": 35.0,
+        "mean_xfas_closed": 0.008
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -131.036152,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.0065,
+        "net_cash_5th_percentile": -247.0,
+        "mean_payouts": 4.372847999999999,
+        "mean_fees": 135.409,
+        "chance_any_payout": 0.0075,
+        "median_days_to_first_payout": 35.0,
+        "mean_xfas_closed": 0.0205
+      },
+      "net_cash_minus_luck_90ci": [
+        1.643650166666679,
+        23.773578
+      ],
+      "eligible": true
+    },
+    {
+      "policy": {
+        "name": "P1_fixed_2",
+        "fixed": 2,
+        "dll": false,
+        "profit_stop": null,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "standard",
+      "payout_path": "consistency",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 49,
+        "reset": 49,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "consistency",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 3000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 149
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -115.730144,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.0055,
+        "net_cash_5th_percentile": -247.0,
+        "mean_payouts": 5.161356,
+        "mean_fees": 120.8915,
+        "chance_any_payout": 0.0055,
+        "median_days_to_first_payout": 41.0,
+        "mean_xfas_closed": 0.0055
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -133.821745,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.0015,
+        "net_cash_5th_percentile": -247.0,
+        "mean_payouts": 1.5137549999999997,
+        "mean_fees": 135.3355,
+        "chance_any_payout": 0.002,
+        "median_days_to_first_payout": 39.5,
+        "mean_xfas_closed": 0.019
+      },
+      "net_cash_minus_luck_90ci": [
+        4.6710953333333345,
+        21.380092666666666
+      ],
+      "eligible": true
+    },
+    {
+      "policy": {
+        "name": "P1_fixed_2",
+        "fixed": 2,
+        "dll": false,
+        "profit_stop": null,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "no_activation_fee",
+      "payout_path": "standard",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 95,
+        "reset": 95,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "standard",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 2000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 0
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -191.9168335,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.014,
+        "net_cash_5th_percentile": -285.0,
+        "mean_payouts": 9.6256665,
+        "mean_fees": 201.5425,
+        "chance_any_payout": 0.015,
+        "median_days_to_first_payout": 35.0,
+        "mean_xfas_closed": 0.008
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -233.744652,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.0065,
+        "net_cash_5th_percentile": -380.0,
+        "mean_payouts": 4.372847999999999,
+        "mean_fees": 238.1175,
+        "chance_any_payout": 0.0075,
+        "median_days_to_first_payout": 35.0,
+        "mean_xfas_closed": 0.0205
+      },
+      "net_cash_minus_luck_90ci": [
+        19.284124333333313,
+        59.94298966666666
+      ],
+      "eligible": true
+    },
+    {
+      "policy": {
+        "name": "P1_fixed_2",
+        "fixed": 2,
+        "dll": false,
+        "profit_stop": null,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "no_activation_fee",
+      "payout_path": "consistency",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 95,
+        "reset": 95,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "consistency",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 3000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 0
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -196.14364399999997,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.0055,
+        "net_cash_5th_percentile": -285.0,
+        "mean_payouts": 5.161356,
+        "mean_fees": 201.305,
+        "chance_any_payout": 0.0055,
+        "median_days_to_first_payout": 41.0,
+        "mean_xfas_closed": 0.0055
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -236.461245,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.0015,
+        "net_cash_5th_percentile": -380.0,
+        "mean_payouts": 1.5137549999999997,
+        "mean_fees": 237.975,
+        "chance_any_payout": 0.002,
+        "median_days_to_first_payout": 39.5,
+        "mean_xfas_closed": 0.019
+      },
+      "net_cash_minus_luck_90ci": [
+        24.524836999999977,
+        53.70377433333333
+      ],
+      "eligible": true
+    },
+    {
+      "policy": {
+        "name": "P2_fixed_3",
+        "fixed": 3,
+        "dll": false,
+        "profit_stop": null,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "standard",
+      "payout_path": "standard",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 49,
+        "reset": 49,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "standard",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 2000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 149
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -117.31315849999999,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.049,
+        "net_cash_5th_percentile": -296.0,
+        "mean_payouts": 40.190341499999995,
+        "mean_fees": 157.5035,
+        "chance_any_payout": 0.0525,
+        "median_days_to_first_payout": 35.0,
+        "mean_xfas_closed": 0.078
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -154.40791000000002,
+        "median_net_cash": -147.0,
+        "chance_net_cash_positive": 0.03,
+        "net_cash_5th_percentile": -345.0,
+        "mean_payouts": 29.88459,
+        "mean_fees": 184.2925,
+        "chance_any_payout": 0.0335,
+        "median_days_to_first_payout": 35.0,
+        "mean_xfas_closed": 0.0875
+      },
+      "net_cash_minus_luck_90ci": [
+        -3.137730666666671,
+        62.57236349999992
+      ],
+      "eligible": false
+    },
+    {
+      "policy": {
+        "name": "P2_fixed_3",
+        "fixed": 3,
+        "dll": false,
+        "profit_stop": null,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "standard",
+      "payout_path": "consistency",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 49,
+        "reset": 49,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "consistency",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 3000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 149
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -140.9887445,
+        "median_net_cash": -147.0,
+        "chance_net_cash_positive": 0.0145,
+        "net_cash_5th_percentile": -296.0,
+        "mean_payouts": 16.1472555,
+        "mean_fees": 157.136,
+        "chance_any_payout": 0.015,
+        "median_days_to_first_payout": 34.0,
+        "mean_xfas_closed": 0.07
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -171.4165025,
+        "median_net_cash": -147.0,
+        "chance_net_cash_positive": 0.01,
+        "net_cash_5th_percentile": -345.0,
+        "mean_payouts": 12.5574975,
+        "mean_fees": 183.974,
+        "chance_any_payout": 0.0105,
+        "median_days_to_first_payout": 32.0,
+        "mean_xfas_closed": 0.081
+      },
+      "net_cash_minus_luck_90ci": [
+        -4.038828333333338,
+        45.62166766666666
+      ],
+      "eligible": false
+    },
+    {
+      "policy": {
+        "name": "P2_fixed_3",
+        "fixed": 3,
+        "dll": false,
+        "profit_stop": null,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "no_activation_fee",
+      "payout_path": "standard",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 95,
+        "reset": 95,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "standard",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 2000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 0
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -188.33215850000002,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.05,
+        "net_cash_5th_percentile": -380.0,
+        "mean_payouts": 40.190341499999995,
+        "mean_fees": 228.5225,
+        "chance_any_payout": 0.0525,
+        "median_days_to_first_payout": 35.0,
+        "mean_xfas_closed": 0.078
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -266.75291000000004,
+        "median_net_cash": -285.0,
+        "chance_net_cash_positive": 0.0315,
+        "net_cash_5th_percentile": -475.0,
+        "mean_payouts": 29.88459,
+        "mean_fees": 296.6375,
+        "chance_any_payout": 0.0335,
+        "median_days_to_first_payout": 35.0,
+        "mean_xfas_closed": 0.0875
+      },
+      "net_cash_minus_luck_90ci": [
+        37.715094166666674,
+        133.44315549999996
+      ],
+      "eligible": true
+    },
+    {
+      "policy": {
+        "name": "P2_fixed_3",
+        "fixed": 3,
+        "dll": false,
+        "profit_stop": null,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "no_activation_fee",
+      "payout_path": "consistency",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 95,
+        "reset": 95,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "consistency",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 3000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 0
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -211.6627445,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.015,
+        "net_cash_5th_percentile": -380.0,
+        "mean_payouts": 16.1472555,
+        "mean_fees": 227.81,
+        "chance_any_payout": 0.015,
+        "median_days_to_first_payout": 34.0,
+        "mean_xfas_closed": 0.07
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -283.4625025000001,
+        "median_net_cash": -285.0,
+        "chance_net_cash_positive": 0.01,
+        "net_cash_5th_percentile": -475.0,
+        "mean_payouts": 12.5574975,
+        "mean_fees": 296.02,
+        "chance_any_payout": 0.0105,
+        "median_days_to_first_payout": 32.0,
+        "mean_xfas_closed": 0.081
+      },
+      "net_cash_minus_luck_90ci": [
+        41.89979183333334,
+        111.7741705
+      ],
+      "eligible": true
+    },
+    {
+      "policy": {
+        "name": "P3_cushion",
+        "fixed": null,
+        "dll": false,
+        "profit_stop": null,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "standard",
+      "payout_path": "standard",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 49,
+        "reset": 49,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "standard",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 2000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 149
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -106.601209,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.018,
+        "net_cash_5th_percentile": -247.0,
+        "mean_payouts": 12.966291000000002,
+        "mean_fees": 119.5675,
+        "chance_any_payout": 0.0225,
+        "median_days_to_first_payout": 34.0,
+        "mean_xfas_closed": 0.0135
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -121.7648805,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.01,
+        "net_cash_5th_percentile": -247.0,
+        "mean_payouts": 9.609619499999999,
+        "mean_fees": 131.3745,
+        "chance_any_payout": 0.011,
+        "median_days_to_first_payout": 32.0,
+        "mean_xfas_closed": 0.0235
+      },
+      "net_cash_minus_luck_90ci": [
+        -13.278099500000005,
+        28.36448733333332
+      ],
+      "eligible": false
+    },
+    {
+      "policy": {
+        "name": "P3_cushion",
+        "fixed": null,
+        "dll": false,
+        "profit_stop": null,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "standard",
+      "payout_path": "consistency",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 49,
+        "reset": 49,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "consistency",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 3000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 149
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -112.75735250000001,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.0055,
+        "net_cash_5th_percentile": -247.0,
+        "mean_payouts": 6.638647500000001,
+        "mean_fees": 119.396,
+        "chance_any_payout": 0.0055,
+        "median_days_to_first_payout": 34.0,
+        "mean_xfas_closed": 0.0095
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -127.1262105,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.0045,
+        "net_cash_5th_percentile": -247.0,
+        "mean_payouts": 4.174789500000001,
+        "mean_fees": 131.301,
+        "chance_any_payout": 0.0045,
+        "median_days_to_first_payout": 24.0,
+        "mean_xfas_closed": 0.0225
+      },
+      "net_cash_minus_luck_90ci": [
+        -9.743587333333345,
+        23.150052999999986
+      ],
+      "eligible": false
+    },
+    {
+      "policy": {
+        "name": "P3_cushion",
+        "fixed": null,
+        "dll": false,
+        "profit_stop": null,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "no_activation_fee",
+      "payout_path": "standard",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 95,
+        "reset": 95,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "standard",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 2000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 0
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -178.838709,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.0205,
+        "net_cash_5th_percentile": -285.0,
+        "mean_payouts": 12.966291000000002,
+        "mean_fees": 191.805,
+        "chance_any_payout": 0.0225,
+        "median_days_to_first_payout": 34.0,
+        "mean_xfas_closed": 0.0135
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -212.4528805,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.01,
+        "net_cash_5th_percentile": -380.0,
+        "mean_payouts": 9.609619499999999,
+        "mean_fees": 222.0625,
+        "chance_any_payout": 0.011,
+        "median_days_to_first_payout": 32.0,
+        "mean_xfas_closed": 0.0235
+      },
+      "net_cash_minus_luck_90ci": [
+        7.017720166666663,
+        58.71432066666664
+      ],
+      "eligible": true
+    },
+    {
+      "policy": {
+        "name": "P3_cushion",
+        "fixed": null,
+        "dll": false,
+        "profit_stop": null,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "no_activation_fee",
+      "payout_path": "consistency",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 95,
+        "reset": 95,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "consistency",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 3000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 0
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -184.83385249999998,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.0055,
+        "net_cash_5th_percentile": -285.0,
+        "mean_payouts": 6.638647500000001,
+        "mean_fees": 191.4725,
+        "chance_any_payout": 0.0055,
+        "median_days_to_first_payout": 34.0,
+        "mean_xfas_closed": 0.0095
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -217.74521049999998,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.0045,
+        "net_cash_5th_percentile": -380.0,
+        "mean_payouts": 4.174789500000001,
+        "mean_fees": 221.92,
+        "chance_any_payout": 0.0045,
+        "median_days_to_first_payout": 24.0,
+        "mean_xfas_closed": 0.0225
+      },
+      "net_cash_minus_luck_90ci": [
+        9.717367833333368,
+        52.32207900000001
+      ],
+      "eligible": true
+    },
+    {
+      "policy": {
+        "name": "P4_cushion_dll",
+        "fixed": null,
+        "dll": true,
+        "profit_stop": null,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "standard",
+      "payout_path": "standard",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 49,
+        "reset": 49,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "standard",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 4000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 149
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -105.411038,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.017,
+        "net_cash_5th_percentile": -247.0,
+        "mean_payouts": 13.627962,
+        "mean_fees": 119.039,
+        "chance_any_payout": 0.0225,
+        "median_days_to_first_payout": 35.0,
+        "mean_xfas_closed": 0.0115
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -121.04166399999998,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.008,
+        "net_cash_5th_percentile": -247.0,
+        "mean_payouts": 7.552835999999999,
+        "mean_fees": 128.5945,
+        "chance_any_payout": 0.01,
+        "median_days_to_first_payout": 31.0,
+        "mean_xfas_closed": 0.021
+      },
+      "net_cash_minus_luck_90ci": [
+        -13.943083666666643,
+        25.908676166666673
+      ],
+      "eligible": false
+    },
+    {
+      "policy": {
+        "name": "P4_cushion_dll",
+        "fixed": null,
+        "dll": true,
+        "profit_stop": null,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "standard",
+      "payout_path": "consistency",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 49,
+        "reset": 49,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "consistency",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 6000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 149
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -111.611918,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.0055,
+        "net_cash_5th_percentile": -247.0,
+        "mean_payouts": 7.280082,
+        "mean_fees": 118.892,
+        "chance_any_payout": 0.0055,
+        "median_days_to_first_payout": 32.0,
+        "mean_xfas_closed": 0.0075
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -125.7413095,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.003,
+        "net_cash_5th_percentile": -247.0,
+        "mean_payouts": 2.7796905,
+        "mean_fees": 128.521,
+        "chance_any_payout": 0.003,
+        "median_days_to_first_payout": 25.0,
+        "mean_xfas_closed": 0.0195
+      },
+      "net_cash_minus_luck_90ci": [
+        -10.89708258333334,
+        16.401645499999983
+      ],
+      "eligible": false
+    },
+    {
+      "policy": {
+        "name": "P4_cushion_dll",
+        "fixed": null,
+        "dll": true,
+        "profit_stop": null,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "no_activation_fee",
+      "payout_path": "standard",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 95,
+        "reset": 95,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "standard",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 4000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 0
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -179.174538,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.02,
+        "net_cash_5th_percentile": -285.0,
+        "mean_payouts": 13.627962,
+        "mean_fees": 192.8025,
+        "chance_any_payout": 0.0225,
+        "median_days_to_first_payout": 35.0,
+        "mean_xfas_closed": 0.0115
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -214.319664,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.0085,
+        "net_cash_5th_percentile": -380.0,
+        "mean_payouts": 7.552835999999999,
+        "mean_fees": 221.8725,
+        "chance_any_payout": 0.01,
+        "median_days_to_first_payout": 31.0,
+        "mean_xfas_closed": 0.021
+      },
+      "net_cash_minus_luck_90ci": [
+        7.346323500000004,
+        56.80940716666665
+      ],
+      "eligible": true
+    },
+    {
+      "policy": {
+        "name": "P4_cushion_dll",
+        "fixed": null,
+        "dll": true,
+        "profit_stop": null,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "no_activation_fee",
+      "payout_path": "consistency",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 95,
+        "reset": 95,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "consistency",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 6000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 0
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -185.237418,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.0055,
+        "net_cash_5th_percentile": -285.0,
+        "mean_payouts": 7.280082,
+        "mean_fees": 192.5175,
+        "chance_any_payout": 0.0055,
+        "median_days_to_first_payout": 32.0,
+        "mean_xfas_closed": 0.0075
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -218.9503095,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.003,
+        "net_cash_5th_percentile": -380.0,
+        "mean_payouts": 2.7796905,
+        "mean_fees": 221.73,
+        "chance_any_payout": 0.003,
+        "median_days_to_first_payout": 25.0,
+        "mean_xfas_closed": 0.0195
+      },
+      "net_cash_minus_luck_90ci": [
+        13.63776858333334,
+        44.99209949999999
+      ],
+      "eligible": true
+    },
+    {
+      "policy": {
+        "name": "P5_cushion_dll_stop",
+        "fixed": null,
+        "dll": true,
+        "profit_stop": 1500,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "standard",
+      "payout_path": "standard",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 49,
+        "reset": 49,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "standard",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 4000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 149
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -106.84271,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.0215,
+        "net_cash_5th_percentile": -247.0,
+        "mean_payouts": 16.508789999999998,
+        "mean_fees": 123.3515,
+        "chance_any_payout": 0.0275,
+        "median_days_to_first_payout": 35.0,
+        "mean_xfas_closed": 0.013
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -122.783531,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.009,
+        "net_cash_5th_percentile": -247.0,
+        "mean_payouts": 8.400969000000002,
+        "mean_fees": 131.1845,
+        "chance_any_payout": 0.0115,
+        "median_days_to_first_payout": 31.0,
+        "mean_xfas_closed": 0.025
+      },
+      "net_cash_minus_luck_90ci": [
+        -16.363333500000003,
+        25.192985666666647
+      ],
+      "eligible": false
+    },
+    {
+      "policy": {
+        "name": "P5_cushion_dll_stop",
+        "fixed": null,
+        "dll": true,
+        "profit_stop": 1500,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "standard",
+      "payout_path": "consistency",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 49,
+        "reset": 49,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "consistency",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 6000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 149
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -114.6480285,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.007,
+        "net_cash_5th_percentile": -247.0,
+        "mean_payouts": 8.6054715,
+        "mean_fees": 123.2535,
+        "chance_any_payout": 0.007,
+        "median_days_to_first_payout": 33.0,
+        "mean_xfas_closed": 0.01
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -127.57313475,
+        "median_net_cash": -98.0,
+        "chance_net_cash_positive": 0.0035,
+        "net_cash_5th_percentile": -247.0,
+        "mean_payouts": 3.4398652500000004,
+        "mean_fees": 131.013,
+        "chance_any_payout": 0.004,
+        "median_days_to_first_payout": 26.0,
+        "mean_xfas_closed": 0.022
+      },
+      "net_cash_minus_luck_90ci": [
+        -12.560724750000007,
+        18.070708999999994
+      ],
+      "eligible": false
+    },
+    {
+      "policy": {
+        "name": "P5_cushion_dll_stop",
+        "fixed": null,
+        "dll": true,
+        "profit_stop": 1500,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "no_activation_fee",
+      "payout_path": "standard",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 95,
+        "reset": 95,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "standard",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 4000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 0
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -173.96621000000002,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.025,
+        "net_cash_5th_percentile": -285.0,
+        "mean_payouts": 16.508789999999998,
+        "mean_fees": 190.475,
+        "chance_any_payout": 0.0275,
+        "median_days_to_first_payout": 35.0,
+        "mean_xfas_closed": 0.013
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -212.426531,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.0095,
+        "net_cash_5th_percentile": -380.0,
+        "mean_payouts": 8.400969000000002,
+        "mean_fees": 220.8275,
+        "chance_any_payout": 0.0115,
+        "median_days_to_first_payout": 31.0,
+        "mean_xfas_closed": 0.025
+      },
+      "net_cash_minus_luck_90ci": [
+        12.03915341666668,
+        62.45875974999995
+      ],
+      "eligible": true
+    },
+    {
+      "policy": {
+        "name": "P5_cushion_dll_stop",
+        "fixed": null,
+        "dll": true,
+        "profit_stop": 1500,
+        "stress": 629,
+        "max_n": 5
+      },
+      "plan": "no_activation_fee",
+      "payout_path": "consistency",
+      "combine_rules": {
+        "start": 50000,
+        "target": 3000,
+        "max_loss": 2000,
+        "lock_at_start": true,
+        "trailing": true,
+        "consistency": 0.55,
+        "subscription": 95,
+        "reset": 95,
+        "days_per_month": 21
+      },
+      "xfa_rules": {
+        "path": "consistency",
+        "max_loss": 2000,
+        "split": 0.9,
+        "min_payout": 125,
+        "payout_share": 0.5,
+        "cap": 6000,
+        "winning_days": 5,
+        "winning_day_min": 150,
+        "trading_days": 3,
+        "largest_day_share": 0.4,
+        "activation": 0
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -181.67952849999998,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.007,
+        "net_cash_5th_percentile": -285.0,
+        "mean_payouts": 8.6054715,
+        "mean_fees": 190.285,
+        "chance_any_payout": 0.007,
+        "median_days_to_first_payout": 33.0,
+        "mean_xfas_closed": 0.01
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -217.05513475,
+        "median_net_cash": -190.0,
+        "chance_net_cash_positive": 0.0035,
+        "net_cash_5th_percentile": -380.0,
+        "mean_payouts": 3.4398652500000004,
+        "mean_fees": 220.495,
+        "chance_any_payout": 0.004,
+        "median_days_to_first_payout": 26.0,
+        "mean_xfas_closed": 0.022
+      },
+      "net_cash_minus_luck_90ci": [
+        13.705202916666654,
+        54.70777066666667
+      ],
+      "eligible": true
+    }
+  ],
+  "selected": {
+    "policy": {
+      "name": "P2_fixed_3",
+      "fixed": 3,
+      "dll": false,
+      "profit_stop": null,
+      "stress": 629,
+      "max_n": 5
+    },
+    "plan": "no_activation_fee",
+    "payout_path": "consistency"
+  }
+}

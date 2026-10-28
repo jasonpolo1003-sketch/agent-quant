@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 import zstandard
 
-from quant_brain.futures.orb import Bar, DayInput, stop_distance_ticks
+from quant_brain.futures.orb import Bar, DayInput, stop_from_sum, true_range_sum
 from quant_brain.futures.session_audit import (
     CHICAGO,
     RECORD,
@@ -85,6 +85,7 @@ def read_tick_bars(path: Path, instruments: set[int]) -> pd.DataFrame:
             "high": ticks[:, 1],
             "low": ticks[:, 2],
             "close": ticks[:, 3],
+            "volume": records["volume"].astype("int64"),
         }
     )
     if frame.duplicated(["instrument_id", "minute"]).any():
@@ -99,6 +100,7 @@ class _Session:
     low: int
     close: int | None
     minutes: dict[time, Bar]
+    volumes: dict[time, int]
 
 
 def _sessions(
@@ -124,11 +126,21 @@ def _sessions(
             )
             if m.time() >= RANGE_START
         }
+        volumes = (
+            {
+                m.time(): int(v)
+                for m, v in zip(same_day["minute"], same_day["volume"], strict=True)
+                if m.time() >= RANGE_START
+            }
+            if "volume" in same_day
+            else {}
+        )
         out[(int(iid), day)] = _Session(
             high=int(group["high"].max()),
             low=int(group["low"].min()),
             close=int(regular["close"].iloc[-1]) if len(regular) else None,
             minutes=minutes,
+            volumes=volumes,
         )
     return out
 
@@ -142,11 +154,12 @@ def build_days(
     root: str,
     start: date,
     end: date,
+    roll_column: str = "roll_trade_date",
 ) -> Iterator[DayInput]:
     """One DayInput per calendar session in [start, end], in order."""
     by_date = {c.trade_date: c for c in calendar}
     sessions = _sessions(frame, by_date)
-    schedule = selected_contracts(roll_csv, root)
+    schedule = selected_contracts(roll_csv, root, roll_column)
     order = [c.trade_date for c in calendar]
     for position, day in enumerate(order):
         if not start <= day <= end:
@@ -160,12 +173,16 @@ def build_days(
             s = sessions.get((iid, d))
             prior.append(None if s is None or s.close is None else (s.high, s.low, s.close))
         bars = {m: b for m, b in today.minutes.items() if m <= info.exit_minute} if today else {}
+        total = true_range_sum(prior)
         yield DayInput(
             trade_date=day,
             root=root,
             bars=bars,
             exit_minute=info.exit_minute,
-            stop_ticks=stop_distance_ticks(prior),
+            stop_ticks=None if total is None else stop_from_sum(total),
+            atr_tr_sum=total,
+            prev_close=prior[-1][2] if prior and prior[-1] is not None else None,
+            volumes={m: v for m, v in today.volumes.items() if m in bars} if today else {},
         )
 
 

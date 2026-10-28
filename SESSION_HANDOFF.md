@@ -1,5 +1,81 @@
 # Quant Agent Brain — Session Handoff
 
+## Research and branch preservation checkpoint (2026-10-28, latest)
+
+- Jason requested that the completed research and implementation record be preserved on `testing` and in Obsidian.
+- Preservation receipt: `brain/00_Inbox/phase_b_research_preservation_checkpoint_2026-10-28.md`.
+- The independently approved Phase B foundation plan is intentionally tracked at `.hermes/plans/2026-10-22-phase-b-mes-mnq-testing-foundation.md`, despite the general `.hermes/` ignore rule.
+- The curated MES/MNQ corpus is under `brain/sources/mes_mnq/`; Phase A history, Phase B plans, negative findings, reviews, ledgers, and later work remain in Git history.
+- Historical warning retained: the initial B0 run-store checkpoint passed 892 tests / 2 skipped but failed an independent Windows junction-containment review. Do not call that checkpoint secure without a fresh focused review of current code.
+- This checkpoint authorizes preservation only: no live trading, broker changes, paid purchase, paid download, held-out read, or new strategy run.
+
+## SC-FUT-0006 high-volatility filter: NOT DEMONSTRATED (2026-10-27, latest)
+
+- **Card and spec:** `brain/03_Strategy_Cards/SC-FUT-0006-noise-area-high-vol.md`; spec `brain/_system/futures/sc-fut-0006-spec.v1.json`, frozen in 425c881 before any result.
+- **Filter:**
+  - code `src/quant_brain/workbench/volfilter.py` (tests `tests/test_volfilter.py`);
+  - day list `brain/_system/futures/sc-fut-0006-hv-days.csv`, built by `scripts/build_hv_days.py` from NQ daily bars;
+  - pinned by sha256 in `noise.py` `DAY_FILTERS`, used via the plug-in setting `day_filter`.
+- **Results** (ledger `brain/04_Backtest_Reports/SC-FUT-0006.trials.jsonl`):
+  - workbench $4.82/day, Sharpe 0.71;
+  - prop at 3 MNQ (no-lock rules): 24.6% vs luck 15.4%, gate fail;
+  - calm days beat volatile days for SC-FUT-0005.
+- **Prop rules:** new `brain/_system/prop/topstep_50k_nolock.json` (Topstep states the MLL lock for the XFA only); `scripts/prop_eval.py --rules`.
+- **Next:** Jason picks one every-day SC-FUT-0005 size for the exam, or adds markets first.
+
+
+## SC-FUT-0005 independent rebuild + adversarial review (2026-10-27, late)
+
+- `scripts/sc_fut_0005_independent_rebuild.py` (no `quant_brain` imports; `databento_dbn` decode; own volume roll) matches the workbench on all 1,424 MNQ practice days, to the cent; MES too. Run: `FILL=open|sigclose|plus2|delay1|worst .venv/Scripts/python.exe -I scripts/sc_fut_0005_independent_rebuild.py <dev 1m dbn> brain/_system/futures/session-calendar.v1.csv brain/sources/mes_mnq/contracts/roll_volume_check.csv <out.csv> MNQ`.
+- Findings: `brain/05_Reviews/SC-FUT-0005-independent-review.md`.
+  - Sign-flip p = 0.0001.
+  - Break-even slippage 12.8 ticks/side.
+  - One-minute delay: $7.94/day (-31%).
+  - Best 20 days = 76% of profit.
+  - Risk-only sizing points to 2 MNQ.
+- Excluded from Ruff as a review receipt (like RX-0001). `needs_you.json`: `sc-fut-0005-prop-size` added.
+- **Next:** Jason pre-registers the size; simulator Phase 2; one locked exam check.
+
+## Prop-goal pivot and evaluation simulator Phase 1 (2026-10-27)
+
+- **Ideas tried:**
+  - SC-FUT-0002 (late-day momentum) was frozen and tested in the workbench: not demonstrated. MES lost $3.93/day; MNQ lost $0.45/day; the edge vs random was +$2-3/day, and costs swamped it. Closing awaits Jason.
+  - SC-FUT-0003 (diversified TSMOM) was planned, reviewed by engineering and trader agents, and **shelved**. Prop firms (Topstep/Apex) require being flat by 3:10 pm CT. Reviews: `brain/05_Reviews/SC-FUT-0003-plan-reviews.md`.
+  - Data was bought anyway: 28-market daily bars 2010-2024, $39.44 from Databento free credits. Stored in `Quant/data/databento/daily_.../`.
+- **Jason's priority** is prop firm first, with same-day strategies only. Verified rules and the next idea (rare liquidity-shock reversal): `brain/sources/prop_firm_same_day_ideas_2026-10-27.md`. Topstep's API works in Combine and XFA, not Live; Apex bans bots.
+- **Simulator plan:** `brain/_system/plan/prop_eval_simulator_plan.md`, revised after two reviews (`brain/05_Reviews/prop-eval-simulator-plan-reviews.md`).
+- **Phase 1 built** (`src/quant_brain/prop/`; rules in `brain/_system/prop/topstep_50k.json`; CLI `scripts/prop_eval.py`):
+  - intraday lows for the strategy and every control draw;
+  - the EOD-trailing floor with lock;
+  - consistency at 55%;
+  - fees and resets;
+  - a paired, non-wrapping bootstrap;
+  - walk-forward with censoring.
+- **Key finding:** with resets, even random trading passes about 99% of the time within 6 months at 5 micros. The gate is therefore the **first-account pass rate** versus luck at luck's best size, and Phase 2 (payouts, net cash) remains essential.
+- **Security:** the Databento password had been committed to the public repo. It is removed from current files but still in history. Jason has been told to rotate it; history scrubbing is optional and needs a force-push.
+- **Next:**
+  - validation replay of SC-FUT-0001/0002 (running);
+  - P7 UI panel;
+  - Phase 2 (XFA payouts) after the rules are confirmed;
+  - then draft SC-FUT-0004 (shock reversal).
+
+## Backtest workbench core built (2026-10-26; plan approved: exam budget 3, MNQ/MES only)
+
+- `src/quant_brain/workbench/`:
+  - `strategies.py`: W1 plug-ins; ORB defaults = SC-FUT-0001, reproduces its dev results to the cent on sample days.
+  - `engine.py`: W7 fingerprinted, cached runs; one ledger trial per distinct run, at `brain/04_Backtest_Reports/workbench/trials.jsonl`; practice data only.
+  - `analysis.py`: W2/W5 year, backward-looking regime and L1-L4 slices with random-entry luck checks; W6 Sidak pass bar per family.
+- Supporting pieces:
+  - CLI: `scripts/workbench.py run|list`.
+  - UI: **Workbench** tab (`ui/workbench_view.py`, `RENDER.workbench`). Saved verdicts are re-judged against the current bar when shown.
+  - Engine hooks: `range_bars`, stop fraction via `atr_tr_sum`, control `first_fill`, volume roll. Frozen SC-FUT-0001 behaviour is unchanged (all fixtures, crosscheck and audit tests pass).
+- First trials (baseline ORB, 2019-2024; orb family has 2 trials, so the bar is p < 0.0253):
+  - MNQ: $2.91/day, p = 0.132.
+  - MES: -$3.77/day.
+  - Both not demonstrated.
+- 2026-10-26: Researched next MNQ/MES intraday candidates (2019-2024 only): late-day hedging-flow momentum first; opening-gap fade and negative-jump reversal secondary. Reviewed and filed as `brain/sources/candidate_ideas_2026-10-26.md` (citations spot-checked; one paper could not be confirmed).
+- Not built yet: W3 robustness nudges, W4 walk-forward, W8 exam proctor, run button in the UI, W10 paper feed.
+
 ## UI: PR #13 redesign restored as the main UI (2026-10-26)
 
 - Jason prefers the PR #13 data-terminal UI. It was merged back onto `testing` (`1e5f46b`) from tag `archive/2026-10-26/cursor-interactive-base-ui-d89c`, keeping its app.js/app.css and re-adding the Study tab. 1,004 tests pass. Serve with `.venv/Scripts/python.exe scripts/serve_terminal.py --root . --port 8765`.

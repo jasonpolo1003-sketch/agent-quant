@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "personal-data-library"
+version = "0.1.0"
+description = "Local, provenance-first economic data library"
+requires-python = ">=3.12,<3.14"
+dependencies = ["pandas>=2.2,<3", "pyarrow>=18", "duckdb>=1.1", "requests>=2.32", "streamlit>=1.42", "plotly>=6", "PyYAML==6.0.3", "portalocker==3.2.0"]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[project.scripts]
+pdl-refresh = "data_library.refresh:main"
+pdl-intake = "data_library.worker:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/data_library"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "--basetemp=.test-tmp"

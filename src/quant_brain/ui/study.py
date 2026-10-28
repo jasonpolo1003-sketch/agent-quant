@@ -23,7 +23,7 @@ from quant_brain.futures.controls import daily_control
 from quant_brain.futures.orb import RANGE_BARS, RANGE_START, add_minutes, simulate_day
 from quant_brain.futures.session_audit import read_mappings
 
-DEV_DIR = Path("C:/Users/jason/OneDrive/Desktop/Quant/data/databento/dev_2019-05-01_2024-12-31")
+DEV_DIR = Path(__file__).resolve().parents[4] / "data" / "databento" / "dev_2019-05-01_2024-12-31"
 POINTS_PER_TICK = 0.25
 STAGES = [
     ("frozen", "Rules frozen", "Every rule, seed and input fingerprinted before any result."),

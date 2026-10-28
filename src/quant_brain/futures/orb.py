@@ -7,14 +7,21 @@ bar starts. Fixtures: `brain/_system/futures/orb-fixtures.md`.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
+from fractions import Fraction
 
 Bar = tuple[int, int, int, int]  # open, high, low, close (ticks)
 
-TICK_CENTS = {"MNQ": 50, "MES": 125}
-L3_ROUND_TRIP_CENTS = {"MNQ": 322, "MES": 622}
+# Extra markets (plan B2): one tick of the *data* grid, valued for the traded contract.
+# ZN 1/64 pt = $15.625; M6E on 6E's 0.00005 grid = $0.625; MGC on GC's 0.1 = $1; ZC 0.25c = $12.50.
+# Fractional cents are truncated to whole cents per day (at most 1 cent).
+TICK_CENTS = {"MNQ": 50, "MES": 125, "ZN": 1562.5, "M6E": 62.5, "MGC": 100, "ZC": 1250}
+# L3 = Topstep fees (help centre, 2026-10-28; higher figure where pages conflict) + 4 ticks of
+# the traded contract (M6E's tick is $1.25), rounded up to whole cents.
+L3_ROUND_TRIP_CENTS = {"MNQ": 322, "MES": 622, "ZN": 6580, "M6E": 600, "MGC": 592, "ZC": 5528}
 RANGE_START = time(8, 30)
 RANGE_BARS = 15
 SIGNAL_START = time(8, 45)
@@ -44,17 +51,26 @@ def true_range(session: Bar | tuple[int, int, int], prior_close: int) -> int:
     return max(high - low, abs(high - prior_close), abs(low - prior_close))
 
 
+def true_range_sum(sessions: Sequence[tuple[int, int, int] | None]) -> int | None:
+    """Sum of the 14 true ranges from 15 prior sessions (high, low, close), oldest first."""
+    if len(sessions) != ATR_SESSIONS + 1 or any(s is None for s in sessions):
+        return None
+    return sum(true_range(sessions[i], sessions[i - 1][2]) for i in range(1, len(sessions)))
+
+
+def stop_from_sum(total: int, fraction: Fraction = Fraction(1, 10)) -> int:
+    """fraction x (total / 14) ticks, exact half rounds up, minimum one tick."""
+    return max(1, math.floor(Fraction(total) * fraction / ATR_SESSIONS + Fraction(1, 2)))
+
+
 def stop_distance_ticks(sessions: Sequence[tuple[int, int, int] | None]) -> int | None:
-    """0.10 x mean of 14 true ranges, half-up to a tick, minimum one.
+    """0.10 x mean of 14 true ranges, half-up to a tick, minimum one (frozen SC-FUT-0001).
 
     `sessions` are the 15 prior NYSE sessions (high, low, regular-hours close),
     oldest first; the first supplies only the prior close. Any gap -> None.
     """
-    if len(sessions) != ATR_SESSIONS + 1 or any(s is None for s in sessions):
-        return None
-    total = sum(true_range(sessions[i], sessions[i - 1][2]) for i in range(1, len(sessions)))
-    # total / 14 / 10, rounded half up: floor(total / 140 + 1/2)
-    return max(1, (2 * total + 140) // 280)
+    total = true_range_sum(sessions)
+    return None if total is None else stop_from_sum(total)
 
 
 @dataclass(frozen=True)
@@ -64,6 +80,10 @@ class DayInput:
     bars: Mapping[time, Bar]
     exit_minute: time
     stop_ticks: int | None
+    atr_tr_sum: int | None = None  # sum of the 14 prior true ranges, for other stop fractions
+    prev_close: int | None = None  # previous NYSE session's regular close, same contract
+    context: Mapping | None = None  # strategy-specific point-in-time inputs (e.g. scales)
+    volumes: Mapping | None = None  # 1-minute volume by bar start (for VWAP)
 
 
 @dataclass(frozen=True)
@@ -160,7 +180,7 @@ def run_trade(
     )
 
 
-def simulate_day(day: DayInput) -> DayResult:
+def simulate_day(day: DayInput, *, range_bars: int = RANGE_BARS) -> DayResult:
     def result(status: str, trades=(), events=()) -> DayResult:
         trades = list(trades)
         return DayResult(
@@ -175,7 +195,7 @@ def simulate_day(day: DayInput) -> DayResult:
 
     if day.stop_ticks is None or not day.bars:
         return result("ineligible")  # no ATR history, or no bars in the cash window
-    range_minutes = minute_span(RANGE_START, add_minutes(RANGE_START, RANGE_BARS - 1))
+    range_minutes = minute_span(RANGE_START, add_minutes(RANGE_START, range_bars - 1))
     if any(m not in day.bars for m in range_minutes):
         return result("void_range")
     high = max(day.bars[m][1] for m in range_minutes)
@@ -186,7 +206,7 @@ def simulate_day(day: DayInput) -> DayResult:
     used: set[int] = set()
     trades: list[Trade] = []
     events: list[tuple[str, time]] = []
-    minute = SIGNAL_START
+    minute = add_minutes(RANGE_START, range_bars)  # first bar after the range
     while minute < cutoff:
         bar = day.bars.get(minute)
         side = 0 if bar is None else 1 if bar[3] > high else -1 if bar[3] < low else 0
