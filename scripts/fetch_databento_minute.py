@@ -26,7 +26,9 @@ API = "https://hist.databento.com/v0"
 DATASET = "GLBX.MDP3"
 START, END = "2019-05-01", "2025-01-01"  # end exclusive
 LOCKED_FROM = date(2025, 1, 1)
-SCHEMAS = ("ohlcv-1m", "definition")
+# Definitions dropped 2026-10-28: the loader reads contract names from the bar file's own
+# metadata, and the definition stream broke mid-download (the first run kept ZN bars only).
+SCHEMAS = ("ohlcv-1m",)
 # Listed contract months (CME); every outright expiring 2019-06..2025-07 (covers the
 # contracts trading on any practice day, including the next one during a roll).
 MONTHS = {"ZN": "HMUZ", "6E": "HMUZ", "GC": "GJMQVZ", "ZC": "HKNUZ"}
@@ -63,16 +65,42 @@ def params(root: str, schema: str) -> dict[str, str]:
     }
 
 
+def count_records(path: Path) -> int:
+    import struct
+
+    import zstandard
+
+    with path.open("rb") as handle:
+        raw = zstandard.ZstdDecompressor().stream_reader(handle).read()
+    (meta_len,) = struct.unpack_from("<I", raw, 4)
+    return (len(raw) - 8 - meta_len) // 56  # ohlcv records are 56 bytes
+
+
+def fetch(session: requests.Session, root: str, schema: str, path: Path) -> None:
+    with session.get(
+        f"{API}/timeseries.get_range",
+        params=params(root, schema) | {"encoding": "dbn", "compression": "zstd"},
+        stream=True,
+        timeout=1800,
+    ) as r:
+        r.raise_for_status()
+        with path.open("wb") as handle:
+            for chunk in r.iter_content(1 << 20):
+                handle.write(chunk)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--quote-only", action="store_true")
+    parser.add_argument("--resume", action="store_true", help="keep complete files, fetch the rest")
+    parser.add_argument("--roots", default=" ".join(MONTHS), help="subset, e.g. \"ZN 6E GC\"")
     args = parser.parse_args()
     if date.fromisoformat(END) > LOCKED_FROM:
         raise SystemExit("refusing: end date reaches the locked exam period")
-    if args.out.exists() and not args.quote_only:
+    if args.out.exists() and not (args.quote_only or args.resume):
         raise SystemExit(f"refusing to overwrite {args.out}")
     session = requests.Session()
     session.auth = (api_key(), "")
@@ -82,9 +110,20 @@ def main() -> int:
         r.raise_for_status()
         return r.json()
 
-    quotes = {(r, s): float(meta("get_cost", r, s)) for r in MONTHS for s in SCHEMAS}
+    roots = args.roots.split()
+    quotes = {(r, s): float(meta("get_cost", r, s)) for r in roots for s in SCHEMAS}
     total = sum(quotes.values())
     print(f"re-quoted total ${total:.2f}")
+    expected = {key: int(meta("get_record_count", *key)) for key in quotes}
+    have = {
+        key
+        for key in quotes
+        if args.resume
+        and (p := args.out / f"glbx-mdp3_{key[1]}_{key[0]}_20190501-20241231.dbn.zst").exists()
+        and count_records(p) == expected[key]
+    }
+    for key in sorted(have):
+        print(f"kept {key[0]} {key[1]} (complete, {expected[key]:,} records; not re-bought)")
     if total > APPROVED_MAX_USD:
         raise SystemExit(
             f"quote ${total:.2f} exceeds the approved ${APPROVED_MAX_USD:.2f}; nothing downloaded"
@@ -92,21 +131,14 @@ def main() -> int:
     if args.quote_only:
         return 0
 
-    args.out.mkdir(parents=True)
+    args.out.mkdir(parents=True, exist_ok=args.resume)
     files = []
     for (root, schema), quote in quotes.items():
-        expected = int(meta("get_record_count", root, schema))
         path = args.out / f"glbx-mdp3_{schema}_{root}_20190501-20241231.dbn.zst"
-        with session.get(
-            f"{API}/timeseries.get_range",
-            params=params(root, schema) | {"encoding": "dbn", "compression": "zstd"},
-            stream=True,
-            timeout=1800,
-        ) as r:
-            r.raise_for_status()
-            with path.open("wb") as handle:
-                for chunk in r.iter_content(1 << 20):
-                    handle.write(chunk)
+        if (root, schema) not in have:
+            fetch(session, root, schema, path)
+            if count_records(path) != expected[(root, schema)]:
+                raise SystemExit(f"{path.name}: record count differs from the quote; stopping")
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         files.append(
             {
@@ -115,12 +147,11 @@ def main() -> int:
                 "symbols": symbols(root),
                 "file": path.name,
                 "sha256": digest,
-                "expected_records": expected,
+                "expected_records": expected[(root, schema)],
                 "quote_usd": round(quote, 4),
             }
         )
-        print(f"OK {root} {schema}: {path.stat().st_size:,} bytes, expected {expected:,} records")
-
+        print(f"OK {root} {schema}: {path.stat().st_size:,} bytes, {expected[(root, schema)]:,} records", flush=True)
     (args.out / "SHA256SUMS").write_text(
         "".join(f"{f['sha256']}  {f['file']}\n" for f in files), encoding="utf-8"
     )

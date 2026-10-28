@@ -75,6 +75,8 @@ def read_bars(path: Path, tick_nano: int) -> tuple[pd.DataFrame, dict[int, str]]
     frame = pd.DataFrame(
         {
             "iid": records["instrument_id"].astype("int64"),
+            # One contract can carry several instrument ids over time; everything keys on symbol.
+            "symbol": [symbol_of[int(i)] for i in records["instrument_id"]],
             "minute": minute,
             "trade_date": (minute + pd.Timedelta(hours=7)).date,  # 17:00 CT starts the next date
             "open": ticks[:, 0],
@@ -84,15 +86,15 @@ def read_bars(path: Path, tick_nano: int) -> tuple[pd.DataFrame, dict[int, str]]
             "volume": records["volume"].astype("int64"),
         }
     )
-    if frame.duplicated(["iid", "minute"]).any():
+    if frame.duplicated(["symbol", "minute"]).any():
         raise ValueError(f"{path.name}: duplicate minute bars for one instrument")
-    return frame.sort_values(["iid", "minute"], kind="stable", ignore_index=True), symbol_of
+    return frame.sort_values(["symbol", "minute"], kind="stable", ignore_index=True), symbol_of
 
 
-def volume_roll(frame: pd.DataFrame, symbol_of: dict[int, str], days: list[date]) -> dict[date, int]:
-    """Contract (iid) traded on each day; decisions use only completed earlier trade dates."""
-    volume = frame.groupby(["iid", "trade_date"])["volume"].sum().to_dict()
-    chain = sorted(symbol_of, key=lambda iid: _expiry_key(symbol_of[iid]))
+def volume_roll(frame: pd.DataFrame, days: list[date]) -> dict[date, str]:
+    """Contract (symbol) traded on each day; decisions use only completed earlier trade dates."""
+    volume = frame.groupby(["symbol", "trade_date"])["volume"].sum().to_dict()
+    chain = sorted(set(frame["symbol"]), key=_expiry_key)
     cur, out = 0, {}
     for day in days:
         out[day] = chain[cur]
@@ -104,20 +106,20 @@ def volume_roll(frame: pd.DataFrame, symbol_of: dict[int, str], days: list[date]
 
 def load_days(data_dir: Path, calendar_csv: Path, market: str, start: date, end: date) -> list[DayInput]:
     spec = SPECS[market]
-    frame, symbol_of = read_bars(bars_file(data_dir, market), spec.tick_nano)
+    frame, _ = read_bars(bars_file(data_dir, market), spec.tick_nano)
     calendar = [c for c in read_calendar(calendar_csv) if not c.early_close]
     days = [c.trade_date for c in calendar if c.trade_date <= end]
-    contract = volume_roll(frame, symbol_of, days)
+    contract = volume_roll(frame, days)
     local = frame["minute"].dt.time
     same_day = frame["minute"].dt.date == frame["trade_date"]
     session = frame[same_day & (local >= spec.open) & (local <= spec.flat)]
-    by_key = {key: g for key, g in session.groupby(["iid", "trade_date"], sort=False)}
+    by_key = {key: g for key, g in session.groupby(["symbol", "trade_date"], sort=False)}
     out: list[DayInput] = []
     for i, day in enumerate(days):
         if day < start:
             continue
-        iid = contract[day]
-        today = by_key.get((iid, day))
+        symbol = contract[day]
+        today = by_key.get((symbol, day))
         bars, volumes = {}, {}
         if today is not None:
             for m, o, h, lo, c, v in zip(
@@ -128,7 +130,7 @@ def load_days(data_dir: Path, calendar_csv: Path, market: str, start: date, end:
                 volumes[m] = int(v)
         prev_close = None
         if i > 0:
-            before = by_key.get((iid, days[i - 1]))
+            before = by_key.get((symbol, days[i - 1]))
             if before is not None:
                 regular = before[before["minute"].dt.time < spec.close]
                 prev_close = int(regular["close"].iloc[-1]) if len(regular) else None

@@ -1,0 +1,25 @@
+{
+  "rule": "For each market: the median, over practice days, of the session range (highest high -\nlowest low from the session open to the flatten bar) in dollars per traded contract.\nMNQ is fixed at 2 contracts; every other market gets round(2 x MNQ range / its range)\ncontracts, and is dropped if that rounds to 0.",
+  "sizes": {
+    "MNQ": {
+      "median_session_range_usd": 390.5,
+      "days": 1425,
+      "size": 2
+    },
+    "ZN": {
+      "median_session_range_usd": 437.5,
+      "days": 1416,
+      "size": 2
+    },
+    "M6E": {
+      "median_session_range_usd": 59.38,
+      "days": 1416,
+      "size": 13
+    },
+    "MGC": {
+      "median_session_range_usd": 169.0,
+      "days": 1416,
+      "size": 5
+    }
+  }
+}

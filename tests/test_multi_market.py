@@ -50,15 +50,16 @@ def test_zn_enters_at_its_first_check_and_flattens_at_its_close():
 
 def test_volume_roll_switches_the_session_after_the_next_contract_out_trades():
     d1, d2, d3 = date(2020, 3, 2), date(2020, 3, 3), date(2020, 3, 4)
+    # ZNH0 carries two instrument ids (Databento can re-issue one); volumes add up per symbol.
     frame = pd.DataFrame(
         {
-            "iid": [1, 2, 1, 2, 1, 2],
-            "trade_date": [d1, d1, d2, d2, d3, d3],
-            "volume": [100, 10, 40, 60, 5, 90],
+            "symbol": ["ZNH0", "ZNH0", "ZNM0", "ZNH0", "ZNM0", "ZNH0", "ZNM0"],
+            "trade_date": [d1, d1, d1, d2, d2, d3, d3],
+            "volume": [60, 40, 10, 40, 60, 5, 90],
         }
     )
-    roll = multi.volume_roll(frame, {1: "ZNH0", 2: "ZNM0"}, [d1, d2, d3])
-    assert roll == {d1: 1, d2: 1, d3: 2}  # ZNM0 out-traded on d2, so it is used from d3
+    roll = multi.volume_roll(frame, [d1, d2, d3])
+    assert roll == {d1: "ZNH0", d2: "ZNH0", d3: "ZNM0"}  # ZNM0 out-traded on d2: used from d3
 
 
 def test_expiry_order_handles_the_decade_digit():
