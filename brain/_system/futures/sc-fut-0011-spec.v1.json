@@ -1,0 +1,52 @@
+{
+  "status": "frozen",
+  "frozen": true,
+  "frozen_at": "2026-10-28",
+  "approved_by": "Jason 2026-10-28 (new-edge plan: \"let's go ahead with it\")",
+  "plan": "brain/_system/plan/new_edge_plan.md",
+  "written_before": "any code or result for this rule. Known before: SC-FUT-0005 (noise-area momentum) results and its exam check #1 FAIL; the failed ORB, late-momentum and shock-reversal cards.",
+  "market": "MNQ (MES reported as a diagnostic only)",
+  "roll": "volume",
+  "data": {
+    "practice_inclusive": [
+      "2019-05-01",
+      "2024-12-31"
+    ],
+    "exam": "2025-01-01..2026-10-21 locked; only via the proctor, with Jason's OK"
+  },
+  "fills": {
+    "decision": "on the close of the bar ending at the decision minute; entry at the open of the decision-minute bar",
+    "target": "a resting limit: fills at the target only if a later bar trades through it by at least 1 tick",
+    "stop": "a resting stop: fills at the stop, or at the bar open if the bar opens beyond it",
+    "both_in_one_bar": "stop first (adverse first)",
+    "rounding": "targets rounded toward the entry, stops away from it, to the tick grid",
+    "flatten": "at the open of the flatten-minute bar"
+  },
+  "costs": "L3 = Topstep fees + 4 ticks per round trip ($3.22 MNQ); L1-L4 reported",
+  "luck": "matched control: the same entry minutes and bracket distances (target and stop distance from entry), each leg with an independent random direction, simulated on the same bars; 500 draws",
+  "gates": {
+    "beats_luck": "workbench paired test vs the control at the family honesty bar; the three new cards (SC-FUT-0009/0010/0011) share one Sidak split: alpha = 1 - 0.95^(1/3) = 0.0170 each for their first trial",
+    "floor": "net >= $5.00/day at L3 (GRADING floor)",
+    "advance": "to the prop simulator only with practice annual Sharpe >= 1.5 (exam power); exam check #2 only with Jason's OK",
+    "no_retuning": "no other parameters on this card; a failure is recorded as is"
+  },
+  "honesty": "one new family each; 1 distinct workbench trial on MNQ (+1 MES diagnostic)",
+  "schema_version": "sc-fut-0011-1",
+  "card_id": "SC-FUT-0011",
+  "workbench_family": "evening_revert",
+  "name": "Evening reversion to the 17:00 CT reopen",
+  "source": "JJ Simon (6 PM ET reopen as fair price; reversion trades in the evening and Asia open)",
+  "rule": {
+    "session": "the Globex evening that starts the trade date: 17:00-20:30 CT on the previous calendar evening (Sunday evening for Monday)",
+    "fair_price": "P0 = open of the 17:00 CT bar; the day is skipped if that bar or more than 30 evening bars are missing",
+    "sigma": "sigma(check) = mean |close at check / P0 - 1| over the previous 14 evenings (>= 10 values)",
+    "checks": "every 15 minutes, 17:30..20:00 CT",
+    "entry": "flat and |price / P0 - 1| > sigma: trade toward P0 (short above, long below)",
+    "target": "P0",
+    "stop": "P0 x (1 +/- 2 x sigma) on the far side (twice the normal move)",
+    "exit": "target, stop, or flatten at 20:30 CT",
+    "position": "one at a time; at most 2 entries per evening",
+    "size": "1 contract",
+    "note": "evening trades belong to the next trade date (Topstep's day starts at 17:00 CT)"
+  }
+}
