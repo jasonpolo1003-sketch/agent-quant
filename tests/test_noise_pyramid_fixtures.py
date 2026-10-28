@@ -86,7 +86,7 @@ def test_p6_concurrent_units_share_the_minute_path():
 def test_p7_luck_pyramids_on_its_own_open_profit():
     d = STRAT.prepare(day({**BREAKOUT, "10:10": (108, 120, 108, 120)}))
     r = STRAT.simulate(d)
-    gross, taken, lows, recs = STRAT.matched_control(d, r, 50)
+    gross, taken, _lows, _recs = STRAT.matched_control(d, r, 50)
     for g, k in zip(gross, taken, strict=True):
         # long: 4 units, +30 ticks; short at 108: no adds (price never drops), -12 ticks
         assert (g, k) in {(30 * 50, 4), (-12 * 50, 1)}
