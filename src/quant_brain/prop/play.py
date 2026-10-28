@@ -25,6 +25,7 @@ The luck control gets the identical resolved play on the same resampled days.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -125,8 +126,16 @@ def resolve(p: Play, firm: Firm) -> Resolved:
     )
 
 
+Sizer = Callable[[DayContext, PhasePlan], int]
+
+
 def day_fn(
-    days: Days, r: Resolved, idx, draws=None, post_exit_lows: bool = False
+    days: Days,
+    r: Resolved,
+    idx,
+    draws=None,
+    post_exit_lows: bool = False,
+    sizer: Sizer | None = None,
 ) -> firm_sim.DayFn:
     """Day function for one resampled path: strategy (draws None) or one control draw per day.
 
@@ -134,12 +143,14 @@ def day_fn(
     a soft-DLL flatten the account is flat, so later market lows cannot breach it).
     `post_exit_lows=True` restores the old `policy` path, which kept the whole day's low
     (pessimistic; only for reproducing the earlier Topstep results).
+    `sizer` (state-dependent play) picks the day's contracts from the account state;
+    without it the phase's fixed size is used.
     """
     memo: dict[tuple, DayPath] = {}
 
     def fn(ctx: DayContext) -> DayPath:
         ph = r.phase(ctx.phase)
-        n = ph.size
+        n = ph.size if sizer is None else sizer(ctx, ph)
         day = int(idx[ctx.day])
         draw = None if draws is None else int(draws[ctx.day])
         stop = ph.stop
@@ -178,6 +189,7 @@ def run_play(
     rng: np.random.Generator,
     order: np.ndarray | None = None,
     post_exit_lows: bool = False,
+    sizer: Sizer | None = None,
 ):
     """Strategy and luck lifecycles on the same resampled days (one control draw per day).
 
@@ -190,8 +202,8 @@ def run_play(
     strat, luck = [], []
     for i, d in zip(idx, draws, strict=True):
         days_i = base[i]
-        s_fn = day_fn(days, r, days_i, None, post_exit_lows)
-        l_fn = day_fn(days, r, days_i, d, post_exit_lows)
+        s_fn = day_fn(days, r, days_i, None, post_exit_lows, sizer)
+        l_fn = day_fn(days, r, days_i, d, post_exit_lows, sizer)
         strat.append(firm_sim.lifecycle(r.firm, s_fn, horizon, horizon))
         luck.append(firm_sim.lifecycle(r.firm, l_fn, horizon, horizon))
     return strat, luck
@@ -209,9 +221,12 @@ def evaluate_play(
     inner: int = 300,
     level: str = "L3",
     seed: int = SEED,
+    sizer: Sizer | None = None,
+    subset: np.ndarray | None = None,
 ) -> dict[str, Any]:
     """Net cash for one firm x play vs luck under the same play.
 
+    `subset` (day indices) restricts every resample to those days (train/test splits).
     Outer resampling of history gives 90% bounds on the mean net cash and on the paired
     (net - luck). Gate: both lower bounds > $0. Luck averaging positive is flagged: it
     points at a simulator or rules-reading error before it points at an edge.
@@ -219,13 +234,15 @@ def evaluate_play(
     rng = np.random.default_rng(seed)
     days = Days(table, market, level)
     r = resolve(p, firm)
-    strat, luck = run_play(days, p, firm, horizon, n_paths, rng)
-    nets, diffs = [], []
+    pool = np.arange(days.n_days) if subset is None else np.asarray(subset)
+    strat, luck = run_play(days, p, firm, horizon, n_paths, rng, pool, sizer=sizer)
+    nets, diffs, lucks = [], [], []
     for _ in range(outer):
-        order = block_paths(days.n_days, days.n_days, 1, rng)[0]
-        s, lk = run_play(days, p, firm, horizon, inner, rng, order)
+        order = pool[block_paths(len(pool), len(pool), 1, rng)[0]]
+        s, lk = run_play(days, p, firm, horizon, inner, rng, order, sizer=sizer)
         nets.append(np.mean([o.net for o in s]))
-        diffs.append(nets[-1] - np.mean([o.net for o in lk]))
+        lucks.append(np.mean([o.net for o in lk]))
+        diffs.append(nets[-1] - lucks[-1])
 
     def ci(x):
         return [float(np.percentile(x, 5)), float(np.percentile(x, 95))]
@@ -246,6 +263,7 @@ def evaluate_play(
         "luck": lk,
         "net_cash_90ci": net_ci,
         "net_cash_minus_luck_90ci": diff_ci,
+        "luck_net_cash_90ci": ci(lucks),
         "luck_positive_flag": lk["mean_net_cash"] > 0,
         "gate": "pass" if net_ci[0] > 0 and diff_ci[0] > 0 else "fail",
     }

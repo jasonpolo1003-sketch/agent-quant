@@ -312,3 +312,51 @@ def test_lows_after_a_dll_exit_do_not_breach_the_floor():
 
     assert firm_sim.evaluation(f, lambda c: new, 1, 1).resets == 0
     assert firm_sim.evaluation(f, lambda c: old, 1, 1).resets == 1
+
+
+# --- state-dependent sizing (PROP-STATE-SIZING-v1) -------------------------------------------------
+
+
+def test_a_sizer_returning_the_phase_size_changes_nothing():
+    t = rec_table(n=300, edge=2_000, seed=5)
+    f = firms.from_legacy(Rules(), XfaRules(), 1_000)
+    p = Play("p", 4, 2, 1_200, None)
+    a = play.run_play(Days(t, "MNQ"), p, f, 42, 60, np.random.default_rng(3))
+    b = play.run_play(
+        Days(t, "MNQ"), p, f, 42, 60, np.random.default_rng(3), sizer=lambda c, ph: ph.size
+    )
+    assert a == b
+    kw = dict(n_paths=60, outer=4, inner=30)
+    x = play.evaluate_play(t, "MNQ", p, f, **kw)
+    y = play.evaluate_play(t, "MNQ", p, f, subset=np.arange(300), **kw)
+    assert x == y
+    assert x["luck_net_cash_90ci"][0] <= x["luck_net_cash_90ci"][1]
+
+
+def test_the_sizer_sees_the_account_state_and_sets_the_size():
+    t = rec_table(n=300, edge=2_000, seed=5)
+    f = firms.from_legacy(Rules(), XfaRules(), 1_000)
+    seen = []
+
+    def sizer(c, ph):
+        seen.append((c.phase, c.cushion))
+        return max(1, int(c.cushion // 500))
+
+    s, _ = play.run_play(
+        Days(t, "MNQ"), Play("p", 1, 1), f, 42, 40, np.random.default_rng(2), sizer=sizer
+    )
+    assert {ph for ph, _ in seen} == {"eval", "funded"}
+    assert len({cu for _, cu in seen}) > 10  # the cushion moves with the account
+    one, _ = play.run_play(Days(t, "MNQ"), Play("p", 1, 1), f, 42, 40, np.random.default_rng(2))
+    assert s != one
+
+
+def test_a_subset_only_resamples_its_own_days():
+    t = rec_table(n=300, edge=2_000, seed=5)
+    days = Days(t, "MNQ")
+    losers = np.flatnonzero(days.s_net < 0)
+    f = firms.from_legacy(Rules(), XfaRules(), 1_000)
+    r = play.evaluate_play(
+        t, "MNQ", Play("p", 3, 2), f, n_paths=40, outer=3, inner=20, subset=losers
+    )
+    assert r["strategy"]["chance_any_payout"] == 0
