@@ -92,5 +92,16 @@
       "url": "https://github.com/jasonpolo1003-sketch/agent-quant/blob/testing/brain/05_Reviews/SC-FUT-0005-independent-review.md"
     },
     "added": "2026-10-27"
+  },
+  {
+    "id": "sc-fut-0005-two-month-verdict",
+    "title": "SC-FUT-0005 can't pay out within 2 months: choose the next direction",
+    "why": "Under every frozen sizing rule it loses $105-212 over 42 days (mostly fees). Only 1.5-5% of runs reach a payout. It beats luck, but its ~$11 per contract per day is too slow to pass the $3,000 Combine and earn payout days in 2 months, and bigger sizes break the risk limit.",
+    "recommendation": "Don't spend the exam check. Either accept a longer window (about 3-4 months) for this strategy, or look for a faster/bigger edge (more markets, or several same-day rules on the data we own).",
+    "action": {
+      "label": "Read the result",
+      "url": "https://github.com/jasonpolo1003-sketch/agent-quant/blob/testing/brain/05_Reviews/SC-FUT-0005-sizing-policies-2026-10-28.md"
+    },
+    "added": "2026-10-28"
   }
 ]
