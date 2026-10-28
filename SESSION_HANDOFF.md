@@ -1,5 +1,14 @@
 # Quant Agent Brain — Session Handoff
 
+## Research and branch preservation checkpoint (2026-10-28, latest)
+
+- Jason requested that the completed research and implementation record be preserved on `testing` and in Obsidian.
+- Preservation receipt: `brain/00_Inbox/phase_b_research_preservation_checkpoint_2026-10-28.md`.
+- The independently approved Phase B foundation plan is intentionally tracked at `.hermes/plans/2026-10-22-phase-b-mes-mnq-testing-foundation.md`, despite the general `.hermes/` ignore rule.
+- The curated MES/MNQ corpus is under `brain/sources/mes_mnq/`; Phase A history, Phase B plans, negative findings, reviews, ledgers, and later work remain in Git history.
+- Historical warning retained: the initial B0 run-store checkpoint passed 892 tests / 2 skipped but failed an independent Windows junction-containment review. Do not call that checkpoint secure without a fresh focused review of current code.
+- This checkpoint authorizes preservation only: no live trading, broker changes, paid purchase, paid download, held-out read, or new strategy run.
+
 ## SC-FUT-0006 high-volatility filter: NOT DEMONSTRATED (2026-10-27, latest)
 
 - **Card and spec:** `brain/03_Strategy_Cards/SC-FUT-0006-noise-area-high-vol.md`; spec `brain/_system/futures/sc-fut-0006-spec.v1.json`, frozen in 425c881 before any result.
