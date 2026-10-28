@@ -83,6 +83,7 @@ class Days:
         self.t = table
         self.n_days = len(table.dates)
         self.draws = table.ctrl_gross.shape[1]
+        self._max_high: dict[tuple[int, int | None], float] = {}
 
     def _records(self, day: int, draw: int | None) -> np.ndarray:
         t = self.t
@@ -126,6 +127,70 @@ class Days:
             out = -(dll + slip)
             return out, min(lo, out)
         return close, lo
+
+    @property
+    def has_records(self) -> bool:
+        t = self.t
+        return t.orb_rec_off.size == self.n_days + 1 and t.ctrl_rec_idx.shape == (
+            self.n_days,
+            self.draws,
+        )
+
+    def max_high(self, day: int, draw: int | None) -> float:
+        """Highest equity record of the day per contract, net of the day's cost (inf if unknown).
+
+        A profit stop above n x this can never trigger, so callers may drop it (same outcome).
+        """
+        if not self.has_records:
+            return math.inf
+        key = (day, draw)
+        cache = self._max_high
+        if key not in cache:
+            good = self.s_good[day] if draw is None else self.c_good[day]
+            cost = self.s_cost[day] if draw is None else self.c_cost[day, draw]
+            recs = self._records(day, draw) if good else np.zeros((0, 2))
+            cache[key] = (float(recs[:, 1].max()) if len(recs) else 0.0) - cost
+        return cache[key]
+
+    def extremes(
+        self, day: int, draw: int | None, n: int, dll: float | None, stop: float | None
+    ) -> tuple[float, float, float]:
+        """(high, give-back, stop_low) in dollars for n contracts, with the same exits as `outcome`.
+
+        high: the day's highest equity (>= 0, the open). give-back: the largest fall from the
+        running high to a later low, counting a minute's high before its low (conservative for a
+        trailing floor). stop_low: the lowest equity until the day's exit (the DLL fill, the
+        profit-stop fill, or the close); `outcome`'s low keeps lows after a DLL exit instead.
+        Within a minute the DLL wins a profit stop (adverse first), as in `outcome`.
+        Non-evaluable days have no path: high 0, give-back = -low. Needs minute records.
+        """
+        close, low = self.outcome(day, draw, n, dll, stop)
+        good = self.s_good[day] if draw is None else self.c_good[day]
+        if not good:
+            lo = min(low, close)
+            return 0.0, max(0.0, -lo), lo
+        if not self.has_records:
+            raise ValueError("day highs need minute records; re-run the workbench trial")
+        cost = self.s_cost[day] if draw is None else self.c_cost[day, draw]
+        slip = n * DLL_SLIP_TICKS * self.tick
+        run_low = 0.0 - n * cost
+        high, give = 0.0, n * cost
+        for r_lo, r_hi in self._records(day, draw):
+            lo_d, hi_d = n * (r_lo - cost), n * (r_hi - cost)
+            if dll is not None and lo_d <= -dll:
+                out = -(dll + slip)
+                high = max(high, hi_d)
+                return high, max(give, high - min(lo_d, out)), min(run_low, out)
+            if stop is not None and hi_d >= stop:
+                give = max(give, high - lo_d)
+                run_low = min(run_low, lo_d)
+                high = max(high, stop)
+                return high, max(give, high - (stop - slip)), min(run_low, stop - slip)
+            high = max(high, hi_d)
+            run_low = min(run_low, lo_d)
+            give = max(give, high - lo_d)
+        high = max(high, close)
+        return high, max(give, high - close), min(run_low, close)
 
 
 def _pnl(days: Days, policy: Policy, dll_usd: float, idx, draws=None):
