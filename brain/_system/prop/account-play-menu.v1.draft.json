@@ -1,0 +1,27 @@
+{
+  "id": "PROP-PLAY-v1",
+  "written": "2026-10-28, before any multi-firm cash result (plan: brain/_system/plan/prop_firm_grid_plan.md)",
+  "approved_by": "Jason 2026-10-28 (\"create a plan ... orchestrate ... execute\")",
+  "strategy": "SC-FUT-0005 noise-area momentum, MNQ, workbench practice data 2019-05..2024-12 (volume roll)",
+  "inputs_used": "worst practice day per MNQ $629 and firm rules only; no cash result chooses a number below",
+  "policies": {
+    "P1_steady":      {"combine_size": 2,  "funded_size": 2, "combine_profit_stop": "consistency_safe", "funded_profit_stop": null},
+    "P2_pass_fast":   {"combine_size": 6,  "funded_size": 2, "combine_profit_stop": "consistency_safe", "funded_profit_stop": null},
+    "P3_sprint":      {"combine_size": 12, "funded_size": 2, "combine_profit_stop": "consistency_safe", "funded_profit_stop": null},
+    "P4_sprint_both": {"combine_size": 12, "funded_size": 4, "combine_profit_stop": "consistency_safe", "funded_profit_stop": "funded_consistency_safe"}
+  },
+  "profit_stops": {
+    "consistency_safe": "if the evaluation has a best-day consistency share c: stop for the day once day P&L >= 0.9 x c x target; no eval consistency rule -> no stop",
+    "funded_consistency_safe": "if the funded account has a consistency share c: stop for the day once day P&L >= 0.9 x c x (the next payout's profit requirement, or target if none stated); else none"
+  },
+  "always": [
+    "stop trading for the attempt once the evaluation target is met (the attempt passes)",
+    "soft daily loss limits flatten the day at -limit (+2 ticks/contract slippage) and resume next day; where the plan offers an optional DLL, it is ON",
+    "sizes capped by the plan's max micros; a size above the cap is cut to the cap"
+  ],
+  "grid": {"horizon_days": 42, "cost_level": "L3", "firms": "every firm x plan JSON in brain/_system/prop/firms/ that the research marks automation_allowed_eval AND automation_allowed_funded"},
+  "luck": "each policy applied unchanged to the random-direction control on the same resampled days",
+  "gate": "per cell: mean net cash lower 90% bound > $0 AND (net - luck) lower 90% bound > $0",
+  "selection": "best cell = highest lower bound of mean net cash among passing cells; none if no cell passes",
+  "trials": "every firm x plan x policy cell is one prop trial"
+}
