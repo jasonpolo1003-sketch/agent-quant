@@ -83,3 +83,34 @@ def day_path(bars: Mapping[time, Bar], trades: Sequence[Trade], tick_cents: int)
 def flipped_path(worst: int, best: int, gross: int) -> tuple[int, int]:
     """Same single trade taken in the opposite direction: its worst is minus the original best."""
     return min(0, -best, -gross), -gross
+
+
+def book_records(
+    bars: Mapping[time, Bar], trades: Sequence[Trade], tick_cents: int
+) -> list[tuple[int, int]]:
+    """`day_records` for units that can be held at the same time (SC-FUT-0007 pyramids).
+
+    Each minute: realised P&L of units already out plus every open unit's adverse and
+    favourable point in that minute. One market, so a missing bar is missing for all.
+    """
+    points: dict[time, list[tuple[int, int]]] = {}
+    for trade in trades:
+        for minute, adverse, favourable in _minute_points(bars, trade):
+            points.setdefault(minute, []).append((adverse, favourable))
+    run_low = run_high = 0
+    out: list[tuple[int, int]] = []
+    for minute in sorted(points):
+        realised = sum(x.gross_cents for x in trades if x.exit_minute < minute)
+        lo = realised + sum(a for a, _ in points[minute]) * tick_cents
+        hi = realised + sum(f for _, f in points[minute]) * tick_cents
+        if lo < run_low or hi > run_high:
+            out.append((lo, hi))
+            run_low, run_high = min(run_low, lo), max(run_high, hi)
+    return out
+
+
+def book_path(bars: Mapping[time, Bar], trades: Sequence[Trade], tick_cents: int) -> tuple[int, int]:
+    """(lowest equity, closing P&L) for units held at the same time; low <= close."""
+    close = sum(x.gross_cents for x in trades)
+    low = min([0] + [lo for lo, _ in book_records(bars, trades, tick_cents)])
+    return min(low, close), close

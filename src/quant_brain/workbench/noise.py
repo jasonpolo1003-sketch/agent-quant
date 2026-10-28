@@ -11,6 +11,7 @@ from __future__ import annotations
 import csv
 import dataclasses
 import hashlib
+import math
 from dataclasses import dataclass
 from datetime import date, time
 from typing import Any
@@ -20,6 +21,7 @@ import numpy as np
 from quant_brain.config import PROJECT_ROOT
 from quant_brain.futures import orb
 from quant_brain.futures.controls import ROOT_CODE
+from quant_brain.futures.multi import SPECS
 from quant_brain.futures.orb import DayInput, DayResult, Trade
 from quant_brain.prop import paths
 
@@ -61,9 +63,20 @@ def _t(n: int) -> time:
     return time(n // 60, n % 60)
 
 
-def _checks(early: bool) -> list[int]:
-    last = EARLY_LAST_CHECK if early else LAST_CHECK
-    return list(range(_n(FIRST_CHECK), _n(last) + 1, 30))
+def _session(root: str, early: bool = False) -> tuple[time, list[int], time]:
+    """(open, check minutes, flatten minute). MNQ/MES: the SC-FUT-0005 times; the extra
+    markets: every 30 minutes from open + 30 to close - 30 at the latest (multi.SPECS)."""
+    if root not in SPECS:
+        last = EARLY_LAST_CHECK if early else LAST_CHECK
+        return OPEN, list(range(_n(FIRST_CHECK), _n(last) + 1, 30)), (
+            EARLY_CLOSE if early else CLOSE
+        )
+    spec = SPECS[root]
+    return spec.open, list(range(_n(spec.open) + 30, _n(spec.close) - 30 + 1, 30)), spec.flat
+
+
+def _checks(early: bool, root: str = "MNQ") -> list[int]:
+    return _session(root, early)[1]
 
 
 @dataclass(frozen=True)
@@ -92,11 +105,12 @@ class NoiseArea:
 
     @staticmethod
     def _moves(day: DayInput) -> dict[int, float]:
-        first = day.bars.get(OPEN)
+        open_at, checks, _ = _session(day.root)
+        first = day.bars.get(open_at)
         if first is None or first[0] <= 0:
             return {}
         out = {}
-        for n in _checks(early=False):
+        for n in checks:
             bar = day.bars.get(_t(n - 1))
             if bar is not None:
                 out[n] = abs(bar[3] / first[0] - 1)
@@ -110,7 +124,7 @@ class NoiseArea:
         for day in days:
             past = history[-self.lookback_sessions :]
             sigma = {}
-            for n in _checks(early=False):
+            for n in _checks(early=False, root=day.root):
                 values = [h[n] for h in past if n in h]
                 if len(values) >= self.min_observations:
                     sigma[n] = float(np.mean(values))
@@ -125,18 +139,19 @@ class NoiseArea:
         if (day.context or {}).get("skip"):
             return "no_trade", []
         sigma = (day.context or {}).get("sigma") or {}
-        first = day.bars.get(OPEN)
+        open_at, _, close_at = _session(day.root)
+        first = day.bars.get(open_at)
         if first is None or day.prev_close is None:
             return "no_trade", []
         open_ = first[0]
         hi_anchor, lo_anchor = max(open_, day.prev_close), min(open_, day.prev_close)
-        early = day.exit_minute < CLOSE
-        flat_at = EARLY_CLOSE if early else CLOSE
+        early = day.exit_minute < close_at
+        _, checks, flat_at = _session(day.root, early)
         pv = vol = 0.0
         legs: list[dict] = []
         position = None  # (side, entry_at, entry)
-        cum_until = _n(OPEN)
-        for n in _checks(early):
+        cum_until = _n(open_at)
+        for n in checks:
             # VWAP over cash-hours bars ending by this check
             while cum_until < n:
                 bar = day.bars.get(_t(cum_until))
@@ -255,3 +270,83 @@ class NoiseArea:
             lows.append(lo)
             recs.append(rec)
         return gross, [len(legs)] * draws, lows, recs
+
+
+@dataclass(frozen=True)
+class NoiseAreaPyramid(NoiseArea):
+    """SC-FUT-0007: the SC-FUT-0005 legs, plus one unit at each step of open profit.
+
+    Frozen rules: brain/_system/futures/sc-fut-0007-spec.v1.json. Fixtures:
+    tests/test_noise_pyramid_fixtures.py (written first). Each unit is one Trade;
+    units overlap in time, so equity paths use `paths.book_*`.
+    """
+
+    max_units: int = 4
+
+    def settings(self) -> dict[str, Any]:
+        return super().settings() | {
+            "pyramid": {"max_units": self.max_units, "step": "1 x sigma x open, stop orders"}
+        }
+
+    def _units(self, day: DayInput, leg: dict, side: int) -> list[Trade]:
+        """The leg's base unit plus every add whose resting stop order filled."""
+        out = [self._trade(day, leg, side)]
+        sigma = (day.context or {}).get("sigma") or {}
+        step = math.ceil(sigma[_n(leg["entry_at"])] * day.bars[_session(day.root)[0]][0] - 1e-9)
+        triggers = [leg["entry"] + side * k * step for k in range(1, self.max_units)]
+        for n in range(_n(leg["entry_at"]) + 1, _n(leg["exit_at"])):
+            bar = day.bars.get(_t(n))
+            while bar is not None and triggers:
+                trigger = triggers[0]
+                if side > 0 and bar[1] >= trigger:
+                    fill = max(trigger, bar[0])
+                elif side < 0 and bar[2] <= trigger:
+                    fill = min(trigger, bar[0])
+                else:
+                    break
+                triggers.pop(0)
+                add = dict(leg, entry_at=_t(n), entry=fill)
+                out.append(self._trade(day, add, side))
+        return out
+
+    def simulate(self, day: DayInput) -> DayResult:
+        if not day.bars:
+            return DayResult(day.trade_date, day.root, "ineligible", 0, 0, [], [])
+        status, legs = self._legs(day)
+        trades = [u for leg in legs for u in self._units(day, leg, leg["side"])]
+        if status == "non_evaluable":
+            return DayResult(day.trade_date, day.root, status, 0, 0, trades, [])
+        net = sum(x.net_cents for x in trades)
+        return DayResult(day.trade_date, day.root, status, net, net, trades, [])
+
+    @staticmethod
+    def equity_path(bars, trades, tick: int) -> tuple[int, list[tuple[int, int]]]:
+        return paths.book_path(bars, trades, tick)[0], paths.book_records(bars, trades, tick)
+
+    def matched_control(self, day: DayInput, result: DayResult, draws: int):
+        """SC-FUT-0005's random-direction legs (same seeds); each pyramids by the same rule."""
+        if result.status != "traded":
+            return [0] * draws, [0] * draws, [0] * draws, [[]] * draws
+        _, legs = self._legs(day)
+        stamp = int(day.trade_date.strftime("%Y%m%d"))
+        seq = np.random.SeedSequence([NOISE_SEED, ROOT_CODE[day.root], stamp, 5])
+        flips = np.random.Generator(np.random.PCG64(seq)).integers(0, 2, size=(draws, len(legs)))
+        tick = orb.TICK_CENTS[day.root]
+        cache: dict[tuple[int, ...], tuple[int, int, int, list[tuple[int, int]]]] = {}
+        gross, taken, lows, recs = [], [], [], []
+        for row in flips:
+            key = tuple(int(x) for x in row)
+            if key not in cache:
+                trades = [
+                    u
+                    for leg, f in zip(legs, key, strict=True)
+                    for u in self._units(day, leg, 1 if f else -1)
+                ]
+                low, rec = self.equity_path(day.bars, trades, tick)
+                cache[key] = (sum(x.gross_cents for x in trades), len(trades), low, rec)
+            g, k, lo, rec = cache[key]
+            gross.append(g)
+            taken.append(k)
+            lows.append(lo)
+            recs.append(rec)
+        return gross, taken, lows, recs

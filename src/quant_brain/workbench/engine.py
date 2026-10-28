@@ -30,7 +30,7 @@ LEDGER = f"{WORKBENCH}/trials.jsonl"
 CACHE = f"{WORKBENCH}/cache"
 PRACTICE = (date(2019, 5, 1), date(2024, 12, 31))
 ROLLS = {"fixed": "roll_trade_date", "volume": "volume_roll_date"}
-MARKETS = ("MNQ", "MES")
+MARKETS = ("MNQ", "MES", "ZN", "M6E", "MGC", "ZC")
 CODE_FILES = (
     "src/quant_brain/futures/orb.py",
     "src/quant_brain/futures/controls.py",
@@ -41,6 +41,7 @@ CODE_FILES = (
     "src/quant_brain/prop/paths.py",
     "src/quant_brain/workbench/shock.py",
     "src/quant_brain/workbench/noise.py",
+    "src/quant_brain/futures/multi.py",
 )
 EVALUABLE = ("traded", "no_trade", "void_range")
 
@@ -159,7 +160,12 @@ def simulate(strategy: Strategy, days: list[DayInput], *, draws: int = DRAWS) ->
                 if draw_rows
                 else [path_id([])] * draws
             )
-        orb_recs.append(paths.day_records(day.bars, result.trades, tick))
+        if hasattr(strategy, "equity_path"):  # units held at the same time (pyramids)
+            path_low, day_recs = strategy.equity_path(day.bars, result.trades, tick)
+        else:
+            path_low = paths.day_path(day.bars, result.trades, tick)[0]
+            day_recs = paths.day_records(day.bars, result.trades, tick)
+        orb_recs.append(day_recs)
         rows["ctrl_rec_idx"].append(ctrl_idx)
         rows["dates"].append(day.trade_date.isoformat())
         rows["status"].append(result.status)
@@ -167,10 +173,7 @@ def simulate(strategy: Strategy, days: list[DayInput], *, draws: int = DRAWS) ->
         rows["orb_side"].append(result.trades[0].side if result.trades else 0)
         rows["orb_gross"].append(sum(t.gross_cents for t in result.trades))
         rows["orb_low"].append(
-            min(
-                paths.day_path(day.bars, result.trades, tick)[0],
-                result.stress_net_cents + cost * len(result.trades),
-            )
+            min(path_low, result.stress_net_cents + cost * len(result.trades))
         )
         rows["orb_stress_gross"].append(result.stress_net_cents + cost * len(result.trades))
         rows["orb_trades"].append(len(result.trades))

@@ -155,7 +155,7 @@ class LateDayMomentum:
         return [c for _, c in picked], [1] * draws, [lo for lo, _ in picked]
 
 
-from quant_brain.workbench.noise import NoiseArea  # noqa: E402
+from quant_brain.workbench.noise import NoiseArea, NoiseAreaPyramid  # noqa: E402
 from quant_brain.workbench.shock import ShockReversal  # noqa: E402
 
 REGISTRY: dict[str, type] = {
@@ -163,6 +163,7 @@ REGISTRY: dict[str, type] = {
     "late_momentum": LateDayMomentum,
     "shock_reversal": ShockReversal,
     "noise_area": NoiseArea,
+    "noise_area_pyramid": NoiseAreaPyramid,
 }
 GRADING = {
     "noise_area": {
