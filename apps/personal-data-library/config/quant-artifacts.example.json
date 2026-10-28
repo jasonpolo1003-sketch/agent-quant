@@ -1,0 +1,19 @@
+[
+  {
+    "id": "EXAMPLE-DEVELOPMENT-REPORT",
+    "path": "brain/approved-development-summary.md",
+    "kind": "report",
+    "classification": "unknown",
+    "reviewed": false,
+    "sha256": "REPLACE_AFTER_EXPLICIT_REVIEW",
+    "strategy_id": null,
+    "research_id": null,
+    "source_run_id": null,
+    "ledger_location": null,
+    "data_id": null,
+    "code_id": null,
+    "spec_id": null,
+    "source_verdict": null,
+    "diagnostic_type": null
+  }
+]
