@@ -79,7 +79,7 @@ def main() -> int:
     days = Days(table, trial["market"], "L3")
     good = days.s_good & days.c_good
     net = np.where(days.s_good, days.s_net, 0.0)
-    luck = np.where(days.c_good, days.c_net, 0.0).mean(axis=1)
+    luck = np.where(days.c_good[:, None], days.c_net, 0.0).mean(axis=1)
     years = np.array([int(d[:4]) for d in table.dates])
     by = buckets(table, net)
 
