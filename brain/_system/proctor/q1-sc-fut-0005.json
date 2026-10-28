@@ -1,0 +1,18 @@
+{
+  "id": "PROCTOR-Q1",
+  "asked_for": "SC-FUT-0005 (noise-area momentum, MNQ): does the frozen rule still beat luck after costs on the locked exam data?",
+  "approved_by": "Jason 2026-10-28 (chose 'Strategy first' for exam check #1)",
+  "frozen_before": "any exam-period result; the strategy's practice results (2019-05..2024-12) are known",
+  "family": "noise_area",
+  "settings": {"lookback_sessions": 14, "stop": "band_or_vwap", "size": 1},
+  "practice_trial": "266777ef7609d8dfaf36d02ea3a9e4a5dc970fe6c756c88dd6665d097f8db400",
+  "market": "MNQ",
+  "roll": "volume",
+  "cost_level": "L3",
+  "warmup_start": "2024-10-01",
+  "exam_start": "2025-01-01",
+  "exam_end": "2026-10-21",
+  "test": "workbench paired test (stationary bootstrap, one-sided) of strategy net vs the mean of the matched random-direction control, exam days only; PASS = p below check #1's noisy bar (alpha 0.05) AND mean net per day > 0",
+  "answer": "PASS or FAIL only; no exam numbers are shown or stored",
+  "next": "PASS: the calm-day filter can be check #2 (separate frozen question, Jason's OK). FAIL: SC-FUT-0005 is not trusted for real money; the prop/live plans built on it stop."
+}
