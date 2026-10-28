@@ -63,3 +63,9 @@ Platforms: Tradovate, NinjaTrader, TradingView (help-centre platform FAQ; funded
 3. The Direct "$2,100 buffer" may mean cycle profit ≥ $2,100 or balance ≥ start + $2,100.
 4. F6 contradicts itself on when trading resumes after a DLL breach.
 5. Python order route (needs written confirmation that Tradovate API or NinjaTrader ATI is allowed).
+
+## QA corrections 2026-10-28
+Made by the quality agent (review: `brain/05_Reviews/prop-firm-grid-QA-2026-10-28.md`); JSON regenerated from `gen_firms.py`.
+- **Flex payout base (`fundednext_flex_50k.json`).** F14 (https://helpfutures.fundednext.com/en/articles/17229848-fundednext-futures-flex-fundednext-account-all-rules, read 2026-10-28): "Up to 50% of your profit per cycle", max $1,500. The loader applied 50% to total profit (balance - start), which after the first payout double-counts the unpaid half. Now `payout_base: "cycle"` (50% of profit since the last payout).
+- **Direct perpetual consistency (`fundednext_direct_50k.json`).** F15 (https://helpfutures.fundednext.com/en/articles/17430065-fundednext-futures-direct-account-all-rules): best day "may not exceed 20% of your current cycle's total profit"; "perpetual" = "tracks your all-time best trading day across every trading cycle". The text was in `funded_consistency_effect` only and the loader defaulted the scope to `cycle`. Now `funded_consistency_scope: "best_ever"`.
+- Open, not changed: Direct "$2,100 buffer in your current cycle" may mean cycle profit >= $2,100 each cycle (stricter than the balance reading the JSON uses); Flex price rises to $84.99 from the 3rd purchase (simulator uses $74.99 for every purchase).

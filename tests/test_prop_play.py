@@ -167,7 +167,8 @@ def test_daily_loss_soft_firm_limit_own_stop_and_hard_limit():
     )
     fn = play.day_fn(d, play.resolve(Play("p", 1, 1, stop_at_target=False), soft), [0])
     p = fn(ctx("eval"))
-    assert (p.close, p.low) == pytest.approx((-51.0, -103.22))  # flattened by the firm at -50
+    # flattened by the firm at -50; the floor sees the low until the exit (QA 2026-10-28)
+    assert (p.close, p.low) == pytest.approx((-51.0, -51.0))
     assert fn(ctx("funded")).close == pytest.approx(-83.22)  # funded has no daily loss
     hard = dataclasses.replace(
         FIRM,
@@ -175,9 +176,9 @@ def test_daily_loss_soft_firm_limit_own_stop_and_hard_limit():
     )
     own = Play("p", 1, 1, stop_at_target=False, daily_loss_stop=50)
     p = play.day_fn(d, play.resolve(own, hard), [0])(ctx("eval"))
-    # The bot's own stop at -50 exits at -51: the hard limit (-60) is judged on the low until
-    # the exit (stop_low), not on the later -103.22 the old convention keeps in `low`.
-    assert (p.close, p.low, p.stop_low) == pytest.approx((-51.0, -103.22, -51.0))
+    # The bot's own stop at -50 exits at -51: the hard limit (-60) and the floor are judged on
+    # the low until the exit, not on the later -103.22 (kept only with post_exit_lows=True).
+    assert (p.close, p.low, p.stop_low) == pytest.approx((-51.0, -51.0, -51.0))
     opt = dataclasses.replace(FIRM, optional_daily_loss=50.0, cap_with_optional_daily_loss=9_999)
     r = play.resolve(Play("p", 1, 1, stop_at_target=False, optional_daily_loss=True), opt)
     assert (r.eval.dll, r.funded.dll, r.firm.funded.cap) == (50.0, 50.0, 9_999)
@@ -232,7 +233,9 @@ def test_fixed_play_reproduces_the_old_policy_path_exactly(dll, stop):
     )
     f = firms.from_legacy(Rules(), XfaRules(), 300)
     p = Play("f", 3, 3, stop, None, stop_at_target=False, optional_daily_loss=dll)
-    new_s, new_l = play.run_play(Days(t, "MNQ"), p, f, 42, 80, np.random.default_rng(7))
+    new_s, new_l = play.run_play(
+        Days(t, "MNQ"), p, f, 42, 80, np.random.default_rng(7), post_exit_lows=True
+    )
     assert sum(o.combines_passed for o in old_s + old_l) > 10
     assert new_s == old_s and new_l == old_l
 
@@ -287,3 +290,25 @@ def test_menu_loads_named_stops_and_refuses_unknown_keys(tmp_path):
     p.write_text(json.dumps(menu), encoding="utf-8")
     with pytest.raises(ValueError, match="colour"):
         play.load_plays(p)
+
+
+def test_lows_after_a_dll_exit_do_not_breach_the_floor():
+    # QA 2026-10-28. One day: DLL 50 fires in minute 1 (out at -51); the market later falls to
+    # -103.22. With a floor $80 below the open, the old path breaches; the trader was flat.
+    d = Days(DAY, "MNQ")
+    f = Firm(
+        "t",
+        EvalRules(target=3_000, max_loss=80),
+        FundedRules(max_loss=80, payout_share=0.5, cap=None, min_payout=0, split=0.9),
+        Fees("monthly", 100, 100),
+    )
+    p = Play("p", 1, 1, None, None, daily_loss_stop=50, stop_at_target=False)
+    r = play.resolve(p, f)
+    new = play.day_fn(d, r, [0])(ctx("eval"))
+    old = play.day_fn(d, r, [0], post_exit_lows=True)(ctx("eval"))
+    assert new.close == old.close == pytest.approx(-51.0)
+    assert new.low == pytest.approx(-51.0) and old.low == pytest.approx(-103.22)
+    from quant_brain.prop import firm_sim
+
+    assert firm_sim.evaluation(f, lambda c: new, 1, 1).resets == 0
+    assert firm_sim.evaluation(f, lambda c: old, 1, 1).resets == 1

@@ -19,8 +19,10 @@ account. Per day, in order:
    start + lock; static never.
 4. Evaluation: pass at the close if profit >= target (raised to best day / share
    by a consistency rule) and the minimum trading days are met. Funded: pay out at
-   the end of the first eligible day (`_eligible`), min(share x (balance - start -
-   buffer), cap) if >= the minimum; then the floor moves to start + floor_after_payout
+   the end of the first eligible day (`_eligible`, and balance - start >= min_balance if
+   set), min(share x (balance - start - buffer, or the cycle's profit - buffer with
+   payout_base "cycle"), max_cycle_multiple x cycle profit, cap) if >= the minimum (with a
+   min_balance, clipped to stay FLOOR_MARGIN above the post-payout floor); then the floor moves to start + floor_after_payout
    and stops trailing (or, if unset, stays where it was and keeps trailing from the
    lower balance), and the since-payout counters restart.
 
@@ -54,7 +56,7 @@ from quant_brain.prop.funded import CashOutcome, XfaOutcome
 @dataclass(frozen=True)
 class DayPath:
     close: float
-    low: float  # lowest equity of the day (may include lows after an early exit: conservative)
+    low: float  # lowest equity until the day's exit (play.day_fn; the old path kept later lows)
     high: float  # highest equity of the day, >= 0 (the open)
     drawdown: float  # largest give-back from the running high
     stop_low: float | None = None  # lowest equity until the trader's own exit (None: = low)
@@ -69,6 +71,8 @@ class DayContext:
 
 
 DayFn = Callable[[DayContext], DayPath]
+
+FLOOR_MARGIN = 1.0  # dollars a clipped payout leaves above the post-payout floor
 
 
 def array_days(
@@ -228,12 +232,19 @@ def funded_account(firm: Firm, day: DayFn, n_days: int, horizon: int, first: int
         every.append(p.close)
         if trailing:
             peak, floor = _trail(r, peak, floor, open_balance, balance, p, lock)
-        if _eligible(r, since, since_traded, every, len(paid)):
-            amount = r.payout_share * (balance - r.start - r.buffer)
+        if _eligible(r, since, since_traded, every, len(paid)) and (
+            r.min_balance is None or balance - r.start >= r.min_balance
+        ):
+            base = sum(since) if r.payout_base == "cycle" else balance - r.start
+            amount = r.payout_share * (base - r.buffer)
+            if r.max_cycle_multiple is not None:
+                amount = min(amount, r.max_cycle_multiple * sum(since))
             cap = r.cap_at(len(paid))
             if cap is not None:
                 amount = min(amount, cap)
             after = floor if r.floor_after_payout is None else r.start + r.floor_after_payout
+            if r.min_balance is not None:  # a capped request can't take the balance to the floor
+                amount = min(amount, balance - after - FLOOR_MARGIN)
             if amount >= r.min_payout and balance - amount > after:
                 balance -= amount
                 paid.append(amount)

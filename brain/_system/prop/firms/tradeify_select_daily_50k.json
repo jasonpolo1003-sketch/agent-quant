@@ -75,6 +75,7 @@
   ],
   "price_with_50pct_consistency_addon_usd": 205,
   "reset_with_addon_usd": 135,
+  "payout_max_cycle_profit_multiple": 2,
   "payout_rule": "daily; may request up to 2x profit earned since previous request; cannot withdraw below start+$2,100",
   "payout_cap_note": "$1,250 for accounts bought on/after 2026-09-01 ($1,000 before)",
   "commission_mnq_round_trip_usd": 1.82

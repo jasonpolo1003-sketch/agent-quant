@@ -76,5 +76,6 @@
     "buffer semantics (cycle profit >= $2,100 vs balance >= start+$2,100) ambiguous"
   ],
   "price_list_usd": 283.99,
+  "funded_consistency_scope": "best_ever",
   "payout_buffer_note": "must clear $2,100 buffer in current cycle; no profit goal"
 }

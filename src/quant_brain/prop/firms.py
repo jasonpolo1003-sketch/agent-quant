@@ -50,6 +50,7 @@ DAILY_KINDS = ("soft_pause", "hard_fail")
 BILLING = ("monthly", "one_time")
 NEEDS_PROFIT = ("always", "after_first", "never")
 CONSISTENCY_SCOPES = ("cycle", "total", "best_ever")
+PAYOUT_BASES = ("balance", "cycle")
 
 
 def _check_daily(limit: float | None, kind: str | None, where: str) -> None:
@@ -112,8 +113,16 @@ class FundedRules:
     # cycle: largest day since the last payout vs profit since it; total: largest day ever vs
     # all profit since the start; best_ever: largest day ever vs profit since the last payout
     consistency_scope: str = "cycle"
+    # QA 2026-10-28: what payout_share applies to. "balance": balance - start - buffer (total
+    # profit); "cycle": profit since the last payout - buffer (FundedNext Flex "50% of profit
+    # per cycle").
+    payout_base: str = "balance"
+    min_balance: float | None = None  # balance - start needed to request (not a buffer)
+    max_cycle_multiple: float | None = None  # amount <= this x profit since the last payout
 
     def __post_init__(self):
+        if self.payout_base not in PAYOUT_BASES:
+            raise ValueError(f"payout_base {self.payout_base!r} not in {PAYOUT_BASES}")
         if self.drawdown not in DRAWDOWN_MODES:
             raise ValueError(f"funded drawdown_mode {self.drawdown!r} not in {DRAWDOWN_MODES}")
         _check_daily(self.daily_loss, self.daily_loss_kind, "funded")
@@ -277,6 +286,9 @@ _ALIASES: dict[str, tuple[str, ...]] = {
     "min_profit": ("payout_min_cycle_profit_usd", "payout_min_profit_usd"),
     "min_profit_schedule": ("payout_profit_goal_schedule_usd", "payout_min_profit_schedule_usd"),
     "max_payouts": ("max_payouts",),
+    "payout_base": ("payout_base",),
+    "min_balance": ("payout_min_balance_rel_start_usd",),
+    "cycle_multiple": ("payout_max_cycle_profit_multiple",),
 }
 
 _MODE_WORDS = {
@@ -453,6 +465,9 @@ def _funded(fc: dict, where: str) -> tuple[FundedRules, float | None]:
         min_profit_schedule=_schedule(_get(fc, "min_profit_schedule", where, None), where),
         consistency_schedule=_schedule(_get(fc, "consistency_schedule", where, None), where),
         consistency_scope=_get(fc, "consistency_scope", where, "cycle"),
+        payout_base=_get(fc, "payout_base", where, "balance"),
+        min_balance=_get(fc, "min_balance", where, None),
+        max_cycle_multiple=_get(fc, "cycle_multiple", where, None),
     )
     return fu, daily if optional else None
 

@@ -570,3 +570,67 @@ def test_research_drafts_load_or_fail_loudly():
             firms.load_firm(p)
         except ValueError:
             pass  # a loud, named refusal is fine; anything else is a loader bug
+
+
+# --- QA 2026-10-28: payout semantics read from the official pages ---------------------------
+
+
+def test_min_balance_gates_the_request_but_is_not_a_buffer():
+    # Tradeify Growth: request needs balance >= start + 3,000; the request is capped, not
+    # limited to the excess over 3,000 (official example: 53,000 -> request 1,500 -> 51,500).
+    fu = dataclasses.replace(
+        FU,
+        max_loss=2_000,
+        payout_share=1.0,
+        lock=100.0,
+        floor_after_payout=100.0,
+        winning_days=1,
+        winning_day_min=150,
+        min_balance=3_000,
+        cap_schedule=(1_500.0, 3_000.0),
+        min_payout=500,
+    )
+    assert fu_run([1_000.0, 1_000.0], fu=fu).paid == ()  # balance 2,000 < 3,000
+    o = fu_run([1_000.0, 1_000.0, 1_000.0], fu=fu)
+    assert o.paid == (1_500.0,) and o.payout_days == (3,)  # leaves 1,500 above start
+    # Second request: cap 3,000 at balance 3,000 would leave 0 <= floor 100: clipped to 2,899.
+    o = fu_run([1_000.0] * 3 + [1_500.0], fu=fu)
+    assert o.paid == (1_500.0, 2_899.0)
+
+
+def test_cycle_payout_base_pays_a_share_of_profit_since_the_last_payout():
+    # FundedNext Flex: "up to 50% of your profit per cycle".
+    fu = dataclasses.replace(FU, winning_days=1, winning_day_min=100, payout_base="cycle")
+    o = fu_run([1_000.0, 200.0], fu=fu)
+    assert o.paid == (500.0, 100.0)  # 50% of 200, not 50% of the 700 balance
+    total = dataclasses.replace(fu, payout_base="balance")
+    assert fu_run([1_000.0, 200.0], fu=total).paid == (500.0, 350.0)
+
+
+def test_max_cycle_multiple_limits_the_request():
+    # Tradeify Select Daily: "up to 2x the profit earned between each payout request".
+    fu = dataclasses.replace(
+        FU,
+        payout_share=1.0,
+        cap=300.0,
+        min_payout=10,
+        winning_days=0,
+        max_cycle_multiple=2,
+    )
+    o = fu_run([1_000.0, 50.0], fu=fu)
+    assert o.paid == (300.0, 100.0)  # without the rule the second request would be 300
+    assert fu_run([1_000.0, 50.0], fu=dataclasses.replace(fu, max_cycle_multiple=None)).paid == (
+        300.0,
+        300.0,
+    )
+
+
+def test_qa_corrected_research_values():
+    def fund(name):
+        return firms.load_firm(PROP / "firms" / f"{name}.json")["default"].funded
+
+    g = fund("tradeify_growth_50k")
+    assert (g.buffer, g.payout_share, g.min_balance) == (0.0, 1.0, 3_000)
+    assert fund("tradeify_select_daily_50k").max_cycle_multiple == 2
+    assert fund("fundednext_flex_50k").payout_base == "cycle"
+    assert fund("fundednext_direct_50k").consistency_scope == "best_ever"

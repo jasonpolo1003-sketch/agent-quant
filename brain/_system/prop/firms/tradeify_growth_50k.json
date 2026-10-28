@@ -40,8 +40,8 @@
   "payout_min_winning_days": 5,
   "payout_winning_day_min_usd": 150,
   "payout_min_cycle_profit_usd": null,
-  "payout_buffer_rel_start_usd": 3000,
-  "payout_share_of_profit": null,
+  "payout_buffer_rel_start_usd": 0,
+  "payout_share_of_profit": 1.0,
   "payout_share_of_balance": null,
   "payout_cap_usd": null,
   "payout_cap_schedule_usd": [
@@ -82,6 +82,7 @@
   ],
   "funded_daily_loss_rises_to_usd": 2000,
   "funded_daily_loss_rise_trigger_rel_start_usd": 3000,
-  "payout_buffer_note": "min balance to request $53,000 (accounts bought before 2025-09-12: $52,100)",
+  "payout_min_balance_rel_start_usd": 3000,
+  "payout_buffer_note": "QA 2026-10-28: $53,000 is the minimum balance to REQUEST, not a buffer; official example: $53,000 balance, $1,500 request leaves $51,500 (accounts bought before 2025-09-12: $52,100)",
   "commission_mnq_round_trip_usd": 1.82
 }

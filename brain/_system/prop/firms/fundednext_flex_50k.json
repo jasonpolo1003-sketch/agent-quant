@@ -77,5 +77,6 @@
   ],
   "price_note": "coupon price for first 2 purchases; $84.99 from 3rd; list $141.99",
   "price_list_usd": 141.99,
-  "min_days_note": "no explicit minimum; implied by 40%-of-target day cap"
+  "min_days_note": "no explicit minimum; implied by 40%-of-target day cap",
+  "payout_base": "cycle"
 }

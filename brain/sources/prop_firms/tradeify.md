@@ -78,3 +78,10 @@ Brokers (T14): "Tradovate (NinjaTrader, TradingView), Rithmic (Tradesea, Quantow
 3. Growth funded: what share of profit can be withdrawn? Only per-request caps are stated.
 4. The Lightning profit goal: per cycle or cumulative?
 5. Using the same bot at Topstep and Tradeify breaks "using it across multiple firms". Jason should pick one firm per bot.
+
+## QA corrections 2026-10-28
+Made by the quality agent (review: `brain/05_Reviews/prop-firm-grid-QA-2026-10-28.md`); JSON regenerated from `gen_firms.py`.
+- **Growth 50K payout (`tradeify_growth_50k.json`).** Was `payout_buffer_rel_start_usd: 3000` with share 1.0, so the simulator could only pay the excess over $53,000. Official (T5 mirror https://intercom.help/tradeify/en/articles/11083796-growth-funded-account-payout-policy, read 2026-10-28): $53,000 is the minimum balance to *request*; requests are hard-capped by payout number ($1,500 / $2,000 / $2,500 / $3,000) and "the remainder stays in your account"; worked example: $53,000 balance, $1,500 request leaves $51,500. Now `payout_min_balance_rel_start_usd: 3000`, `payout_buffer_rel_start_usd: 0`, `payout_share_of_profit: 1.0` (a request never takes the balance to the $50,100 floor: clipped $1 above it).
+- **Growth 35% consistency base.** T12 (https://intercom.help/tradeify/en/articles/10468320-rules-consistency-rule): "total profits accumulated from the first day of trading up to the payout request date" and "After an approved payout, the consistency % will reset" -> profit since the last payout (`cycle`), unchanged.
+- **Select Daily 2x rule (`tradeify_select_daily_50k.json`).** T7 (https://intercom.help/tradeify/en/articles/12853966-select-flex-and-select-daily-payout-policies): "They may request up to 2x the profit earned between each payout request". Was text only (ignored by the loader); now `payout_max_cycle_profit_multiple: 2`.
+- Not changed, noted: Growth funded DLL rises to $2,000 at $53,000 (not simulated: conservative); MNQ commission $1.82 round trip vs the workbench L3 cost built on Topstep fees (see review, finding H2).

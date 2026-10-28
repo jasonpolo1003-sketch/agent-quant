@@ -125,8 +125,16 @@ def resolve(p: Play, firm: Firm) -> Resolved:
     )
 
 
-def day_fn(days: Days, r: Resolved, idx, draws=None) -> firm_sim.DayFn:
-    """Day function for one resampled path: strategy (draws None) or one control draw per day."""
+def day_fn(
+    days: Days, r: Resolved, idx, draws=None, post_exit_lows: bool = False
+) -> firm_sim.DayFn:
+    """Day function for one resampled path: strategy (draws None) or one control draw per day.
+
+    The floor is checked against the lowest equity until the day's exit (QA 2026-10-28: after
+    a soft-DLL flatten the account is flat, so later market lows cannot breach it).
+    `post_exit_lows=True` restores the old `policy` path, which kept the whole day's low
+    (pessimistic; only for reproducing the earlier Topstep results).
+    """
     memo: dict[tuple, DayPath] = {}
 
     def fn(ctx: DayContext) -> DayPath:
@@ -143,9 +151,16 @@ def day_fn(days: Days, r: Resolved, idx, draws=None) -> firm_sim.DayFn:
         key = (day, draw, n, ph.dll, stop, ph.walk)
         if key not in memo:
             close, low = days.outcome(day, draw, n, ph.dll, stop)
+            dll_fired = ph.dll is not None and close <= -ph.dll
             if ph.walk:
                 high, give, stop_low = days.extremes(day, draw, n, ph.dll, stop)
-                memo[key] = DayPath(close, low, high, give, stop_low)
+                memo[key] = DayPath(
+                    close, low if post_exit_lows else stop_low, high, give, stop_low
+                )
+            elif dll_fired and not post_exit_lows and days.has_records:
+                _, _, stop_low = days.extremes(day, draw, n, ph.dll, stop)
+                high = max(0.0, close)
+                memo[key] = DayPath(close, stop_low, high, high - min(stop_low, close))
             else:
                 high = max(0.0, close)
                 memo[key] = DayPath(close, low, high, high - min(low, close))
@@ -162,6 +177,7 @@ def run_play(
     n_paths: int,
     rng: np.random.Generator,
     order: np.ndarray | None = None,
+    post_exit_lows: bool = False,
 ):
     """Strategy and luck lifecycles on the same resampled days (one control draw per day).
 
@@ -174,8 +190,10 @@ def run_play(
     strat, luck = [], []
     for i, d in zip(idx, draws, strict=True):
         days_i = base[i]
-        strat.append(firm_sim.lifecycle(r.firm, day_fn(days, r, days_i), horizon, horizon))
-        luck.append(firm_sim.lifecycle(r.firm, day_fn(days, r, days_i, d), horizon, horizon))
+        s_fn = day_fn(days, r, days_i, None, post_exit_lows)
+        l_fn = day_fn(days, r, days_i, d, post_exit_lows)
+        strat.append(firm_sim.lifecycle(r.firm, s_fn, horizon, horizon))
+        luck.append(firm_sim.lifecycle(r.firm, l_fn, horizon, horizon))
     return strat, luck
 
 
