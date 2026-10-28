@@ -72,7 +72,12 @@ def main() -> int:
                     inner=args.inner,
                     level=grid["cost_level"],
                 )
-                cell = {"policy": p.name, "plan": plan, "payout_path": path} | r
+                cell = {k: v for k, v in r.items() if k != "policy"} | {
+                    "policy": p.name,
+                    "plan": plan,
+                    "payout_path": path,
+                    "policy_detail": r["policy"],
+                }
                 cells.append(cell)
                 st, lk = r["strategy"], r["luck"]
                 lo, hi = r["net_cash_minus_luck_90ci"]
