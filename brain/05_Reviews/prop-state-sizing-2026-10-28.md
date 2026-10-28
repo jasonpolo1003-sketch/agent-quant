@@ -34,3 +34,8 @@ Topstep standard +$189 [-5, +509], 41% payout; consistency +$217 [-5, +507]; Tra
 Fees include re-buying a failed Combine inside the 42 days and the API fee per account (one subscription in reality, so slightly pessimistic); the 5% worst case is about -$2,600 if every failure is re-bought.
 
 Ledger: 9 test cells (kind state_sizing) in prop_trials.jsonl.
+
+## Follow-up: payback of a $500 budget (descriptive, P4 12/4, Topstep 50K standard path, in-sample)
+- Hard $500 budget (one account at a time, $49/mo + $49 resets + $149 activation + $29/mo API): trader payouts >= $500 within 42 trading days 31%, within 84 days 45% (then flat: money runs out). Any payout 58%. Mean payouts $1,150 by day 84 but median $316 (skewed). Spend median $403 (max ~$619 from monthly fees).
+- One account already funded (4 MNQ): any payout ever 58%; median 20 trading days to the first; >= $500 within 42 days 42%.
+- Four funded accounts, same bot: >= $500 within 42 days 58% (same start) / 75% (a week apart); mean ~$3,200.
