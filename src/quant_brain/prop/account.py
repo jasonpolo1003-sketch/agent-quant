@@ -10,7 +10,7 @@ target is checked on the end-of-day balance, raised by the consistency rule.
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -51,8 +51,22 @@ class Outcome:
     censored: bool  # data ran out before a pass or the horizon end
 
 
-def attempt(closes: Sequence[float], lows: Sequence[float], rules: Rules, horizon: int) -> Outcome:
-    """Run one funded attempt over up to `horizon` days of (close, low) day P&L in dollars."""
+# (day index, cushion = equity - floor at the open) -> that day's (close, low) in dollars
+DayPnl = Callable[[int, float], tuple[float, float]]
+
+
+def attempt(
+    closes: Sequence[float],
+    lows: Sequence[float],
+    rules: Rules,
+    horizon: int,
+    pnl: DayPnl | None = None,
+) -> Outcome:
+    """Run one funded attempt over up to `horizon` days of (close, low) day P&L in dollars.
+
+    With `pnl`, each day's P&L comes from it instead (so size can follow the account);
+    `closes` then only sets how many days there are.
+    """
     balance, peak = rules.start, rules.start
     floor = rules.start - rules.max_loss
     best_day = 0.0
@@ -62,7 +76,8 @@ def attempt(closes: Sequence[float], lows: Sequence[float], rules: Rules, horizo
     for day in range(days):
         if day and day % rules.days_per_month == 0:
             fees += rules.subscription
-        if balance + min(lows[day], closes[day]) <= floor:
+        close, low = pnl(day, balance - floor) if pnl else (closes[day], lows[day])
+        if balance + min(low, close) <= floor:
             resets += 1
             fees += rules.reset
             balance, peak, floor, best_day = (
@@ -72,8 +87,8 @@ def attempt(closes: Sequence[float], lows: Sequence[float], rules: Rules, horizo
                 0.0,
             )
             continue
-        balance += closes[day]
-        best_day = max(best_day, closes[day])
+        balance += close
+        best_day = max(best_day, close)
         if rules.trailing and balance > peak:
             peak = balance
             floor = peak - rules.max_loss

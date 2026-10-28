@@ -12,7 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
@@ -88,6 +88,14 @@ class DayTable:
     ctrl_trades: np.ndarray
     ctrl_ok: np.ndarray  # every draw evaluable
     ctrl_low: np.ndarray  # days x draws lowest intraday equity, gross
+    # Minute-ordered equity records (paths.day_records), ragged: day i's strategy records are
+    # orb_rec[orb_rec_off[i]:orb_rec_off[i + 1]]; control draw (i, d) uses unique path
+    # ctrl_rec_idx[i, d] (-1: not recorded) into ctrl_rec via ctrl_rec_off.
+    orb_rec: np.ndarray = field(default_factory=lambda: np.zeros((0, 2), np.int64))
+    orb_rec_off: np.ndarray = field(default_factory=lambda: np.zeros(1, np.int64))
+    ctrl_rec: np.ndarray = field(default_factory=lambda: np.zeros((0, 2), np.int64))
+    ctrl_rec_off: np.ndarray = field(default_factory=lambda: np.zeros(1, np.int64))
+    ctrl_rec_idx: np.ndarray = field(default_factory=lambda: np.zeros((0, 0), np.int64))
 
     @property
     def evaluable(self) -> np.ndarray:
@@ -105,6 +113,12 @@ class DayTable:
 
 def simulate(strategy: Strategy, days: list[DayInput], *, draws: int = DRAWS) -> DayTable:
     rows: dict[str, list] = {k: [] for k in DayTable.__dataclass_fields__}
+    orb_recs: list[list[tuple[int, int]]] = []
+    ctrl_paths: dict[tuple[tuple[int, int], ...], int] = {}
+
+    def path_id(records) -> int:
+        return ctrl_paths.setdefault(tuple(records), len(ctrl_paths))
+
     if hasattr(strategy, "prepare_all"):  # cross-day, point-in-time inputs (past sessions only)
         days = strategy.prepare_all(days)
     for raw in days:
@@ -118,9 +132,10 @@ def simulate(strategy: Strategy, days: list[DayInput], *, draws: int = DRAWS) ->
         if hasattr(strategy, "matched_control"):
             # Strategy-specific benchmark (e.g. same window, random direction); no stops,
             # so stress equals primary and every draw is evaluable.
-            gross, taken, lows = strategy.matched_control(day, result, draws)
+            gross, taken, lows, *recs = strategy.matched_control(day, result, draws)
             ctrl_gross, ctrl_stress, ctrl_trades, ctrl_ok = gross, gross, taken, True
             ctrl_low = lows
+            ctrl_idx = [path_id(r) for r in recs[0]] if recs else [-1] * draws
         else:
             control = daily_control(day, k, draws=draws, first_fill=strategy.first_fill)
             draw_rows = control.draws or []
@@ -139,6 +154,13 @@ def simulate(strategy: Strategy, days: list[DayInput], *, draws: int = DRAWS) ->
                 if draw_rows
                 else [0] * draws
             )
+            ctrl_idx = (
+                [path_id(paths.day_records(day.bars, d.trades, tick)) for d in draw_rows]
+                if draw_rows
+                else [path_id([])] * draws
+            )
+        orb_recs.append(paths.day_records(day.bars, result.trades, tick))
+        rows["ctrl_rec_idx"].append(ctrl_idx)
         rows["dates"].append(day.trade_date.isoformat())
         rows["status"].append(result.status)
         rows["atr"].append(day.atr_tr_sum or 0)
@@ -160,6 +182,14 @@ def simulate(strategy: Strategy, days: list[DayInput], *, draws: int = DRAWS) ->
         rows["ctrl_ok"].append(ctrl_ok)
         rows["ctrl_low"].append(ctrl_low)
     as_int = lambda key: np.array(rows[key], dtype=np.int64)  # noqa: E731
+
+    def ragged(groups) -> tuple[np.ndarray, np.ndarray]:
+        flat = [r for g in groups for r in g]
+        off = np.cumsum([0] + [len(g) for g in groups]).astype(np.int64)
+        return np.array(flat, dtype=np.int64).reshape(-1, 2), off
+
+    orb_rec, orb_rec_off = ragged(orb_recs)
+    ctrl_rec, ctrl_rec_off = ragged(list(ctrl_paths))
     return DayTable(
         dates=np.array(rows["dates"], dtype="<U10"),
         status=np.array(rows["status"], dtype="<U16"),
@@ -176,6 +206,11 @@ def simulate(strategy: Strategy, days: list[DayInput], *, draws: int = DRAWS) ->
         ctrl_trades=as_int("ctrl_trades").reshape(-1, draws),
         ctrl_ok=np.array(rows["ctrl_ok"], dtype=bool),
         ctrl_low=as_int("ctrl_low").reshape(-1, draws),
+        orb_rec=orb_rec,
+        orb_rec_off=orb_rec_off,
+        ctrl_rec=ctrl_rec,
+        ctrl_rec_off=ctrl_rec_off,
+        ctrl_rec_idx=as_int("ctrl_rec_idx").reshape(-1, draws),
     )
 
 

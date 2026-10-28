@@ -225,17 +225,20 @@ class NoiseArea:
 
     def matched_control(
         self, day: DayInput, result: DayResult, draws: int
-    ) -> tuple[list[int], list[int], list[int]]:
-        """The same legs (times, prices), each with an independent random direction."""
+    ) -> tuple[list[int], list[int], list[int], list[list[tuple[int, int]]]]:
+        """The same legs (times, prices), each with an independent random direction.
+
+        Also returns each draw's minute-ordered equity records (paths.day_records).
+        """
         if result.status != "traded":
-            return [0] * draws, [0] * draws, [0] * draws
+            return [0] * draws, [0] * draws, [0] * draws, [[]] * draws
         _, legs = self._legs(day)
         stamp = int(day.trade_date.strftime("%Y%m%d"))
         seq = np.random.SeedSequence([NOISE_SEED, ROOT_CODE[day.root], stamp, 5])
         flips = np.random.Generator(np.random.PCG64(seq)).integers(0, 2, size=(draws, len(legs)))
         tick = orb.TICK_CENTS[day.root]
-        cache: dict[tuple[int, ...], tuple[int, int]] = {}
-        gross, lows = [], []
+        cache: dict[tuple[int, ...], tuple[int, int, list[tuple[int, int]]]] = {}
+        gross, lows, recs = [], [], []
         for row in flips:
             key = tuple(int(x) for x in row)
             if key not in cache:
@@ -245,8 +248,10 @@ class NoiseArea:
                 cache[key] = (
                     sum(t.gross_cents for t in trades),
                     paths.day_path(day.bars, trades, tick)[0],
+                    paths.day_records(day.bars, trades, tick),
                 )
-            g, lo = cache[key]
+            g, lo, rec = cache[key]
             gross.append(g)
             lows.append(lo)
-        return gross, [len(legs)] * draws, lows
+            recs.append(rec)
+        return gross, [len(legs)] * draws, lows, recs

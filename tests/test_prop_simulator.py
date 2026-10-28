@@ -239,3 +239,23 @@ def test_fast_day_path_matches_slow_minute_replay_on_random_days():
         assert paths.day_path(day.bars, r.trades, tick)[0] == _slow_day_low(day, r.trades, tick)
         checked += 1
     assert checked > 1_000
+
+
+def test_day_records_low_matches_day_path_and_keep_time_order():
+    bars = {
+        **LONG,
+        "08:52": (112, 115, 112, 114),
+        "08:53": (114, 114, 108, 109),
+        "08:54": (109, 118, 109, 117),
+        "15:07": (117, 117, 117, 117),
+    }
+    d = make_day(bars)
+    r = simulate_day(d)
+    recs = paths.day_records(d.bars, r.trades, TICK)
+    low, _ = paths.day_path(d.bars, r.trades, TICK)
+    assert min(lo for lo, _ in recs) == low
+    run_lo = run_hi = 0
+    for lo, hi in recs:  # every record sets a new day low or a new day high
+        assert lo <= hi and (lo < run_lo or hi > run_hi)
+        run_lo, run_hi = min(run_lo, lo), max(run_hi, hi)
+    assert len(recs) >= 2  # the 08:53 dip comes after the 08:52 high, then a new high

@@ -15,13 +15,13 @@ closed, then a new Combine, until the horizon. Net cash = trader payouts - fees.
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
 
-from quant_brain.prop.account import Rules, attempt
+from quant_brain.prop.account import DayPnl, Rules, attempt
 
 
 @dataclass(frozen=True)
@@ -103,8 +103,12 @@ def xfa(
     r: XfaRules,
     horizon: int,
     traded: Sequence[bool] | None = None,
+    pnl: DayPnl | None = None,
 ) -> XfaOutcome:
-    """Run one funded account over up to `horizon` days (balance starts at $0)."""
+    """Run one funded account over up to `horizon` days (balance starts at $0).
+
+    `pnl` works as in `account.attempt`.
+    """
     balance = peak = 0.0
     floor = -r.max_loss
     paid: list[float] = []
@@ -113,13 +117,12 @@ def xfa(
     since_traded: list[bool] = []
     days = min(horizon, len(closes))
     for day in range(days):
-        if balance + min(lows[day], closes[day]) <= floor:
+        close, low = pnl(day, balance - floor) if pnl else (closes[day], lows[day])
+        if balance + min(low, close) <= floor:
             return XfaOutcome(day + 1, tuple(paid), tuple(payout_days), True)
-        balance += closes[day]
-        since.append(closes[day])
-        since_traded.append(
-            bool(traded[day]) if traded is not None else (closes[day] != 0 or lows[day] != 0)
-        )
+        balance += close
+        since.append(close)
+        since_traded.append(bool(traded[day]) if traded is not None else (close != 0 or low != 0))
         if not paid and balance > peak:
             peak = balance
             floor = min(peak - r.max_loss, 0.0)
@@ -144,23 +147,39 @@ class CashOutcome:
     first_payout_day: int | None  # 1-based, from the start of the horizon
 
 
+# (day index from the start of the horizon, cushion, "combine" | "xfa") -> (close, low)
+PhasePnl = Callable[[int, float, str], tuple[float, float]]
+
+
 def lifecycle(
-    closes: Sequence[float], lows: Sequence[float], combine: Rules, r: XfaRules, horizon: int
+    closes: Sequence[float],
+    lows: Sequence[float],
+    combine: Rules,
+    r: XfaRules,
+    horizon: int,
+    pnl: PhasePnl | None = None,
 ) -> CashOutcome:
-    """Combine -> XFA -> payouts, restarting with a new Combine after an XFA closes."""
+    """Combine -> XFA -> payouts, restarting with a new Combine after an XFA closes.
+
+    With `pnl`, day P&L comes from it (size and in-day rules can follow the account).
+    """
+
+    def phase(start: int, name: str) -> DayPnl | None:
+        return (lambda d, cushion: pnl(start + d, cushion, name)) if pnl else None
+
     day, fees, payouts = 0, 0.0, 0.0
     passed = closed = 0
     first_payout = None
     end = min(horizon, len(closes))
     while day < end:
-        c = attempt(closes[day:end], lows[day:end], combine, end - day)
+        c = attempt(closes[day:end], lows[day:end], combine, end - day, phase(day, "combine"))
         fees += c.fees
         day += c.days
         if not c.passed:
             break
         passed += 1
         fees += r.activation
-        x = xfa(closes[day:end], lows[day:end], r, end - day)
+        x = xfa(closes[day:end], lows[day:end], r, end - day, pnl=phase(day, "xfa"))
         if x.payout_days and first_payout is None:
             first_payout = day + x.payout_days[0]
         payouts += r.split * sum(x.paid)

@@ -107,10 +107,11 @@ def test_n11_short_mirror():
 def test_matched_control_randomises_each_trade_direction():
     d = day({**BREAKOUT, "10:29": (108, 108, 102, 102)})
     r = STRAT.simulate(d)
-    gross, taken, lows = STRAT.matched_control(d, r, 500)
+    gross, taken, lows, recs = STRAT.matched_control(d, r, 500)
     assert taken == [2] * 500
     assert set(gross) <= {-300, 300}  # long -6 / short 0 ticks, each leg's sign random
-    assert STRAT.matched_control(d, r, 500) == (gross, taken, lows)
+    assert STRAT.matched_control(d, r, 500) == (gross, taken, lows, recs)
+    assert all(min(lo for lo, _ in rec) == low for rec, low in zip(recs, lows, strict=True) if rec)
 
 
 def test_sigma_uses_only_previous_sessions():

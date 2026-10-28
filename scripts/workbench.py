@@ -23,7 +23,7 @@ from quant_brain.futures.session_audit import read_mappings
 from quant_brain.workbench import analysis, engine
 from quant_brain.workbench.strategies import make
 
-DEV_DIR = Path("C:/Users/jason/OneDrive/Desktop/Quant/data/databento/dev_2019-05-01_2024-12-31")
+DEV_DIR = PROJECT_ROOT.parent / "data" / "databento" / "dev_2019-05-01_2024-12-31"
 RESULTS = f"{engine.WORKBENCH}/results"
 VOLUME_ROLLS = "brain/sources/mes_mnq/contracts/roll_volume_check.csv"
 

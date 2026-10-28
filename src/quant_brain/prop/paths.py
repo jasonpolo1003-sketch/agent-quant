@@ -21,10 +21,9 @@ from datetime import time
 from quant_brain.futures.orb import Bar, Trade, minute_span
 
 
-def trade_extremes(bars: Mapping[time, Bar], trade: Trade, tick_cents: int) -> tuple[int, int]:
-    """(worst open P&L, best open P&L) in cents per contract, both counted from entry."""
+def _minute_points(bars: Mapping[time, Bar], trade: Trade):
+    """(minute, adverse, favourable) open P&L in ticks per contract, in time order."""
     side, entry = trade.side, trade.entry_ticks
-    worst = best = 0
     for minute in minute_span(trade.entry_minute, trade.exit_minute):
         if minute == trade.exit_minute:
             adverse = trade.exit_ticks
@@ -39,9 +38,36 @@ def trade_extremes(bars: Mapping[time, Bar], trade: Trade, tick_cents: int) -> t
                 continue
             adverse = bar[2] if side > 0 else bar[1]
             favourable = bar[1] if side > 0 else bar[2]
-        worst = min(worst, side * (adverse - entry))
-        best = max(best, side * (favourable - entry))
+        yield minute, side * (adverse - entry), side * (favourable - entry)
+
+
+def trade_extremes(bars: Mapping[time, Bar], trade: Trade, tick_cents: int) -> tuple[int, int]:
+    """(worst open P&L, best open P&L) in cents per contract, both counted from entry."""
+    worst = best = 0
+    for _, adverse, favourable in _minute_points(bars, trade):
+        worst, best = min(worst, adverse), max(best, favourable)
     return worst * tick_cents, best * tick_cents
+
+
+def day_records(
+    bars: Mapping[time, Bar], trades: Sequence[Trade], tick_cents: int
+) -> list[tuple[int, int]]:
+    """Each minute that sets a new day low or high: (equity low, equity high) in that minute.
+
+    Cents per contract, gross, in time order. Enough to tell which of an upper and
+    a lower level the day's equity touched first (a minute touching both counts as
+    adverse first). The smallest low equals `day_path`'s low.
+    """
+    realised = run_low = run_high = 0
+    out: list[tuple[int, int]] = []
+    for trade in trades:
+        for _, adverse, favourable in _minute_points(bars, trade):
+            lo, hi = realised + adverse * tick_cents, realised + favourable * tick_cents
+            if lo < run_low or hi > run_high:
+                out.append((lo, hi))
+                run_low, run_high = min(run_low, lo), max(run_high, hi)
+        realised += trade.gross_cents
+    return out
 
 
 def day_path(bars: Mapping[time, Bar], trades: Sequence[Trade], tick_cents: int) -> tuple[int, int]:
