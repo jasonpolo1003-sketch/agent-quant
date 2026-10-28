@@ -19,10 +19,11 @@ from quant_brain.workbench.engine import DayTable, read_ledger
 from quant_brain.workbench.strategies import GRADING
 
 COSTS = {
-    "L1": {"MNQ": 172, "MES": 247},
-    "L2": {"MNQ": 222, "MES": 372},
-    "L3": {"MNQ": 322, "MES": 622},
-    "L4": {"MNQ": 522, "MES": 1122},
+    # fees + 1 / 2 / 4 / 8 ticks of the traded contract (extra markets: see orb.L3_ROUND_TRIP_CENTS)
+    "L1": {"MNQ": 172, "MES": 247, "ZN": 1893, "M6E": 225, "MGC": 292, "ZC": 1778},
+    "L2": {"MNQ": 222, "MES": 372, "ZN": 3455, "M6E": 350, "MGC": 392, "ZC": 3028},
+    "L3": {"MNQ": 322, "MES": 622, "ZN": 6580, "M6E": 600, "MGC": 592, "ZC": 5528},
+    "L4": {"MNQ": 522, "MES": 1122, "ZN": 12830, "M6E": 1100, "MGC": 992, "ZC": 10528},
 }
 REGIME_LOOKBACK = 250
 GRID_REPLICATES = 1_999

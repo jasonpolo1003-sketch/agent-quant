@@ -26,7 +26,7 @@ from quant_brain.futures.orb import (
 
 DRAW_SEED = 20261026
 DRAWS = 500
-ROOT_CODE = {"MNQ": 1, "MES": 2}
+ROOT_CODE = {"MNQ": 1, "MES": 2, "ZN": 3, "M6E": 4, "MGC": 5, "ZC": 6}
 FIRST_FILL = add_minutes(SIGNAL_START, 1)  # 08:46, the earliest ORB fill
 
 

@@ -15,8 +15,13 @@ from fractions import Fraction
 
 Bar = tuple[int, int, int, int]  # open, high, low, close (ticks)
 
-TICK_CENTS = {"MNQ": 50, "MES": 125}
-L3_ROUND_TRIP_CENTS = {"MNQ": 322, "MES": 622}
+# Extra markets (plan B2): one tick of the *data* grid, valued for the traded contract.
+# ZN 1/64 pt = $15.625; M6E on 6E's 0.00005 grid = $0.625; MGC on GC's 0.1 = $1; ZC 0.25c = $12.50.
+# Fractional cents are truncated to whole cents per day (at most 1 cent).
+TICK_CENTS = {"MNQ": 50, "MES": 125, "ZN": 1562.5, "M6E": 62.5, "MGC": 100, "ZC": 1250}
+# L3 = Topstep fees (help centre, 2026-10-28; higher figure where pages conflict) + 4 ticks of
+# the traded contract (M6E's tick is $1.25), rounded up to whole cents.
+L3_ROUND_TRIP_CENTS = {"MNQ": 322, "MES": 622, "ZN": 6580, "M6E": 600, "MGC": 592, "ZC": 5528}
 RANGE_START = time(8, 30)
 RANGE_BARS = 15
 SIGNAL_START = time(8, 45)

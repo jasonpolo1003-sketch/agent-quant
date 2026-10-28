@@ -26,6 +26,27 @@ from quant_brain.workbench.strategies import make
 DEV_DIR = PROJECT_ROOT.parent / "data" / "databento" / "dev_2019-05-01_2024-12-31"
 RESULTS = f"{engine.WORKBENCH}/results"
 VOLUME_ROLLS = "brain/sources/mes_mnq/contracts/roll_volume_check.csv"
+MULTI_DIR = PROJECT_ROOT.parent / "data" / "databento" / "multi_2019-05-01_2024-12-31"
+
+
+def multi_loader(data_dir: Path) -> engine.Loader:
+    """ZN / M6E / MGC / ZC (futures.multi): hash-checked against the download manifest."""
+    import hashlib
+
+    from quant_brain.futures import multi
+
+    listed = json.loads((data_dir / "manifest.json").read_text(encoding="utf-8"))["files"]
+
+    def load(market: str, start: date, end: date, roll_column: str):
+        if roll_column != "volume_roll_date":
+            raise SystemExit("extra markets use the volume roll only")
+        path = multi.bars_file(data_dir, market)
+        expected = next(f["sha256"] for f in listed if f["file"] == path.name)
+        if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+            raise SystemExit(f"{path.name} does not match its manifest")
+        return multi.load_days(data_dir, PROJECT_ROOT / runner.CALENDAR, market, start, end)
+
+    return load
 
 
 def dev_loader(data_dir: Path) -> engine.Loader:
@@ -87,9 +108,12 @@ def main() -> int:
         return 0
 
     strategy = make(args.family, json.loads(args.settings))
-    table, record, cached = engine.run(
-        PROJECT_ROOT, strategy, args.market, args.roll, dev_loader(args.data_dir)
+    loader = (
+        dev_loader(args.data_dir)
+        if args.market in ("MNQ", "MES")
+        else multi_loader(MULTI_DIR)
     )
+    table, record, cached = engine.run(PROJECT_ROOT, strategy, args.market, args.roll, loader)
     result = analysis.summary(PROJECT_ROOT, table, record)
     out = PROJECT_ROOT / RESULTS / f"{record['fingerprint']}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
