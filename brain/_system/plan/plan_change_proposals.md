@@ -351,6 +351,12 @@ This exists because the project's core design rule is *move slowly, one verified
 - **Status:** accepted for this single-rule track on 2026-10-25; master PLAN.md narrow note applied. The eventual frozen card and power/MDE still require separate review; this is not approval of a result.
 - **Jason's decision:** explicitly selected “Approve PROP-011 as proposed” in the 2026-10-25 decision prompt. Also selected drafting Fetna's cash-open 15-minute R2 rule **for review only**, not freezing or testing it. No held-out run authorized.
 
+### PROP-012 - BM25 keyword layer for retrieval (proposed 2026-10-28)
+- **Problem:** semantic search (nomic-embed-text) can miss exact terms such as rule IDs, tickers and formula names.
+- **Proposed change:** add a BM25 lexical score fused with the existing embedding score inside `retrieval/`, judged by `scripts/retrieval_eval.py` (must beat the current Recall@5). No new agent, no new models.
+- **Origin:** an ML4T-based harness proposal (parked locally 2026-10-28; the rest duplicated existing code).
+- **Status:** proposed; low priority while strategy work leads.
+
 ---
 
 ## Accepted changes log
