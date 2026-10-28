@@ -18,6 +18,8 @@ from typing import Any
 
 import numpy as np
 
+from quant_brain.futures.orb import TICK_CENTS
+from quant_brain.prop import funded
 from quant_brain.prop.account import Outcome, Rules, attempt
 from quant_brain.workbench.analysis import COSTS
 from quant_brain.workbench.engine import EVALUABLE, DayTable
@@ -153,4 +155,102 @@ def evaluate(
         "walk_forward": walk_forward(table, market, frozen_size, rules, horizon, level),
         "phase1_gate": "pass" if (lo > 0 and timely) else "fail",
         "note": "Phase 1: evaluation only; payouts not estimable until Phase 2.",
+    }
+
+
+# --- Phase 2: net cash through the whole Combine -> XFA lifecycle ----------------------
+
+DLL_SLIP_TICKS = 2  # extra ticks per contract when the daily loss limit flattens a day
+
+
+def cash_dollars(table, market, size, level="L3", dll: float | None = None):
+    """`day_dollars`, with the daily loss limit applied to the strategy and every control."""
+    close, low, c_close, c_low = day_dollars(table, market, size, level)
+    if dll is not None:
+        slip = size * DLL_SLIP_TICKS * TICK_CENTS[market] / 100
+        close, low = funded.apply_dll(close, low, dll, slip)
+        c_close, c_low = funded.apply_dll(c_close, c_low, dll, slip)
+    return close, low, c_close, c_low
+
+
+def _cash_stats(outcomes: list[funded.CashOutcome]) -> dict[str, Any]:
+    net = np.array([o.net for o in outcomes])
+    firsts = [o.first_payout_day for o in outcomes if o.first_payout_day is not None]
+    return {
+        "attempts": len(outcomes),
+        "mean_net_cash": float(net.mean()),
+        "median_net_cash": float(np.median(net)),
+        "chance_net_cash_positive": float((net > 0).mean()),
+        "net_cash_5th_percentile": float(np.percentile(net, 5)),
+        "mean_payouts": float(np.mean([o.payouts for o in outcomes])),
+        "mean_fees": float(np.mean([o.fees for o in outcomes])),
+        "chance_any_payout": len(firsts) / len(outcomes),
+        "median_days_to_first_payout": float(np.median(firsts)) if firsts else None,
+        "mean_xfas_closed": float(np.mean([o.xfas_closed for o in outcomes])),
+    }
+
+
+def cash_bootstrap(
+    table, market, size, combine, xfa_rules, horizon, n_paths, rng, level="L3", dll=None, order=None
+):
+    close, low, c_close, c_low = cash_dollars(table, market, size, level, dll)
+    if order is not None:
+        close, low, c_close, c_low = close[order], low[order], c_close[order], c_low[order]
+    idx = block_paths(len(close), horizon, n_paths, rng)
+    draws = rng.integers(c_close.shape[1], size=idx.shape)
+    strat = [funded.lifecycle(close[i], low[i], combine, xfa_rules, horizon) for i in idx]
+    luck = [
+        funded.lifecycle(c_close[i, d], c_low[i, d], combine, xfa_rules, horizon)
+        for i, d in zip(idx, draws, strict=True)
+    ]
+    return strat, luck
+
+
+def evaluate_cash(
+    table: DayTable,
+    market: str,
+    combine: Rules,
+    xfa_rules: funded.XfaRules,
+    *,
+    frozen_size: int,
+    horizon: int = 42,
+    dll: float | None = None,
+    sizes: tuple[int, ...] = (1, 2, 3, 5),
+    n_paths: int = 2_000,
+    outer: int = 40,
+    inner: int = 300,
+    level: str = "L3",
+    seed: int = SEED,
+) -> dict[str, Any]:
+    """Net cash per attempt vs luck at luck's own best size; gate on the paired difference."""
+    rng = np.random.default_rng(seed)
+    by_size = {}
+    for size in sizes:
+        strat, luck = cash_bootstrap(
+            table, market, size, combine, xfa_rules, horizon, n_paths, rng, level, dll
+        )
+        by_size[str(size)] = {"strategy": _cash_stats(strat), "luck": _cash_stats(luck)}
+    luck_best = max(sizes, key=lambda s: by_size[str(s)]["luck"]["mean_net_cash"])
+    diffs = []
+    n = len(table.dates)
+    for _ in range(outer):
+        order = block_paths(n, n, 1, rng)[0]
+        args = (combine, xfa_rules, horizon, inner, rng, level, dll, order)
+        s_out, _ = cash_bootstrap(table, market, frozen_size, *args)
+        _, l_out = cash_bootstrap(table, market, luck_best, *args)
+        diffs.append(np.mean([o.net for o in s_out]) - np.mean([o.net for o in l_out]))
+    lo, hi = float(np.percentile(diffs, 5)), float(np.percentile(diffs, 95))
+    frozen = by_size[str(frozen_size)]["strategy"]
+    first = frozen["median_days_to_first_payout"]
+    return {
+        "combine_rules": combine.__dict__,
+        "xfa_rules": xfa_rules.__dict__,
+        "horizon_days": horizon,
+        "daily_loss_limit": dll,
+        "cost_level": level,
+        "frozen_size": frozen_size,
+        "luck_best_size": luck_best,
+        "by_size": by_size,
+        "net_cash_minus_luck_90ci": [lo, hi],
+        "phase2_gate": "pass" if (lo > 0 and first is not None and first <= horizon) else "fail",
     }

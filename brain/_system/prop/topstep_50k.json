@@ -1,8 +1,9 @@
 {
   "firm": "Topstep",
   "account": "50K Trading Combine (evaluation)",
-  "checked": "2026-10-27",
+  "checked": "2026-10-28",
   "sources": [
+    "https://help.topstep.com/en/articles/8284204-what-is-the-maximum-loss-limit (2026-09-18)",
     "https://intercom.help/topstep-llc/en/articles/8284197-trading-combine-parameters",
     "https://intercom.help/topstep-llc/en/articles/8284208-what-is-the-consistency-target",
     "brain/sources/prop_firm_same_day_ideas_2026-10-27.md",
@@ -29,11 +30,27 @@
     "minimum_trading_days": "help centre (reviewer)",
     "flat_by_ct": "research note 2026-10-27",
     "subscription_usd_per_month": "research note 2026-10-27",
-    "reset_usd": "research note 2026-10-27"
+    "reset_usd": "research note 2026-10-27",
+    "max_loss_limit_locks_at_start_balance": "MLL article 2026-09-18, re-read 2026-10-28: once the trailing limit reaches the starting balance it locks permanently (Combine)",
+    "plans": "Pricing and Payment article, read 2026-10-28",
+    "daily_loss_limit_usd": "DLL article 2026-06-30: optional, $1,000 for 50K; flattens and stops trading until the next session; not a rule violation; fixed if set at purchase and carried into the XFA"
   },
   "assumptions": [
     "a failed account is reset the next trading day for reset_usd; the monthly subscription keeps running every 21 trading days until the attempt passes or the fee budget ends",
     "costs per contract follow the workbench cost ladder (L3 primary, L4 stress)"
   ],
-  "phase_2_unverified": ["XFA payout caps and paths", "XFA loss-limit behaviour after payout", "XFA scaling plan", "live promotion"]
+  "plans": {
+    "standard": {
+      "subscription_usd_per_month": 49,
+      "reset_usd": 49,
+      "xfa_activation_usd": 149
+    },
+    "no_activation_fee": {
+      "subscription_usd_per_month": 95,
+      "reset_usd": 95,
+      "xfa_activation_usd": 0
+    }
+  },
+  "daily_loss_limit_usd": 1000,
+  "xfa_rules_file": "brain/_system/prop/topstep_50k_xfa.json"
 }
