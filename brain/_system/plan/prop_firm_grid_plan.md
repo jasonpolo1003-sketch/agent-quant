@@ -30,3 +30,11 @@ Mean net cash over 42 days > $0 with its lower 90% bound > $0, AND beats luck un
 
 ## Done when
 Grid run and reviewed, quality findings fixed or recorded, results and the bot status reported to Jason, vault updated.
+
+## Addendum before running (2026-10-28, after QA, before any grid result)
+QA review: `brain/05_Reviews/prop-firm-grid-QA-2026-10-28.md`. Rules fixed now, before results:
+1. **Multiple testing (QA H4).** A cell that passes the per-cell gate is only a *candidate*. It counts only if it passes again in a confirmation run with a fresh seed, `--outer 200`, using the lowest of the 200 outer resamples (≈ one-sided 0.5%) as the bound for both mean net cash and net − luck. The confirmation run covers candidates only and is reported in full.
+2. **Costs (QA H2).** Non-Topstep cells are also run at L4 (8 ticks + fees, covers Tradeify's higher $1.82 commission and FundedNext's unknown one). A non-Topstep cell counts only if it passes at both L3 and L4.
+3. **Order route (QA H3).** Non-Topstep results are reported as "only if a Python order route exists"; Tradeify also forbids the same bot at two firms.
+4. **Refused files (QA M6).** The 5 firm files that cannot load (3 Lucid: no official price; FundedNext Rapid Pro, Tradeify Lightning: no payout share) are listed in the review as not run.
+5. Topstep is billed with the simulator's convention (slightly over-charges resets, QA M5); Topstep cells are run both from the research JSONs (incl. the $29/mo API fee) and with `--topstep` adapters.
