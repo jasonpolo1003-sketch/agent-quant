@@ -36,3 +36,6 @@ brain/sources/youtube_inbox/*.md
 
 # Workbench run cache (rebuildable from code + settings; the trials ledger is tracked)
 brain/04_Backtest_Reports/workbench/cache/
+
+# Parked local work, not for the public repo (review 2026-10-28)
+parking/
