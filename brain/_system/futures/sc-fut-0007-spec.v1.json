@@ -1,0 +1,34 @@
+{
+  "schema_version": "sc-fut-0007-1",
+  "card_id": "SC-FUT-0007",
+  "status": "frozen",
+  "frozen": true,
+  "frozen_at": "2026-10-28",
+  "approved_by": "Jason 2026-10-28 (bigger-edge plan, step A2: \"go with plans A and B\")",
+  "parent": "SC-FUT-0005 (entries, exits, checks, VWAP, flatten, costs unchanged)",
+  "workbench_family": "noise_area",
+  "written_before": "any pyramiding result. Inputs used: the SC-FUT-0005 frozen rule and Topstep's published thresholds. No pyramid P&L, pass rate or cash figure chose a number below.",
+  "instrument": {"market": "MNQ", "roll": "volume", "base_size": "1 contract"},
+  "data": {"practice_inclusive": ["2019-05-01", "2024-12-31"], "exam": "2025-01-01.. locked"},
+  "pyramid": {
+    "step": "step_ticks = ceil(sigma_at_entry_check x open_of_day_in_ticks): one noise-band width at the check that opened the leg",
+    "adds": "while a leg is open, resting stop orders at entry +/- k x step (k = 1, 2, 3) in the leg's direction; at most 4 units in total per leg",
+    "monitoring": "1-minute bars strictly after the entry minute and strictly before the exit minute (the exit fills at the exit bar's open)",
+    "fill": "long: max(trigger, bar open) once the bar high reaches the trigger; short: min(trigger, bar open) once the bar low reaches it; several triggers can fill in one bar",
+    "exit": "all units exit with the leg, at the leg's exit fill (signal exit or flatten); a reversal starts a new leg at 1 unit",
+    "costs": "L3 per unit round trip (each add is one more MNQ round trip)",
+    "intraday_equity": "units held at once: each minute's equity is the realised P&L of closed units plus every open unit's adverse/favourable extreme in that minute"
+  },
+  "benchmarks": {
+    "matched_control": "the SC-FUT-0005 legs (same times and base fills) with random direction (same 500 seeded draws as SC-FUT-0005); each random leg pyramids by the identical rule on its own open profit"
+  },
+  "risk": "every day is capped by the $1,000 Topstep daily loss limit set at purchase (not a violation). The uncapped worst day is reported as a diagnostic only; the max of 4 units is not changed after results. (Plan draft said 'lower the max if the worst day exceeds the DLL'; replaced before any result because the DLL already caps the day and the check would need a look at results.)",
+  "gates": {
+    "cash_gate": "portfolio.evaluate, one sleeve (MNQ, base 1), 42-day Combine -> XFA lifecycle, Topstep 50K rules + $1,000 DLL, L3. PASS needs all three: mean net cash > $0; lower 90% bound of (net cash - luck net cash) > $0; chance of any payout within the stated range",
+    "stated_payout_range": [0.03, 0.30],
+    "cells": "2 pricing plans (standard, no_activation_fee) x 2 payout paths (standard, consistency) = 4 cells, each one trial; the card passes only if at least one cell passes, and the exam (later, Jason's go-ahead) uses the passing cell with the highest lower bound",
+    "workbench_supporting": "per-base-unit $/day vs matched control and Sharpe are reported, not gated",
+    "no_retuning": "no other step sizes or unit caps on this card; a failure is recorded as is"
+  },
+  "honesty": "noise_area family: one more distinct settings trial in the workbench ledger, plus 4 prop cash cells"
+}
