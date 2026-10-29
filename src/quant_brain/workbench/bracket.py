@@ -380,6 +380,7 @@ class EveningRevert(_BracketCard):
             "stop_sigmas": self.STOP_SIGMAS,
             "max_entries": self.MAX_ENTRIES,
             "size": 1,
+            "entry_band": "sigma < |price/P0 - 1| < 2 sigma (addendum 1)",
         }
 
     @property
@@ -441,6 +442,8 @@ class EveningRevert(_BracketCard):
                 continue
             move = price_bar[3] - p0
             if abs(move) <= sigma[n] * p0:  # |price / P0 - 1| > sigma, without float division
+                continue
+            if abs(move) >= self.STOP_SIGMAS * sigma[n] * p0:  # addendum 1: inside the stop only
                 continue
             side = -1 if move > 0 else 1
             stop = to_tick(p0 * (1 - side * self.STOP_SIGMAS * sigma[n]), side)

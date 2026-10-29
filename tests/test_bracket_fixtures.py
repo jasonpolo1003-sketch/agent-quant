@@ -334,13 +334,27 @@ def test_e3_long_mirror_and_stop():
     assert legs(r)[0] == (1, t("17:30"), 989, t("18:00"), 980, "stop")
 
 
-def test_e4_beyond_two_sigma_stops_at_entry_and_max_two_entries():
-    r = EVE.simulate(eday({"17:29": (1000, 1025, 1000, 1025)}))
-    assert legs(r) == [
-        (-1, t("17:30"), 1025, t("17:30"), 1025, "gap_stop"),
-        (-1, t("17:45"), 1025, t("17:45"), 1025, "gap_stop"),
-    ]
-    assert r.net_cents == -2 * 322
+def test_e4_addendum_1_no_entry_at_or_beyond_two_sigma():
+    assert EVE.simulate(eday({"17:29": (1000, 1025, 1000, 1025)})).trades == []
+    assert EVE.simulate(eday({"17:29": (1000, 1020, 1000, 1020)})).trades == []  # exactly 2 sigma
+    r = EVE.simulate(eday({"17:29": (1000, 1019, 1000, 1019)}))
+    assert legs(r)[0][:3] == (-1, t("17:30"), 1019)
+
+
+def test_e4b_max_two_entries():
+    r = EVE.simulate(
+        eday(
+            {
+                "17:29": (1000, 1015, 1000, 1015),
+                "17:31": (1015, 1020, 1015, 1020),  # stopped at 1020
+                "17:44": (1020, 1020, 1015, 1015),
+                "17:46": (1015, 1021, 1015, 1021),  # second stop
+                "17:59": (1021, 1021, 1015, 1015),
+            }
+        )
+    )
+    assert [x[5] for x in legs(r)] == ["stop", "stop"]
+    assert len(r.trades) == 2
 
 
 def test_e5_flatten_at_2030_and_last_check_2000():
