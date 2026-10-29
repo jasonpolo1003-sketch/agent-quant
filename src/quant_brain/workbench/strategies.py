@@ -155,7 +155,10 @@ class LateDayMomentum:
         return [c for _, c in picked], [1] * draws, [lo for lo, _ in picked]
 
 
+from quant_brain.workbench.bracket import EveningRevert, FadeBand, GapFill  # noqa: E402
+from quant_brain.workbench.month_end import MonthEnd  # noqa: E402
 from quant_brain.workbench.noise import NoiseArea, NoiseAreaPyramid  # noqa: E402
+from quant_brain.workbench.overnight import OvernightDrift  # noqa: E402
 from quant_brain.workbench.shock import ShockReversal  # noqa: E402
 
 REGISTRY: dict[str, type] = {
@@ -164,6 +167,16 @@ REGISTRY: dict[str, type] = {
     "shock_reversal": ShockReversal,
     "noise_area": NoiseArea,
     "noise_area_pyramid": NoiseAreaPyramid,
+    "fade_band": FadeBand,
+    "gap_fill": GapFill,
+    "evening_revert": EveningRevert,
+    "overnight_drift": OvernightDrift,
+    "month_end": MonthEnd,
+}
+_SMALL_EDGE = {
+    "floor_cents": 500,
+    "tiers": [(500, "small edge"), (1000, "good"), (1500, "strong")],
+    "sharpe_min": 1.0,
 }
 GRADING = {
     "noise_area": {
@@ -176,6 +189,13 @@ GRADING = {
         "tiers": [(500, "small edge"), (1000, "good"), (1500, "strong")],
         "sharpe_min": 1.0,
     },
+    "fade_band": dict(_SMALL_EDGE),  # SC-FUT-0009/0010/0011: same tiers as noise_area
+    "gap_fill": dict(_SMALL_EDGE),
+    "evening_revert": dict(_SMALL_EDGE),
+    "overnight_drift": dict(_SMALL_EDGE),  # SC-FUT-0012: $5/day floor, Sharpe >= 1.0
+    # SC-FUT-0013 is sparse: its real gates are month_end.spec_verdict ($1/session AND $5/trade,
+    # p over trade days); this entry only lets the generic summary run.
+    "month_end": {"floor_cents": 100, "tiers": [(100, "pass")], "sharpe_min": None},
     "orb": {"floor_cents": 1500, "tiers": [(1500, "pass")], "sharpe_min": None},
     "late_momentum": {
         "floor_cents": 500,
@@ -184,6 +204,20 @@ GRADING = {
     },
 }
 DESCRIPTIONS = {
+    "month_end": "Month end: T1 trades the last 3 sessions of the month against the month-to-date move of stocks (MES) vs bonds (ZN), short if stocks led, long if they lagged (pension rebalancing flow); "
+    "T2 is long on the last session and the first 3 of the next month (turn of the month); 8:30 CT open to 3:00 pm CT, no stop.",
+    "fade_band": "Fade inside the noise band: at half-hour checks, when price is more than half-way from "
+    "the 8:30 CT open to the edge of its normal move but not past it, trade back toward the open; "
+    "stop at the band edge; at most 3 trades; flat at the 3:00 pm CT close.",
+    "gap_fill": "Gap fill: when the 8:30 CT open gaps 0.2 to 1 times the 14-day average range away from "
+    "yesterday's close and the first minute does not fill it, trade back toward yesterday's close at 8:31; "
+    "stop one gap away; flat at 11:00 CT.",
+    "evening_revert": "Evening reversion: in the 5:00-8:30 pm CT evening session (counted with the next "
+    "trading day), when price is further from the 5:00 pm reopen than normal for that time, trade back to "
+    "the reopen price; stop at twice the normal move; at most 2 trades; flat at 8:30 pm.",
+    "overnight_drift": "Overnight drift: buy 1 contract at the 5:00 pm CT Globex reopen and sell at 8:29 am "
+    "CT, before the regular open (counted with that trading day); T2 only after a down regular session; "
+    "no stop; days after a holiday skipped.",
     "noise_area": "Noise-area momentum: at half-hour checks, ride a breakout beyond the normal move for that time "
     "of day; trail it with the band or VWAP; flat at the 3:00 pm CT close.",
     "shock_reversal": "Shock reversal: after a rare 15-minute lurch (4x normal for that time of day, not FOMC), "

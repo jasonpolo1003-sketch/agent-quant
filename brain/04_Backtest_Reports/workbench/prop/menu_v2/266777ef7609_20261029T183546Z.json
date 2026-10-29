@@ -1,0 +1,5410 @@
+{
+  "menu": "brain/_system/prop/account-play-menu.v2.json",
+  "menu_sha256": "09470164214b4ad157fe1bc25521ccff815eeff7a5e8f572d263ca95a7d961ac",
+  "addendum": "brain/_system/prop/account-play-menu.v2-addendum-1.md",
+  "addendum_sha256": "fafc05718ad0b026d04d69b009004813a4d69d9e443d085b7b07e5d3e6d7c230",
+  "workbench_trial": {
+    "at": "2026-10-28T16:29:59+00:00",
+    "code": "73e3747466348ed00ea1d90916d794196b4f8869eba2446491da2d93ca039d2c",
+    "days": 1425,
+    "family": "noise_area",
+    "fingerprint": "266777ef7609d8dfaf36d02ea3a9e4a5dc970fe6c756c88dd6665d097f8db400",
+    "market": "MNQ",
+    "roll": "volume",
+    "settings": {
+      "lookback_sessions": 14,
+      "size": 1,
+      "stop": "band_or_vwap"
+    }
+  },
+  "days": {
+    "train": 669,
+    "test": 756
+  },
+  "settings": {
+    "horizon_days": 42,
+    "paths": 2000,
+    "outer": 40,
+    "inner": 300,
+    "luck": "the trial's matched random-direction control with the same sizes",
+    "seed": 20261027,
+    "confirm_seed": 20261029,
+    "confirm_outer": 200
+  },
+  "units": [
+    {
+      "firm_file": "topstep_50k (adapter)",
+      "firm_sha256": "875444a078eced6813c8970c31e39d4fbd55c1d92d2bf11d0d953ca464312cd2",
+      "variant": "standard/standard",
+      "selectable": true,
+      "caps": {
+        "eval": 50,
+        "funded": 20
+      },
+      "train_grid": [
+        {
+          "eval": 12,
+          "funded": 2,
+          "menu_eval": 12,
+          "menu_funded": 2,
+          "mean_net_cash": -123.10301050000002,
+          "net_cash_90ci": [
+            -203.77088750000001,
+            -13.628703000000149
+          ],
+          "net_cash_minus_luck_90ci": [
+            26.20161183333333,
+            218.6804979999999
+          ],
+          "chance_any_payout": 0.2855,
+          "chance_net_cash_positive": 0.232,
+          "net_cash_5th_percentile": -443.0,
+          "median_days_to_first_payout": 34.0,
+          "mean_fees": 271.4065,
+          "mean_payouts": 148.30348949999996,
+          "luck_mean_net_cash": -234.1063125,
+          "luck_net_cash_90ci": [
+            -261.4240933333334,
+            -212.07916683333337
+          ],
+          "luck_chance_any_payout": 0.138,
+          "luck_mean_fees": 306.5985,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 12,
+          "funded": 4,
+          "menu_eval": 12,
+          "menu_funded": 4,
+          "mean_net_cash": 42.17817299999998,
+          "net_cash_90ci": [
+            -121.02245066666664,
+            246.88419566666659
+          ],
+          "net_cash_minus_luck_90ci": [
+            53.59844233333336,
+            421.47590899999994
+          ],
+          "chance_any_payout": 0.3955,
+          "chance_net_cash_positive": 0.34,
+          "net_cash_5th_percentile": -492.0,
+          "median_days_to_first_payout": 31.0,
+          "mean_fees": 306.3675,
+          "mean_payouts": 348.54567299999997,
+          "luck_mean_net_cash": -175.44294300000004,
+          "luck_net_cash_90ci": [
+            -234.970312,
+            -137.3718836666667
+          ],
+          "luck_chance_any_payout": 0.193,
+          "luck_mean_fees": 351.813,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 12,
+          "funded": 6,
+          "menu_eval": 12,
+          "menu_funded": 6,
+          "mean_net_cash": 207.22271150000003,
+          "net_cash_90ci": [
+            -65.96516716666663,
+            425.432261
+          ],
+          "net_cash_minus_luck_90ci": [
+            55.30450033333331,
+            554.5308181666667
+          ],
+          "chance_any_payout": 0.3635,
+          "chance_net_cash_positive": 0.334,
+          "net_cash_5th_percentile": -494.0,
+          "median_days_to_first_payout": 29.0,
+          "mean_fees": 331.738,
+          "mean_payouts": 538.9607115,
+          "luck_mean_net_cash": -145.20386499999998,
+          "luck_net_cash_90ci": [
+            -228.09002983333335,
+            -70.74297649999997
+          ],
+          "luck_chance_any_payout": 0.1735,
+          "luck_mean_fees": 376.3465,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 2,
+          "menu_eval": 16,
+          "menu_funded": 2,
+          "mean_net_cash": -119.60734550000002,
+          "net_cash_90ci": [
+            -211.81383900000003,
+            -42.89546550000011
+          ],
+          "net_cash_minus_luck_90ci": [
+            35.36150483333332,
+            216.74719416666667
+          ],
+          "chance_any_payout": 0.282,
+          "chance_net_cash_positive": 0.236,
+          "net_cash_5th_percentile": -443.0,
+          "median_days_to_first_payout": 34.0,
+          "mean_fees": 282.6905,
+          "mean_payouts": 163.08315449999998,
+          "luck_mean_net_cash": -248.26000100000002,
+          "luck_net_cash_90ci": [
+            -279.04246716666665,
+            -232.6574553333333
+          ],
+          "luck_chance_any_payout": 0.1485,
+          "luck_mean_fees": 328.9235,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 4,
+          "menu_eval": 16,
+          "menu_funded": 4,
+          "mean_net_cash": 50.88466799999997,
+          "net_cash_90ci": [
+            -118.95755333333332,
+            221.59878333333324
+          ],
+          "net_cash_minus_luck_90ci": [
+            69.330119,
+            419.54495399999985
+          ],
+          "chance_any_payout": 0.4125,
+          "chance_net_cash_positive": 0.3555,
+          "net_cash_5th_percentile": -494.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 323.955,
+          "mean_payouts": 374.83966799999996,
+          "luck_mean_net_cash": -186.46120000000002,
+          "luck_net_cash_90ci": [
+            -253.0990503333333,
+            -150.26945833333335
+          ],
+          "luck_chance_any_payout": 0.2075,
+          "luck_mean_fees": 378.559,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 6,
+          "menu_eval": 16,
+          "menu_funded": 6,
+          "mean_net_cash": 208.36126500000003,
+          "net_cash_90ci": [
+            -63.43151466666665,
+            420.3155176666666
+          ],
+          "net_cash_minus_luck_90ci": [
+            69.62042116666667,
+            593.1494120833333
+          ],
+          "chance_any_payout": 0.3725,
+          "chance_net_cash_positive": 0.345,
+          "net_cash_5th_percentile": -543.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 357.231,
+          "mean_payouts": 565.5922650000001,
+          "luck_mean_net_cash": -146.76399099999998,
+          "luck_net_cash_90ci": [
+            -235.17937716666668,
+            -115.66188300000009
+          ],
+          "luck_chance_any_payout": 0.1915,
+          "luck_mean_fees": 408.934,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 2,
+          "menu_eval": 20,
+          "menu_funded": 2,
+          "mean_net_cash": -136.991642,
+          "net_cash_90ci": [
+            -237.38252666666668,
+            -44.32736700000012
+          ],
+          "net_cash_minus_luck_90ci": [
+            19.525912166666657,
+            219.1018748333333
+          ],
+          "chance_any_payout": 0.28,
+          "chance_net_cash_positive": 0.2405,
+          "net_cash_5th_percentile": -443.0,
+          "median_days_to_first_payout": 34.0,
+          "mean_fees": 298.877,
+          "mean_payouts": 161.88535799999994,
+          "luck_mean_net_cash": -272.375259,
+          "luck_net_cash_90ci": [
+            -287.0658685,
+            -247.07121333333336
+          ],
+          "luck_chance_any_payout": 0.139,
+          "luck_mean_fees": 344.6205,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 4,
+          "menu_eval": 20,
+          "menu_funded": 4,
+          "mean_net_cash": 35.50081899999997,
+          "net_cash_90ci": [
+            -170.09979966666668,
+            258.4635256666666
+          ],
+          "net_cash_minus_luck_90ci": [
+            53.65901399999998,
+            444.9216363333333
+          ],
+          "chance_any_payout": 0.387,
+          "chance_net_cash_positive": 0.336,
+          "net_cash_5th_percentile": -492.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 332.4965,
+          "mean_payouts": 367.997319,
+          "luck_mean_net_cash": -221.50947299999999,
+          "luck_net_cash_90ci": [
+            -271.2425333333333,
+            -171.94390566666675
+          ],
+          "luck_chance_any_payout": 0.199,
+          "luck_mean_fees": 397.8285,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 6,
+          "menu_eval": 20,
+          "menu_funded": 6,
+          "mean_net_cash": 158.45041475000005,
+          "net_cash_90ci": [
+            -146.52468766666667,
+            421.1777010833333
+          ],
+          "net_cash_minus_luck_90ci": [
+            59.39437433333334,
+            595.4673511666666
+          ],
+          "chance_any_payout": 0.331,
+          "chance_net_cash_positive": 0.304,
+          "net_cash_5th_percentile": -543.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 364.654,
+          "mean_payouts": 523.10441475,
+          "luck_mean_net_cash": -179.0586255,
+          "luck_net_cash_90ci": [
+            -278.61130933333334,
+            -112.02543333333331
+          ],
+          "luck_chance_any_payout": 0.192,
+          "luck_mean_fees": 429.006,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 2,
+          "menu_eval": 30,
+          "menu_funded": 2,
+          "mean_net_cash": -187.30203899999998,
+          "net_cash_90ci": [
+            -267.55194983333337,
+            -68.1311351666667
+          ],
+          "net_cash_minus_luck_90ci": [
+            53.500629666666676,
+            225.19461433333333
+          ],
+          "chance_any_payout": 0.247,
+          "chance_net_cash_positive": 0.201,
+          "net_cash_5th_percentile": -492.0,
+          "median_days_to_first_payout": 35.0,
+          "mean_fees": 320.7345,
+          "mean_payouts": 133.432461,
+          "luck_mean_net_cash": -311.377584,
+          "luck_net_cash_90ci": [
+            -339.2517606666667,
+            -285.04828100000003
+          ],
+          "luck_chance_any_payout": 0.121,
+          "luck_mean_fees": 375.7395,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 4,
+          "menu_eval": 30,
+          "menu_funded": 4,
+          "mean_net_cash": -41.54251250000003,
+          "net_cash_90ci": [
+            -176.98893333333334,
+            152.64925566666653
+          ],
+          "net_cash_minus_luck_90ci": [
+            109.39441266666661,
+            432.77691766666663
+          ],
+          "chance_any_payout": 0.3625,
+          "chance_net_cash_positive": 0.3075,
+          "net_cash_5th_percentile": -541.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 360.029,
+          "mean_payouts": 318.48648749999995,
+          "luck_mean_net_cash": -274.915644,
+          "luck_net_cash_90ci": [
+            -322.613015,
+            -223.59895100000006
+          ],
+          "luck_chance_any_payout": 0.1845,
+          "luck_mean_fees": 424.491,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 6,
+          "menu_eval": 30,
+          "menu_funded": 6,
+          "mean_net_cash": 44.36714525000003,
+          "net_cash_90ci": [
+            -139.40230716666665,
+            319.5758793333333
+          ],
+          "net_cash_minus_luck_90ci": [
+            127.98946700000002,
+            509.78615924999974
+          ],
+          "chance_any_payout": 0.321,
+          "chance_net_cash_positive": 0.293,
+          "net_cash_5th_percentile": -592.0,
+          "median_days_to_first_payout": 31.0,
+          "mean_fees": 392.62,
+          "mean_payouts": 436.9871452500001,
+          "luck_mean_net_cash": -250.23227999999997,
+          "luck_net_cash_90ci": [
+            -320.6474928333333,
+            -171.65371633333336
+          ],
+          "luck_chance_any_payout": 0.173,
+          "luck_mean_fees": 452.472,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 2,
+          "menu_eval": 40,
+          "menu_funded": 2,
+          "mean_net_cash": -275.854288,
+          "net_cash_90ci": [
+            -342.41527183333335,
+            -189.35750933333344
+          ],
+          "net_cash_minus_luck_90ci": [
+            24.7793765,
+            157.48196183333332
+          ],
+          "chance_any_payout": 0.1725,
+          "chance_net_cash_positive": 0.1385,
+          "net_cash_5th_percentile": -590.0,
+          "median_days_to_first_payout": 34.0,
+          "mean_fees": 373.405,
+          "mean_payouts": 97.550712,
+          "luck_mean_net_cash": -360.082981,
+          "luck_net_cash_90ci": [
+            -379.2396185,
+            -321.9151476666667
+          ],
+          "luck_chance_any_payout": 0.093,
+          "luck_mean_fees": 407.7775,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 4,
+          "menu_eval": 40,
+          "menu_funded": 4,
+          "mean_net_cash": -173.07258450000003,
+          "net_cash_90ci": [
+            -280.28219766666666,
+            -12.23711000000021
+          ],
+          "net_cash_minus_luck_90ci": [
+            55.56363566666671,
+            308.18665899999985
+          ],
+          "chance_any_payout": 0.247,
+          "chance_net_cash_positive": 0.2085,
+          "net_cash_5th_percentile": -590.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 397.203,
+          "mean_payouts": 224.13041549999997,
+          "luck_mean_net_cash": -331.368461,
+          "luck_net_cash_90ci": [
+            -356.45430300000004,
+            -264.130358
+          ],
+          "luck_chance_any_payout": 0.147,
+          "luck_mean_fees": 447.101,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 6,
+          "menu_eval": 40,
+          "menu_funded": 6,
+          "mean_net_cash": -112.81690574999998,
+          "net_cash_90ci": [
+            -286.353301,
+            91.64496024999964
+          ],
+          "net_cash_minus_luck_90ci": [
+            58.849229333333355,
+            374.20870141666654
+          ],
+          "chance_any_payout": 0.2195,
+          "chance_net_cash_positive": 0.2055,
+          "net_cash_5th_percentile": -637.0,
+          "median_days_to_first_payout": 31.0,
+          "mean_fees": 431.01,
+          "mean_payouts": 318.19309425,
+          "luck_mean_net_cash": -318.578921,
+          "luck_net_cash_90ci": [
+            -363.37573366666663,
+            -234.87322383333333
+          ],
+          "luck_chance_any_payout": 0.13,
+          "luck_mean_fees": 472.2785,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        }
+      ],
+      "pick": {
+        "eval": 16,
+        "funded": 6,
+        "menu_eval": 16,
+        "menu_funded": 6
+      },
+      "test": {
+        "mean_net_cash": 378.94301700000005,
+        "net_cash_90ci": [
+          47.114229666666716,
+          772.63662025
+        ],
+        "net_cash_minus_luck_90ci": [
+          93.06143050000003,
+          757.7940628333333
+        ],
+        "chance_any_payout": 0.3305,
+        "chance_net_cash_positive": 0.3275,
+        "net_cash_5th_percentile": -690.0,
+        "median_days_to_first_payout": 30.0,
+        "mean_fees": 439.8015,
+        "mean_payouts": 818.744517,
+        "luck_mean_net_cash": -0.8085932499999663,
+        "luck_net_cash_90ci": [
+          -131.21372749999998,
+          104.61145966666669
+        ],
+        "luck_chance_any_payout": 0.2305,
+        "luck_mean_fees": 478.9345,
+        "luck_positive_flag": false,
+        "resolved": {
+          "eval": {
+            "size": 16,
+            "stop": 1485.0000000000002,
+            "dll": 1000,
+            "walk": false
+          },
+          "funded": {
+            "size": 6,
+            "stop": null,
+            "dll": 1000,
+            "walk": false
+          },
+          "notes": []
+        },
+        "gate": "pass"
+      },
+      "confirm": {
+        "mean_net_cash": 359.5385460000001,
+        "net_cash_90ci": [
+          -69.29985399999994,
+          918.6575153333334
+        ],
+        "net_cash_minus_luck_90ci": [
+          -68.68798824999998,
+          871.904853
+        ],
+        "chance_any_payout": 0.3195,
+        "chance_net_cash_positive": 0.3155,
+        "net_cash_5th_percentile": -690.0,
+        "median_days_to_first_payout": 29.0,
+        "mean_fees": 441.573,
+        "mean_payouts": 801.1115460000001,
+        "luck_mean_net_cash": -30.326845499999973,
+        "luck_net_cash_90ci": [
+          -134.86100999999996,
+          148.94121283333334
+        ],
+        "luck_chance_any_payout": 0.222,
+        "luck_mean_fees": 479.1375,
+        "luck_positive_flag": false,
+        "resolved": {
+          "eval": {
+            "size": 16,
+            "stop": 1485.0000000000002,
+            "dll": 1000,
+            "walk": false
+          },
+          "funded": {
+            "size": 6,
+            "stop": null,
+            "dll": 1000,
+            "walk": false
+          },
+          "notes": []
+        },
+        "gate": "fail"
+      }
+    },
+    {
+      "firm_file": "topstep_50k (adapter)",
+      "firm_sha256": "875444a078eced6813c8970c31e39d4fbd55c1d92d2bf11d0d953ca464312cd2",
+      "variant": "standard/consistency",
+      "selectable": true,
+      "caps": {
+        "eval": 50,
+        "funded": 20
+      },
+      "train_grid": [
+        {
+          "eval": 12,
+          "funded": 2,
+          "menu_eval": 12,
+          "menu_funded": 2,
+          "mean_net_cash": -184.42331,
+          "net_cash_90ci": [
+            -244.4653906666667,
+            -105.16246400000003
+          ],
+          "net_cash_minus_luck_90ci": [
+            4.072427000000005,
+            152.4178606666666
+          ],
+          "chance_any_payout": 0.12,
+          "chance_net_cash_positive": 0.114,
+          "net_cash_5th_percentile": -443.0,
+          "median_days_to_first_payout": 33.0,
+          "mean_fees": 266.7275,
+          "mean_payouts": 82.30418999999999,
+          "luck_mean_net_cash": -256.0222465,
+          "luck_net_cash_90ci": [
+            -279.64469533333335,
+            -228.48000833333333
+          ],
+          "luck_chance_any_payout": 0.08,
+          "luck_mean_fees": 306.232,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 12,
+          "funded": 4,
+          "menu_eval": 12,
+          "menu_funded": 4,
+          "mean_net_cash": 4.670858999999991,
+          "net_cash_90ci": [
+            -172.69136266666666,
+            199.6097379999999
+          ],
+          "net_cash_minus_luck_90ci": [
+            67.40278733333335,
+            415.35071800000003
+          ],
+          "chance_any_payout": 0.212,
+          "chance_net_cash_positive": 0.2105,
+          "net_cash_5th_percentile": -445.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 292.1145,
+          "mean_payouts": 296.78535899999997,
+          "luck_mean_net_cash": -209.37011,
+          "luck_net_cash_90ci": [
+            -260.2472563333333,
+            -176.45759533333336
+          ],
+          "luck_chance_any_payout": 0.1035,
+          "luck_mean_fees": 346.5725,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 12,
+          "funded": 6,
+          "menu_eval": 12,
+          "menu_funded": 6,
+          "mean_net_cash": 274.56606600000003,
+          "net_cash_90ci": [
+            23.90785516666669,
+            622.9955918333333
+          ],
+          "net_cash_minus_luck_90ci": [
+            213.77508016666667,
+            757.5845586666667
+          ],
+          "chance_any_payout": 0.334,
+          "chance_net_cash_positive": 0.334,
+          "net_cash_5th_percentile": -492.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 308.874,
+          "mean_payouts": 583.440066,
+          "luck_mean_net_cash": -152.55021999999997,
+          "luck_net_cash_90ci": [
+            -239.415609,
+            -70.01399166666667
+          ],
+          "luck_chance_any_payout": 0.1345,
+          "luck_mean_fees": 372.1585,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "pass"
+        },
+        {
+          "eval": 16,
+          "funded": 2,
+          "menu_eval": 16,
+          "menu_funded": 2,
+          "mean_net_cash": -175.764206,
+          "net_cash_90ci": [
+            -260.2859886666667,
+            -112.45756150000003
+          ],
+          "net_cash_minus_luck_90ci": [
+            7.7761073333333455,
+            171.230322
+          ],
+          "chance_any_payout": 0.133,
+          "chance_net_cash_positive": 0.127,
+          "net_cash_5th_percentile": -443.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 278.7995,
+          "mean_payouts": 103.035294,
+          "luck_mean_net_cash": -276.68632299999996,
+          "luck_net_cash_90ci": [
+            -297.20634816666666,
+            -252.5676055
+          ],
+          "luck_chance_any_payout": 0.0795,
+          "luck_mean_fees": 327.9445,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 4,
+          "menu_eval": 16,
+          "menu_funded": 4,
+          "mean_net_cash": -4.327208000000006,
+          "net_cash_90ci": [
+            -167.19881466666666,
+            206.70322333333328
+          ],
+          "net_cash_minus_luck_90ci": [
+            81.54736266666666,
+            429.0233109999999
+          ],
+          "chance_any_payout": 0.2095,
+          "chance_net_cash_positive": 0.209,
+          "net_cash_5th_percentile": -492.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 306.242,
+          "mean_payouts": 301.914792,
+          "luck_mean_net_cash": -232.263833,
+          "luck_net_cash_90ci": [
+            -282.596186,
+            -197.55878666666666
+          ],
+          "luck_chance_any_payout": 0.111,
+          "luck_mean_fees": 373.1765,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 6,
+          "menu_eval": 16,
+          "menu_funded": 6,
+          "mean_net_cash": 266.1828995,
+          "net_cash_90ci": [
+            -22.517313833333308,
+            525.6776563333332
+          ],
+          "net_cash_minus_luck_90ci": [
+            175.60834433333338,
+            701.6085455833334
+          ],
+          "chance_any_payout": 0.339,
+          "chance_net_cash_positive": 0.339,
+          "net_cash_5th_percentile": -494.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 326.6575,
+          "mean_payouts": 592.8403995000001,
+          "luck_mean_net_cash": -166.6906155,
+          "luck_net_cash_90ci": [
+            -233.38390283333334,
+            -103.13091741666666
+          ],
+          "luck_chance_any_payout": 0.147,
+          "luck_mean_fees": 403.515,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 2,
+          "menu_eval": 20,
+          "menu_funded": 2,
+          "mean_net_cash": -195.5356225,
+          "net_cash_90ci": [
+            -276.78953366666667,
+            -146.16167166666673
+          ],
+          "net_cash_minus_luck_90ci": [
+            10.24359616666669,
+            150.30524333333332
+          ],
+          "chance_any_payout": 0.133,
+          "chance_net_cash_positive": 0.13,
+          "net_cash_5th_percentile": -443.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 295.0135,
+          "mean_payouts": 99.47787749999999,
+          "luck_mean_net_cash": -297.055562,
+          "luck_net_cash_90ci": [
+            -307.2509025,
+            -270.7561628333333
+          ],
+          "luck_chance_any_payout": 0.077,
+          "luck_mean_fees": 343.715,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 4,
+          "menu_eval": 20,
+          "menu_funded": 4,
+          "mean_net_cash": -22.601835000000015,
+          "net_cash_90ci": [
+            -209.73783866666668,
+            161.82892999999996
+          ],
+          "net_cash_minus_luck_90ci": [
+            54.941027000000005,
+            380.0584593333333
+          ],
+          "chance_any_payout": 0.209,
+          "chance_net_cash_positive": 0.2085,
+          "net_cash_5th_percentile": -492.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 321.435,
+          "mean_payouts": 298.83316499999995,
+          "luck_mean_net_cash": -262.293996,
+          "luck_net_cash_90ci": [
+            -293.07806466666665,
+            -215.9094406666667
+          ],
+          "luck_chance_any_payout": 0.1055,
+          "luck_mean_fees": 391.7775,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 6,
+          "menu_eval": 20,
+          "menu_funded": 6,
+          "mean_net_cash": 218.45205625000003,
+          "net_cash_90ci": [
+            -34.87933099999998,
+            517.0563609166666
+          ],
+          "net_cash_minus_luck_90ci": [
+            181.85925233333336,
+            680.8965576666665
+          ],
+          "chance_any_payout": 0.321,
+          "chance_net_cash_positive": 0.321,
+          "net_cash_5th_percentile": -494.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 344.2595,
+          "mean_payouts": 562.7115562500001,
+          "luck_mean_net_cash": -184.65630050000001,
+          "luck_net_cash_90ci": [
+            -260.3192648333333,
+            -118.17792491666667
+          ],
+          "luck_chance_any_payout": 0.1525,
+          "luck_mean_fees": 423.389,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 2,
+          "menu_eval": 30,
+          "menu_funded": 2,
+          "mean_net_cash": -234.851372,
+          "net_cash_90ci": [
+            -300.175255,
+            -131.66744383333332
+          ],
+          "net_cash_minus_luck_90ci": [
+            31.553967666666654,
+            174.11540149999996
+          ],
+          "chance_any_payout": 0.1175,
+          "chance_net_cash_positive": 0.11,
+          "net_cash_5th_percentile": -492.0,
+          "median_days_to_first_payout": 33.0,
+          "mean_fees": 317.222,
+          "mean_payouts": 82.370628,
+          "luck_mean_net_cash": -332.197177,
+          "luck_net_cash_90ci": [
+            -355.2450461666666,
+            -304.60169033333335
+          ],
+          "luck_chance_any_payout": 0.077,
+          "luck_mean_fees": 376.8745,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 4,
+          "menu_eval": 30,
+          "menu_funded": 4,
+          "mean_net_cash": -80.69929600000002,
+          "net_cash_90ci": [
+            -231.86497533333335,
+            101.14211533333325
+          ],
+          "net_cash_minus_luck_90ci": [
+            70.80549433333333,
+            381.8346613333331
+          ],
+          "chance_any_payout": 0.19,
+          "chance_net_cash_positive": 0.19,
+          "net_cash_5th_percentile": -541.0,
+          "median_days_to_first_payout": 34.0,
+          "mean_fees": 348.952,
+          "mean_payouts": 268.252704,
+          "luck_mean_net_cash": -310.151666,
+          "luck_net_cash_90ci": [
+            -357.1316323333333,
+            -261.2438963333334
+          ],
+          "luck_chance_any_payout": 0.0965,
+          "luck_mean_fees": 418.5695,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 6,
+          "menu_eval": 30,
+          "menu_funded": 6,
+          "mean_net_cash": 87.61445450000002,
+          "net_cash_90ci": [
+            -79.0707463333333,
+            379.65895933333326
+          ],
+          "net_cash_minus_luck_90ci": [
+            170.42877433333334,
+            604.9884553333334
+          ],
+          "chance_any_payout": 0.281,
+          "chance_net_cash_positive": 0.281,
+          "net_cash_5th_percentile": -590.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 373.7305,
+          "mean_payouts": 461.3449545,
+          "luck_mean_net_cash": -246.12201775,
+          "luck_net_cash_90ci": [
+            -306.84521183333334,
+            -199.71269866666674
+          ],
+          "luck_chance_any_payout": 0.1325,
+          "luck_mean_fees": 447.2335,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 2,
+          "menu_eval": 40,
+          "menu_funded": 2,
+          "mean_net_cash": -310.65109750000005,
+          "net_cash_90ci": [
+            -359.07122000000004,
+            -239.59171683333344
+          ],
+          "net_cash_minus_luck_90ci": [
+            23.113561999999973,
+            116.15678116666656
+          ],
+          "chance_any_payout": 0.087,
+          "chance_net_cash_positive": 0.0805,
+          "net_cash_5th_percentile": -590.0,
+          "median_days_to_first_payout": 33.0,
+          "mean_fees": 371.89,
+          "mean_payouts": 61.238902499999995,
+          "luck_mean_net_cash": -372.88987799999995,
+          "luck_net_cash_90ci": [
+            -391.45186099999995,
+            -336.50290616666666
+          ],
+          "luck_chance_any_payout": 0.0645,
+          "luck_mean_fees": 409.1055,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 4,
+          "menu_eval": 40,
+          "menu_funded": 4,
+          "mean_net_cash": -198.28690600000002,
+          "net_cash_90ci": [
+            -331.1405523333333,
+            -52.216099000000064
+          ],
+          "net_cash_minus_luck_90ci": [
+            36.51132133333336,
+            283.0345703333332
+          ],
+          "chance_any_payout": 0.1335,
+          "chance_net_cash_positive": 0.1315,
+          "net_cash_5th_percentile": -590.0,
+          "median_days_to_first_payout": 33.0,
+          "mean_fees": 391.0405,
+          "mean_payouts": 192.753594,
+          "luck_mean_net_cash": -354.603784,
+          "luck_net_cash_90ci": [
+            -392.5636243333334,
+            -303.389371
+          ],
+          "luck_chance_any_payout": 0.0795,
+          "luck_mean_fees": 442.8445,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 6,
+          "menu_eval": 40,
+          "menu_funded": 6,
+          "mean_net_cash": -92.18283674999999,
+          "net_cash_90ci": [
+            -204.3488203333333,
+            162.78908783333335
+          ],
+          "net_cash_minus_luck_90ci": [
+            79.05852566666667,
+            472.226791
+          ],
+          "chance_any_payout": 0.196,
+          "chance_net_cash_positive": 0.196,
+          "net_cash_5th_percentile": -592.0,
+          "median_days_to_first_payout": 31.0,
+          "mean_fees": 416.157,
+          "mean_payouts": 323.97416325000006,
+          "luck_mean_net_cash": -318.31831200000005,
+          "luck_net_cash_90ci": [
+            -352.8030838333333,
+            -247.97430758333337
+          ],
+          "luck_chance_any_payout": 0.101,
+          "luck_mean_fees": 467.337,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        }
+      ],
+      "pick": {
+        "eval": 12,
+        "funded": 6,
+        "menu_eval": 12,
+        "menu_funded": 6
+      },
+      "test": {
+        "mean_net_cash": 455.7778727500001,
+        "net_cash_90ci": [
+          135.49327166666671,
+          908.7574093749998
+        ],
+        "net_cash_minus_luck_90ci": [
+          199.7760754166667,
+          1020.6557020416667
+        ],
+        "chance_any_payout": 0.406,
+        "chance_net_cash_positive": 0.406,
+        "net_cash_5th_percentile": -641.0,
+        "median_days_to_first_payout": 25.0,
+        "mean_fees": 427.274,
+        "mean_payouts": 883.0518727500001,
+        "luck_mean_net_cash": -79.23438499999997,
+        "luck_net_cash_90ci": [
+          -139.24990566666668,
+          31.116172833333376
+        ],
+        "luck_chance_any_payout": 0.2145,
+        "luck_mean_fees": 458.8115,
+        "luck_positive_flag": false,
+        "resolved": {
+          "eval": {
+            "size": 12,
+            "stop": 1485.0000000000002,
+            "dll": 1000,
+            "walk": false
+          },
+          "funded": {
+            "size": 6,
+            "stop": 1080.0,
+            "dll": 1000,
+            "walk": false
+          },
+          "notes": []
+        },
+        "gate": "pass"
+      },
+      "confirm": {
+        "mean_net_cash": 474.436029,
+        "net_cash_90ci": [
+          21.843251500000026,
+          976.9752681250001
+        ],
+        "net_cash_minus_luck_90ci": [
+          54.32411625000003,
+          1015.0568756666662
+        ],
+        "chance_any_payout": 0.4125,
+        "chance_net_cash_positive": 0.4125,
+        "net_cash_5th_percentile": -643.0,
+        "median_days_to_first_payout": 25.0,
+        "mean_fees": 427.5285,
+        "mean_payouts": 901.9645290000001,
+        "luck_mean_net_cash": -73.56492737499997,
+        "luck_net_cash_90ci": [
+          -131.39544049999998,
+          50.9831762083333
+        ],
+        "luck_chance_any_payout": 0.213,
+        "luck_mean_fees": 455.7505,
+        "luck_positive_flag": false,
+        "resolved": {
+          "eval": {
+            "size": 12,
+            "stop": 1485.0000000000002,
+            "dll": 1000,
+            "walk": false
+          },
+          "funded": {
+            "size": 6,
+            "stop": 1080.0,
+            "dll": 1000,
+            "walk": false
+          },
+          "notes": []
+        },
+        "gate": "pass"
+      }
+    },
+    {
+      "firm_file": "topstep_50k (adapter)",
+      "firm_sha256": "875444a078eced6813c8970c31e39d4fbd55c1d92d2bf11d0d953ca464312cd2",
+      "variant": "no_activation_fee/standard",
+      "selectable": true,
+      "caps": {
+        "eval": 50,
+        "funded": 20
+      },
+      "train_grid": [
+        {
+          "eval": 12,
+          "funded": 2,
+          "menu_eval": 12,
+          "menu_funded": 2,
+          "mean_net_cash": -120.2140105,
+          "net_cash_90ci": [
+            -229.57038749999998,
+            45.077796999999876
+          ],
+          "net_cash_minus_luck_90ci": [
+            51.366611833333316,
+            329.5990086666666
+          ],
+          "chance_any_payout": 0.2855,
+          "chance_net_cash_positive": 0.2585,
+          "net_cash_5th_percentile": -665.0,
+          "median_days_to_first_payout": 34.0,
+          "mean_fees": 268.5175,
+          "mean_payouts": 148.30348949999996,
+          "luck_mean_net_cash": -291.1203125,
+          "luck_net_cash_90ci": [
+            -342.32128266666666,
+            -247.03557849999999
+          ],
+          "luck_chance_any_payout": 0.138,
+          "luck_mean_fees": 363.6125,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 12,
+          "funded": 4,
+          "menu_eval": 12,
+          "menu_funded": 4,
+          "mean_net_cash": 44.02317299999998,
+          "net_cash_90ci": [
+            -113.298237,
+            297.82036233333315
+          ],
+          "net_cash_minus_luck_90ci": [
+            130.32952566666668,
+            527.9609949999999
+          ],
+          "chance_any_payout": 0.3955,
+          "chance_net_cash_positive": 0.366,
+          "net_cash_5th_percentile": -665.0,
+          "median_days_to_first_payout": 31.0,
+          "mean_fees": 304.5225,
+          "mean_payouts": 348.54567299999997,
+          "luck_mean_net_cash": -244.85994300000002,
+          "luck_net_cash_90ci": [
+            -325.625111,
+            -188.40753500000002
+          ],
+          "luck_chance_any_payout": 0.193,
+          "luck_mean_fees": 421.23,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 12,
+          "funded": 6,
+          "menu_eval": 12,
+          "menu_funded": 6,
+          "mean_net_cash": 201.28321150000002,
+          "net_cash_90ci": [
+            -101.08400049999996,
+            476.7345628333333
+          ],
+          "net_cash_minus_luck_90ci": [
+            113.62061950000002,
+            657.6728918333334
+          ],
+          "chance_any_payout": 0.3635,
+          "chance_net_cash_positive": 0.3425,
+          "net_cash_5th_percentile": -665.0,
+          "median_days_to_first_payout": 29.0,
+          "mean_fees": 337.6775,
+          "mean_payouts": 538.9607115,
+          "luck_mean_net_cash": -222.19736499999996,
+          "luck_net_cash_90ci": [
+            -329.0238588333333,
+            -129.43513583333333
+          ],
+          "luck_chance_any_payout": 0.1735,
+          "luck_mean_fees": 453.34,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 2,
+          "menu_eval": 16,
+          "menu_funded": 2,
+          "mean_net_cash": -118.21184550000002,
+          "net_cash_90ci": [
+            -241.98833900000002,
+            -19.755632166666842
+          ],
+          "net_cash_minus_luck_90ci": [
+            83.73443133333332,
+            297.2951941666666
+          ],
+          "chance_any_payout": 0.282,
+          "chance_net_cash_positive": 0.2575,
+          "net_cash_5th_percentile": -665.0,
+          "median_days_to_first_payout": 34.0,
+          "mean_fees": 281.295,
+          "mean_payouts": 163.08315449999998,
+          "luck_mean_net_cash": -321.89900100000006,
+          "luck_net_cash_90ci": [
+            -374.0783005,
+            -297.5595983333333
+          ],
+          "luck_chance_any_payout": 0.1485,
+          "luck_mean_fees": 402.5625,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 4,
+          "menu_eval": 16,
+          "menu_funded": 4,
+          "mean_net_cash": 53.40716799999998,
+          "net_cash_90ci": [
+            -148.68860866666668,
+            260.9060166666666
+          ],
+          "net_cash_minus_luck_90ci": [
+            123.35945233333332,
+            563.3427896666666
+          ],
+          "chance_any_payout": 0.4125,
+          "chance_net_cash_positive": 0.3755,
+          "net_cash_5th_percentile": -665.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 321.4325,
+          "mean_payouts": 374.83966799999996,
+          "luck_mean_net_cash": -275.06469999999996,
+          "luck_net_cash_90ci": [
+            -365.8627366666667,
+            -238.675581
+          ],
+          "luck_chance_any_payout": 0.2075,
+          "luck_mean_fees": 467.1625,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 6,
+          "menu_eval": 16,
+          "menu_funded": 6,
+          "mean_net_cash": 208.677265,
+          "net_cash_90ci": [
+            -105.73818133333332,
+            462.9894561666666
+          ],
+          "net_cash_minus_luck_90ci": [
+            126.15642116666669,
+            737.430167
+          ],
+          "chance_any_payout": 0.3725,
+          "chance_net_cash_positive": 0.3525,
+          "net_cash_5th_percentile": -665.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 356.915,
+          "mean_payouts": 565.5922650000001,
+          "luck_mean_net_cash": -243.37249099999997,
+          "luck_net_cash_90ci": [
+            -359.55151099999995,
+            -205.3529570000001
+          ],
+          "luck_chance_any_payout": 0.1915,
+          "luck_mean_fees": 505.5425,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 2,
+          "menu_eval": 20,
+          "menu_funded": 2,
+          "mean_net_cash": -151.94714200000004,
+          "net_cash_90ci": [
+            -289.7091315,
+            -34.96884783333351
+          ],
+          "net_cash_minus_luck_90ci": [
+            63.91379616666673,
+            293.23985416666653
+          ],
+          "chance_any_payout": 0.28,
+          "chance_net_cash_positive": 0.2525,
+          "net_cash_5th_percentile": -665.0,
+          "median_days_to_first_payout": 34.0,
+          "mean_fees": 313.8325,
+          "mean_payouts": 161.88535799999994,
+          "luck_mean_net_cash": -358.29475899999994,
+          "luck_net_cash_90ci": [
+            -400.5258851666666,
+            -322.33155550000004
+          ],
+          "luck_chance_any_payout": 0.139,
+          "luck_mean_fees": 430.54,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 4,
+          "menu_eval": 20,
+          "menu_funded": 4,
+          "mean_net_cash": 14.549818999999971,
+          "net_cash_90ci": [
+            -211.9810863333333,
+            266.12807433333336
+          ],
+          "net_cash_minus_luck_90ci": [
+            116.26907033333336,
+            547.034829
+          ],
+          "chance_any_payout": 0.387,
+          "chance_net_cash_positive": 0.354,
+          "net_cash_5th_percentile": -665.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 353.4475,
+          "mean_payouts": 367.997319,
+          "luck_mean_net_cash": -322.858473,
+          "luck_net_cash_90ci": [
+            -404.20866433333333,
+            -274.0781706666667
+          ],
+          "luck_chance_any_payout": 0.199,
+          "luck_mean_fees": 499.1775,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 6,
+          "menu_eval": 20,
+          "menu_funded": 6,
+          "mean_net_cash": 134.03191475000003,
+          "net_cash_90ci": [
+            -187.7589585,
+            429.15836774999985
+          ],
+          "net_cash_minus_luck_90ci": [
+            103.17437433333339,
+            672.716238833333
+          ],
+          "chance_any_payout": 0.331,
+          "chance_net_cash_positive": 0.3125,
+          "net_cash_5th_percentile": -760.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 389.0725,
+          "mean_payouts": 523.10441475,
+          "luck_mean_net_cash": -290.03262549999994,
+          "luck_net_cash_90ci": [
+            -419.28753166666667,
+            -228.26406866666665
+          ],
+          "luck_chance_any_payout": 0.192,
+          "luck_mean_fees": 539.98,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 2,
+          "menu_eval": 30,
+          "menu_funded": 2,
+          "mean_net_cash": -225.81003900000002,
+          "net_cash_90ci": [
+            -339.6763266666667,
+            -76.46168816666673
+          ],
+          "net_cash_minus_luck_90ci": [
+            112.47692433333324,
+            330.5159693333334
+          ],
+          "chance_any_payout": 0.247,
+          "chance_net_cash_positive": 0.2125,
+          "net_cash_5th_percentile": -760.0,
+          "median_days_to_first_payout": 35.0,
+          "mean_fees": 359.2425,
+          "mean_payouts": 133.432461,
+          "luck_mean_net_cash": -447.165584,
+          "luck_net_cash_90ci": [
+            -500.8018036666667,
+            -397.7800401666667
+          ],
+          "luck_chance_any_payout": 0.121,
+          "luck_mean_fees": 511.5275,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 4,
+          "menu_eval": 30,
+          "menu_funded": 4,
+          "mean_net_cash": -85.59601250000001,
+          "net_cash_90ci": [
+            -273.55093000000005,
+            135.95663999999985
+          ],
+          "net_cash_minus_luck_90ci": [
+            178.6259126666666,
+            557.6675689999998
+          ],
+          "chance_any_payout": 0.3625,
+          "chance_net_cash_positive": 0.3195,
+          "net_cash_5th_percentile": -760.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 404.0825,
+          "mean_payouts": 318.48648749999995,
+          "luck_mean_net_cash": -432.204644,
+          "luck_net_cash_90ci": [
+            -508.77915599999994,
+            -366.9611176666668
+          ],
+          "luck_chance_any_payout": 0.1845,
+          "luck_mean_fees": 581.78,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 6,
+          "menu_eval": 30,
+          "menu_funded": 6,
+          "mean_net_cash": -8.182854749999965,
+          "net_cash_90ci": [
+            -232.7898071666666,
+            304.12332066666664
+          ],
+          "net_cash_minus_luck_90ci": [
+            204.57292433333342,
+            665.5029301666666
+          ],
+          "chance_any_payout": 0.321,
+          "chance_net_cash_positive": 0.294,
+          "net_cash_5th_percentile": -855.0,
+          "median_days_to_first_payout": 31.0,
+          "mean_fees": 445.17,
+          "mean_payouts": 436.9871452500001,
+          "luck_mean_net_cash": -419.34528,
+          "luck_net_cash_90ci": [
+            -512.2950273333333,
+            -327.298757
+          ],
+          "luck_chance_any_payout": 0.173,
+          "luck_mean_fees": 621.585,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 2,
+          "menu_eval": 40,
+          "menu_funded": 2,
+          "mean_net_cash": -410.461788,
+          "net_cash_90ci": [
+            -524.1953474999999,
+            -272.60784266666684
+          ],
+          "net_cash_minus_luck_90ci": [
+            54.103167166666665,
+            230.2001383333332
+          ],
+          "chance_any_payout": 0.1725,
+          "chance_net_cash_positive": 0.1445,
+          "net_cash_5th_percentile": -1045.0,
+          "median_days_to_first_payout": 34.0,
+          "mean_fees": 508.0125,
+          "mean_payouts": 97.550712,
+          "luck_mean_net_cash": -555.412981,
+          "luck_net_cash_90ci": [
+            -613.1509518333334,
+            -482.79899400000005
+          ],
+          "luck_chance_any_payout": 0.093,
+          "luck_mean_fees": 603.1075,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 4,
+          "menu_eval": 40,
+          "menu_funded": 4,
+          "mean_net_cash": -318.17708450000003,
+          "net_cash_90ci": [
+            -471.9045023333333,
+            -109.21227666666694
+          ],
+          "net_cash_minus_luck_90ci": [
+            89.72775499999995,
+            412.8551589999999
+          ],
+          "chance_any_payout": 0.247,
+          "chance_net_cash_positive": 0.212,
+          "net_cash_5th_percentile": -1045.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 542.3075,
+          "mean_payouts": 224.13041549999997,
+          "luck_mean_net_cash": -549.314961,
+          "luck_net_cash_90ci": [
+            -608.9310096666667,
+            -456.3753326666667
+          ],
+          "luck_chance_any_payout": 0.147,
+          "luck_mean_fees": 665.0475,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 6,
+          "menu_eval": 40,
+          "menu_funded": 6,
+          "mean_net_cash": -275.93690575,
+          "net_cash_90ci": [
+            -485.54207233333335,
+            -67.36122883333397
+          ],
+          "net_cash_minus_luck_90ci": [
+            106.72554633333338,
+            432.06303474999964
+          ],
+          "chance_any_payout": 0.2195,
+          "chance_net_cash_positive": 0.2045,
+          "net_cash_5th_percentile": -1045.0,
+          "median_days_to_first_payout": 31.0,
+          "mean_fees": 594.13,
+          "mean_payouts": 318.19309425,
+          "luck_mean_net_cash": -550.772921,
+          "luck_net_cash_90ci": [
+            -624.5349051666666,
+            -441.47752383333335
+          ],
+          "luck_chance_any_payout": 0.13,
+          "luck_mean_fees": 704.4725,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        }
+      ],
+      "pick": {
+        "eval": 12,
+        "funded": 6,
+        "menu_eval": 12,
+        "menu_funded": 6
+      },
+      "test": {
+        "mean_net_cash": 402.2758180000001,
+        "net_cash_90ci": [
+          28.735614833333365,
+          842.1483221666662
+        ],
+        "net_cash_minus_luck_90ci": [
+          118.26186808333334,
+          942.1480144999995
+        ],
+        "chance_any_payout": 0.3505,
+        "chance_net_cash_positive": 0.347,
+        "net_cash_5th_percentile": -855.0,
+        "median_days_to_first_payout": 29.0,
+        "mean_fees": 437.57,
+        "mean_payouts": 839.845818,
+        "luck_mean_net_cash": -82.16914849999995,
+        "luck_net_cash_90ci": [
+          -200.25029816666662,
+          11.483456500000017
+        ],
+        "luck_chance_any_payout": 0.2335,
+        "luck_mean_fees": 543.59,
+        "luck_positive_flag": false,
+        "resolved": {
+          "eval": {
+            "size": 12,
+            "stop": 1485.0000000000002,
+            "dll": 1000,
+            "walk": false
+          },
+          "funded": {
+            "size": 6,
+            "stop": null,
+            "dll": 1000,
+            "walk": false
+          },
+          "notes": []
+        },
+        "gate": "pass"
+      },
+      "confirm": {
+        "mean_net_cash": 431.2857680000001,
+        "net_cash_90ci": [
+          -90.34571916666665,
+          960.5619714999999
+        ],
+        "net_cash_minus_luck_90ci": [
+          -10.94261858333331,
+          1039.0581831666652
+        ],
+        "chance_any_payout": 0.353,
+        "chance_net_cash_positive": 0.351,
+        "net_cash_5th_percentile": -855.0,
+        "median_days_to_first_payout": 29.0,
+        "mean_fees": 433.2475,
+        "mean_payouts": 864.5332680000001,
+        "luck_mean_net_cash": -102.86208549999996,
+        "luck_net_cash_90ci": [
+          -206.18685616666667,
+          82.81025216666667
+        ],
+        "luck_chance_any_payout": 0.223,
+        "luck_mean_fees": 546.9625,
+        "luck_positive_flag": false,
+        "resolved": {
+          "eval": {
+            "size": 12,
+            "stop": 1485.0000000000002,
+            "dll": 1000,
+            "walk": false
+          },
+          "funded": {
+            "size": 6,
+            "stop": null,
+            "dll": 1000,
+            "walk": false
+          },
+          "notes": []
+        },
+        "gate": "fail"
+      }
+    },
+    {
+      "firm_file": "topstep_50k (adapter)",
+      "firm_sha256": "875444a078eced6813c8970c31e39d4fbd55c1d92d2bf11d0d953ca464312cd2",
+      "variant": "no_activation_fee/consistency",
+      "selectable": true,
+      "caps": {
+        "eval": 50,
+        "funded": 20
+      },
+      "train_grid": [
+        {
+          "eval": 12,
+          "funded": 2,
+          "menu_eval": 12,
+          "menu_funded": 2,
+          "mean_net_cash": -180.60831,
+          "net_cash_90ci": [
+            -253.45672266666665,
+            -63.45704666666669
+          ],
+          "net_cash_minus_luck_90ci": [
+            33.663760333333315,
+            222.24502416666655
+          ],
+          "chance_any_payout": 0.12,
+          "chance_net_cash_positive": 0.117,
+          "net_cash_5th_percentile": -665.0,
+          "median_days_to_first_payout": 33.0,
+          "mean_fees": 262.9125,
+          "mean_payouts": 82.30418999999999,
+          "luck_mean_net_cash": -312.5477465,
+          "luck_net_cash_90ci": [
+            -349.79921566666667,
+            -273.24109300000003
+          ],
+          "luck_chance_any_payout": 0.08,
+          "luck_mean_fees": 362.7575,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 12,
+          "funded": 4,
+          "menu_eval": 12,
+          "menu_funded": 4,
+          "mean_net_cash": 6.60785899999999,
+          "net_cash_90ci": [
+            -208.65567066666668,
+            255.7942119999999
+          ],
+          "net_cash_minus_luck_90ci": [
+            112.45365299999997,
+            511.1957503333333
+          ],
+          "chance_any_payout": 0.212,
+          "chance_net_cash_positive": 0.211,
+          "net_cash_5th_percentile": -665.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 290.1775,
+          "mean_payouts": 296.78535899999997,
+          "luck_mean_net_cash": -277.04510999999997,
+          "luck_net_cash_90ci": [
+            -348.8988533333333,
+            -230.93979100000004
+          ],
+          "luck_chance_any_payout": 0.1035,
+          "luck_mean_fees": 414.2475,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 12,
+          "funded": 6,
+          "menu_eval": 12,
+          "menu_funded": 6,
+          "mean_net_cash": 271.60256599999997,
+          "net_cash_90ci": [
+            -14.279311499999965,
+            646.5906256666666
+          ],
+          "net_cash_minus_luck_90ci": [
+            248.81724683333331,
+            858.5077528333334
+          ],
+          "chance_any_payout": 0.334,
+          "chance_net_cash_positive": 0.334,
+          "net_cash_5th_percentile": -665.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 311.8375,
+          "mean_payouts": 583.440066,
+          "luck_mean_net_cash": -228.93421999999998,
+          "luck_net_cash_90ci": [
+            -318.55252483333334,
+            -118.44482500000001
+          ],
+          "luck_chance_any_payout": 0.1345,
+          "luck_mean_fees": 448.5425,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 2,
+          "menu_eval": 16,
+          "menu_funded": 2,
+          "mean_net_cash": -173.604706,
+          "net_cash_90ci": [
+            -283.6044373333333,
+            -115.01156150000017
+          ],
+          "net_cash_minus_luck_90ci": [
+            53.953774000000024,
+            250.85057883333326
+          ],
+          "chance_any_payout": 0.133,
+          "chance_net_cash_positive": 0.129,
+          "net_cash_5th_percentile": -665.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 276.64,
+          "mean_payouts": 103.035294,
+          "luck_mean_net_cash": -349.261823,
+          "luck_net_cash_90ci": [
+            -389.4581703333333,
+            -317.8513845
+          ],
+          "luck_chance_any_payout": 0.0795,
+          "luck_mean_fees": 400.52,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 4,
+          "menu_eval": 16,
+          "menu_funded": 4,
+          "mean_net_cash": -2.79770800000001,
+          "net_cash_90ci": [
+            -186.53584533333336,
+            202.26122333333316
+          ],
+          "net_cash_minus_luck_90ci": [
+            145.27590066666664,
+            547.0126929999999
+          ],
+          "chance_any_payout": 0.2095,
+          "chance_net_cash_positive": 0.209,
+          "net_cash_5th_percentile": -665.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 304.7125,
+          "mean_payouts": 301.914792,
+          "luck_mean_net_cash": -318.269833,
+          "luck_net_cash_90ci": [
+            -394.13028833333334,
+            -282.32494600000007
+          ],
+          "luck_chance_any_payout": 0.111,
+          "luck_mean_fees": 459.1825,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 6,
+          "menu_eval": 16,
+          "menu_funded": 6,
+          "mean_net_cash": 263.7128995,
+          "net_cash_90ci": [
+            -33.7018138333333,
+            548.8170131666666
+          ],
+          "net_cash_minus_luck_90ci": [
+            233.15299933333336,
+            819.3208789166665
+          ],
+          "chance_any_payout": 0.339,
+          "chance_net_cash_positive": 0.339,
+          "net_cash_5th_percentile": -665.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 329.1275,
+          "mean_payouts": 592.8403995000001,
+          "luck_mean_net_cash": -262.40061549999996,
+          "luck_net_cash_90ci": [
+            -349.080217,
+            -185.05358408333333
+          ],
+          "luck_chance_any_payout": 0.147,
+          "luck_mean_fees": 499.225,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 2,
+          "menu_eval": 20,
+          "menu_funded": 2,
+          "mean_net_cash": -209.3196225,
+          "net_cash_90ci": [
+            -324.1662003333333,
+            -135.86567166666683
+          ],
+          "net_cash_minus_luck_90ci": [
+            55.817900499999965,
+            224.96777049999992
+          ],
+          "chance_any_payout": 0.133,
+          "chance_net_cash_positive": 0.1295,
+          "net_cash_5th_percentile": -665.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 308.7975,
+          "mean_payouts": 99.47787749999999,
+          "luck_mean_net_cash": -381.980562,
+          "luck_net_cash_90ci": [
+            -421.7522145,
+            -342.00557050000003
+          ],
+          "luck_chance_any_payout": 0.077,
+          "luck_mean_fees": 428.64,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 4,
+          "menu_eval": 20,
+          "menu_funded": 4,
+          "mean_net_cash": -41.97933500000001,
+          "net_cash_90ci": [
+            -261.38524800000005,
+            178.80881599999998
+          ],
+          "net_cash_minus_luck_90ci": [
+            106.2013553333333,
+            500.2580103333333
+          ],
+          "chance_any_payout": 0.209,
+          "chance_net_cash_positive": 0.209,
+          "net_cash_5th_percentile": -665.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 340.8125,
+          "mean_payouts": 298.83316499999995,
+          "luck_mean_net_cash": -361.428996,
+          "luck_net_cash_90ci": [
+            -417.745725,
+            -304.812664
+          ],
+          "luck_chance_any_payout": 0.1055,
+          "luck_mean_fees": 490.9125,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 6,
+          "menu_eval": 20,
+          "menu_funded": 6,
+          "mean_net_cash": 193.96905625000002,
+          "net_cash_90ci": [
+            -103.05202533333332,
+            546.6788609166666
+          ],
+          "net_cash_minus_luck_90ci": [
+            261.3219806666667,
+            796.4637243333332
+          ],
+          "chance_any_payout": 0.321,
+          "chance_net_cash_positive": 0.321,
+          "net_cash_5th_percentile": -665.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 368.7425,
+          "mean_payouts": 562.7115562500001,
+          "luck_mean_net_cash": -294.83480050000003,
+          "luck_net_cash_90ci": [
+            -400.0566963333333,
+            -216.93319275000002
+          ],
+          "luck_chance_any_payout": 0.1525,
+          "luck_mean_fees": 533.5675,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 2,
+          "menu_eval": 30,
+          "menu_funded": 2,
+          "mean_net_cash": -271.36187199999995,
+          "net_cash_90ci": [
+            -380.768937,
+            -138.8569398333334
+          ],
+          "net_cash_minus_luck_90ci": [
+            105.65084366666674,
+            285.01175349999994
+          ],
+          "chance_any_payout": 0.1175,
+          "chance_net_cash_positive": 0.107,
+          "net_cash_5th_percentile": -760.0,
+          "median_days_to_first_payout": 33.0,
+          "mean_fees": 353.7325,
+          "mean_payouts": 82.370628,
+          "luck_mean_net_cash": -467.89517700000005,
+          "luck_net_cash_90ci": [
+            -516.6398143333333,
+            -410.511343
+          ],
+          "luck_chance_any_payout": 0.077,
+          "luck_mean_fees": 512.5725,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 4,
+          "menu_eval": 30,
+          "menu_funded": 4,
+          "mean_net_cash": -121.86479600000001,
+          "net_cash_90ci": [
+            -303.5273643333333,
+            90.21564733333327
+          ],
+          "net_cash_minus_luck_90ci": [
+            166.47253900000004,
+            498.93749466666645
+          ],
+          "chance_any_payout": 0.19,
+          "chance_net_cash_positive": 0.19,
+          "net_cash_5th_percentile": -760.0,
+          "median_days_to_first_payout": 34.0,
+          "mean_fees": 390.1175,
+          "mean_payouts": 268.252704,
+          "luck_mean_net_cash": -464.33716599999997,
+          "luck_net_cash_90ci": [
+            -536.932488,
+            -395.4346713333333
+          ],
+          "luck_chance_any_payout": 0.0965,
+          "luck_mean_fees": 572.755,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 6,
+          "menu_eval": 30,
+          "menu_funded": 6,
+          "mean_net_cash": 38.64245450000002,
+          "net_cash_90ci": [
+            -187.61728233333332,
+            389.74950183333334
+          ],
+          "net_cash_minus_luck_90ci": [
+            258.784079,
+            758.9178861666664
+          ],
+          "chance_any_payout": 0.281,
+          "chance_net_cash_positive": 0.281,
+          "net_cash_5th_percentile": -855.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 422.7025,
+          "mean_payouts": 461.3449545,
+          "luck_mean_net_cash": -413.20601775,
+          "luck_net_cash_90ci": [
+            -498.0224798333332,
+            -346.2213653333334
+          ],
+          "luck_chance_any_payout": 0.1325,
+          "luck_mean_fees": 614.3175,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 2,
+          "menu_eval": 40,
+          "menu_funded": 2,
+          "mean_net_cash": -443.2585975,
+          "net_cash_90ci": [
+            -531.5943370000001,
+            -317.2597168333335
+          ],
+          "net_cash_minus_luck_90ci": [
+            61.601470166666694,
+            210.2044478333333
+          ],
+          "chance_any_payout": 0.087,
+          "chance_net_cash_positive": 0.078,
+          "net_cash_5th_percentile": -1045.0,
+          "median_days_to_first_payout": 33.0,
+          "mean_fees": 504.4975,
+          "mean_payouts": 61.238902499999995,
+          "luck_mean_net_cash": -568.744378,
+          "luck_net_cash_90ci": [
+            -627.1577083333334,
+            -491.5207165
+          ],
+          "luck_chance_any_payout": 0.0645,
+          "luck_mean_fees": 604.96,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 4,
+          "menu_eval": 40,
+          "menu_funded": 4,
+          "mean_net_cash": -339.48390600000005,
+          "net_cash_90ci": [
+            -507.3778633333333,
+            -165.94071300000016
+          ],
+          "net_cash_minus_luck_90ci": [
+            57.63818033333337,
+            378.7400629999999
+          ],
+          "chance_any_payout": 0.1335,
+          "chance_net_cash_positive": 0.1315,
+          "net_cash_5th_percentile": -1045.0,
+          "median_days_to_first_payout": 33.0,
+          "mean_fees": 532.2375,
+          "mean_payouts": 192.753594,
+          "luck_mean_net_cash": -571.154284,
+          "luck_net_cash_90ci": [
+            -651.5246243333333,
+            -489.98940633333336
+          ],
+          "luck_chance_any_payout": 0.0795,
+          "luck_mean_fees": 659.395,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 6,
+          "menu_eval": 40,
+          "menu_funded": 6,
+          "mean_net_cash": -249.30333675,
+          "net_cash_90ci": [
+            -413.3791998333333,
+            9.754664083333108
+          ],
+          "net_cash_minus_luck_90ci": [
+            142.926663,
+            570.1488648333334
+          ],
+          "chance_any_payout": 0.196,
+          "chance_net_cash_positive": 0.1955,
+          "net_cash_5th_percentile": -1045.0,
+          "median_days_to_first_payout": 31.0,
+          "mean_fees": 573.2775,
+          "mean_payouts": 323.97416325000006,
+          "luck_mean_net_cash": -548.328812,
+          "luck_net_cash_90ci": [
+            -606.3620378333333,
+            -444.71562408333335
+          ],
+          "luck_chance_any_payout": 0.101,
+          "luck_mean_fees": 697.3475,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        }
+      ],
+      "pick": {
+        "eval": 12,
+        "funded": 6,
+        "menu_eval": 12,
+        "menu_funded": 6
+      },
+      "test": {
+        "mean_net_cash": 443.0593727500001,
+        "net_cash_90ci": [
+          98.27958508333339,
+          948.0220560833333
+        ],
+        "net_cash_minus_luck_90ci": [
+          271.1630513333334,
+          1136.6635150416669
+        ],
+        "chance_any_payout": 0.406,
+        "chance_net_cash_positive": 0.406,
+        "net_cash_5th_percentile": -760.0,
+        "median_days_to_first_payout": 25.0,
+        "mean_fees": 439.9925,
+        "mean_payouts": 883.0518727500001,
+        "luck_mean_net_cash": -163.15788500000002,
+        "luck_net_cash_90ci": [
+          -233.6178925833333,
+          -37.78865716666669
+        ],
+        "luck_chance_any_payout": 0.2145,
+        "luck_mean_fees": 542.735,
+        "luck_positive_flag": false,
+        "resolved": {
+          "eval": {
+            "size": 12,
+            "stop": 1485.0000000000002,
+            "dll": 1000,
+            "walk": false
+          },
+          "funded": {
+            "size": 6,
+            "stop": 1080.0,
+            "dll": 1000,
+            "walk": false
+          },
+          "notes": []
+        },
+        "gate": "pass"
+      },
+      "confirm": {
+        "mean_net_cash": 466.38952900000004,
+        "net_cash_90ci": [
+          3.2360003333333665,
+          1010.8128836249999
+        ],
+        "net_cash_minus_luck_90ci": [
+          124.72349333333337,
+          1122.6797089999998
+        ],
+        "chance_any_payout": 0.4125,
+        "chance_net_cash_positive": 0.4125,
+        "net_cash_5th_percentile": -855.0,
+        "median_days_to_first_payout": 25.0,
+        "mean_fees": 435.575,
+        "mean_payouts": 901.9645290000001,
+        "luck_mean_net_cash": -165.01442737499997,
+        "luck_net_cash_90ci": [
+          -239.68296124999992,
+          -32.274258916666675
+        ],
+        "luck_chance_any_payout": 0.213,
+        "luck_mean_fees": 547.2,
+        "luck_positive_flag": false,
+        "resolved": {
+          "eval": {
+            "size": 12,
+            "stop": 1485.0000000000002,
+            "dll": 1000,
+            "walk": false
+          },
+          "funded": {
+            "size": 6,
+            "stop": 1080.0,
+            "dll": 1000,
+            "walk": false
+          },
+          "notes": []
+        },
+        "gate": "pass"
+      }
+    },
+    {
+      "firm_file": "brain/_system/prop/firms/topstep_50k_standard.json",
+      "firm_sha256": "4d38417cbe65ae225c19c7413460e94364f8dc6d577eb2e72a462ed242307e8d",
+      "variant": "standard",
+      "selectable": true,
+      "caps": {
+        "eval": 50,
+        "funded": 20
+      },
+      "train_grid": [
+        {
+          "eval": 12,
+          "funded": 2,
+          "menu_eval": 12,
+          "menu_funded": 2,
+          "mean_net_cash": -181.10301050000004,
+          "net_cash_90ci": [
+            -261.7708875,
+            -71.62870300000014
+          ],
+          "net_cash_minus_luck_90ci": [
+            26.20161183333333,
+            218.68049799999986
+          ],
+          "chance_any_payout": 0.2855,
+          "chance_net_cash_positive": 0.2015,
+          "net_cash_5th_percentile": -501.0,
+          "median_days_to_first_payout": 34.0,
+          "mean_fees": 329.4065,
+          "mean_payouts": 148.30348949999996,
+          "luck_mean_net_cash": -292.1063125,
+          "luck_net_cash_90ci": [
+            -319.4240933333334,
+            -270.0791668333333
+          ],
+          "luck_chance_any_payout": 0.138,
+          "luck_mean_fees": 364.5985,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 12,
+          "funded": 4,
+          "menu_eval": 12,
+          "menu_funded": 4,
+          "mean_net_cash": -15.821827000000024,
+          "net_cash_90ci": [
+            -179.02245066666666,
+            188.8841956666666
+          ],
+          "net_cash_minus_luck_90ci": [
+            53.598442333333296,
+            421.47590899999994
+          ],
+          "chance_any_payout": 0.3955,
+          "chance_net_cash_positive": 0.326,
+          "net_cash_5th_percentile": -550.0,
+          "median_days_to_first_payout": 31.0,
+          "mean_fees": 364.3675,
+          "mean_payouts": 348.54567299999997,
+          "luck_mean_net_cash": -233.44294300000004,
+          "luck_net_cash_90ci": [
+            -292.97031200000004,
+            -195.3718836666667
+          ],
+          "luck_chance_any_payout": 0.193,
+          "luck_mean_fees": 409.813,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 12,
+          "funded": 6,
+          "menu_eval": 12,
+          "menu_funded": 6,
+          "mean_net_cash": 149.22271150000003,
+          "net_cash_90ci": [
+            -123.96516716666665,
+            367.432261
+          ],
+          "net_cash_minus_luck_90ci": [
+            55.30450033333331,
+            554.5308181666666
+          ],
+          "chance_any_payout": 0.3635,
+          "chance_net_cash_positive": 0.328,
+          "net_cash_5th_percentile": -552.0,
+          "median_days_to_first_payout": 29.0,
+          "mean_fees": 389.738,
+          "mean_payouts": 538.9607115,
+          "luck_mean_net_cash": -203.20386499999998,
+          "luck_net_cash_90ci": [
+            -286.0900298333333,
+            -128.74297649999997
+          ],
+          "luck_chance_any_payout": 0.1735,
+          "luck_mean_fees": 434.3465,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 2,
+          "menu_eval": 16,
+          "menu_funded": 2,
+          "mean_net_cash": -177.60734550000004,
+          "net_cash_90ci": [
+            -269.81383900000003,
+            -100.8954655000001
+          ],
+          "net_cash_minus_luck_90ci": [
+            35.36150483333329,
+            216.74719416666662
+          ],
+          "chance_any_payout": 0.282,
+          "chance_net_cash_positive": 0.214,
+          "net_cash_5th_percentile": -501.0,
+          "median_days_to_first_payout": 34.0,
+          "mean_fees": 340.6905,
+          "mean_payouts": 163.08315449999998,
+          "luck_mean_net_cash": -306.26000100000005,
+          "luck_net_cash_90ci": [
+            -337.04246716666665,
+            -290.6574553333333
+          ],
+          "luck_chance_any_payout": 0.1485,
+          "luck_mean_fees": 386.9235,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 4,
+          "menu_eval": 16,
+          "menu_funded": 4,
+          "mean_net_cash": -7.115332000000024,
+          "net_cash_90ci": [
+            -176.95755333333332,
+            163.59878333333324
+          ],
+          "net_cash_minus_luck_90ci": [
+            69.33011899999997,
+            419.5449539999999
+          ],
+          "chance_any_payout": 0.4125,
+          "chance_net_cash_positive": 0.341,
+          "net_cash_5th_percentile": -552.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 381.955,
+          "mean_payouts": 374.83966799999996,
+          "luck_mean_net_cash": -244.46120000000002,
+          "luck_net_cash_90ci": [
+            -311.09905033333337,
+            -208.26945833333335
+          ],
+          "luck_chance_any_payout": 0.2075,
+          "luck_mean_fees": 436.559,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 6,
+          "menu_eval": 16,
+          "menu_funded": 6,
+          "mean_net_cash": 150.36126500000003,
+          "net_cash_90ci": [
+            -121.43151466666664,
+            362.3155176666666
+          ],
+          "net_cash_minus_luck_90ci": [
+            69.62042116666667,
+            593.1494120833332
+          ],
+          "chance_any_payout": 0.3725,
+          "chance_net_cash_positive": 0.3405,
+          "net_cash_5th_percentile": -601.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 415.231,
+          "mean_payouts": 565.5922650000001,
+          "luck_mean_net_cash": -204.76399099999998,
+          "luck_net_cash_90ci": [
+            -293.17937716666665,
+            -173.66188300000005
+          ],
+          "luck_chance_any_payout": 0.1915,
+          "luck_mean_fees": 466.934,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 2,
+          "menu_eval": 20,
+          "menu_funded": 2,
+          "mean_net_cash": -194.991642,
+          "net_cash_90ci": [
+            -295.38252666666665,
+            -102.32736700000014
+          ],
+          "net_cash_minus_luck_90ci": [
+            19.525912166666608,
+            219.1018748333333
+          ],
+          "chance_any_payout": 0.28,
+          "chance_net_cash_positive": 0.219,
+          "net_cash_5th_percentile": -501.0,
+          "median_days_to_first_payout": 34.0,
+          "mean_fees": 356.877,
+          "mean_payouts": 161.88535799999994,
+          "luck_mean_net_cash": -330.37525899999997,
+          "luck_net_cash_90ci": [
+            -345.0658685,
+            -305.07121333333333
+          ],
+          "luck_chance_any_payout": 0.139,
+          "luck_mean_fees": 402.6205,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 4,
+          "menu_eval": 20,
+          "menu_funded": 4,
+          "mean_net_cash": -22.499181000000032,
+          "net_cash_90ci": [
+            -228.09979966666666,
+            200.46352566666658
+          ],
+          "net_cash_minus_luck_90ci": [
+            53.65901399999998,
+            444.9216363333333
+          ],
+          "chance_any_payout": 0.387,
+          "chance_net_cash_positive": 0.3265,
+          "net_cash_5th_percentile": -550.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 390.4965,
+          "mean_payouts": 367.997319,
+          "luck_mean_net_cash": -279.509473,
+          "luck_net_cash_90ci": [
+            -329.24253333333337,
+            -229.94390566666675
+          ],
+          "luck_chance_any_payout": 0.199,
+          "luck_mean_fees": 455.8285,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 6,
+          "menu_eval": 20,
+          "menu_funded": 6,
+          "mean_net_cash": 100.45041475000002,
+          "net_cash_90ci": [
+            -204.52468766666667,
+            363.1777010833333
+          ],
+          "net_cash_minus_luck_90ci": [
+            59.39437433333338,
+            595.4673511666666
+          ],
+          "chance_any_payout": 0.331,
+          "chance_net_cash_positive": 0.298,
+          "net_cash_5th_percentile": -601.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 422.654,
+          "mean_payouts": 523.10441475,
+          "luck_mean_net_cash": -237.05862549999998,
+          "luck_net_cash_90ci": [
+            -336.61130933333334,
+            -170.02543333333332
+          ],
+          "luck_chance_any_payout": 0.192,
+          "luck_mean_fees": 487.006,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 2,
+          "menu_eval": 30,
+          "menu_funded": 2,
+          "mean_net_cash": -245.302039,
+          "net_cash_90ci": [
+            -325.55194983333337,
+            -126.13113516666672
+          ],
+          "net_cash_minus_luck_90ci": [
+            53.5006296666667,
+            225.19461433333333
+          ],
+          "chance_any_payout": 0.247,
+          "chance_net_cash_positive": 0.183,
+          "net_cash_5th_percentile": -550.0,
+          "median_days_to_first_payout": 35.0,
+          "mean_fees": 378.7345,
+          "mean_payouts": 133.432461,
+          "luck_mean_net_cash": -369.377584,
+          "luck_net_cash_90ci": [
+            -397.2517606666667,
+            -343.04828100000003
+          ],
+          "luck_chance_any_payout": 0.121,
+          "luck_mean_fees": 433.7395,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 4,
+          "menu_eval": 30,
+          "menu_funded": 4,
+          "mean_net_cash": -99.54251250000002,
+          "net_cash_90ci": [
+            -234.98893333333334,
+            94.64925566666653
+          ],
+          "net_cash_minus_luck_90ci": [
+            109.39441266666661,
+            432.77691766666663
+          ],
+          "chance_any_payout": 0.3625,
+          "chance_net_cash_positive": 0.2925,
+          "net_cash_5th_percentile": -599.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 418.029,
+          "mean_payouts": 318.48648749999995,
+          "luck_mean_net_cash": -332.915644,
+          "luck_net_cash_90ci": [
+            -380.613015,
+            -281.59895100000006
+          ],
+          "luck_chance_any_payout": 0.1845,
+          "luck_mean_fees": 482.491,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 6,
+          "menu_eval": 30,
+          "menu_funded": 6,
+          "mean_net_cash": -13.632854749999971,
+          "net_cash_90ci": [
+            -197.40230716666665,
+            261.5758793333333
+          ],
+          "net_cash_minus_luck_90ci": [
+            127.98946700000002,
+            509.7861592499998
+          ],
+          "chance_any_payout": 0.321,
+          "chance_net_cash_positive": 0.2845,
+          "net_cash_5th_percentile": -650.0,
+          "median_days_to_first_payout": 31.0,
+          "mean_fees": 450.62,
+          "mean_payouts": 436.9871452500001,
+          "luck_mean_net_cash": -308.23227999999995,
+          "luck_net_cash_90ci": [
+            -378.64749283333333,
+            -229.65371633333336
+          ],
+          "luck_chance_any_payout": 0.173,
+          "luck_mean_fees": 510.472,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 2,
+          "menu_eval": 40,
+          "menu_funded": 2,
+          "mean_net_cash": -333.854288,
+          "net_cash_90ci": [
+            -400.41527183333335,
+            -247.35750933333347
+          ],
+          "net_cash_minus_luck_90ci": [
+            24.7793765,
+            157.48196183333337
+          ],
+          "chance_any_payout": 0.1725,
+          "chance_net_cash_positive": 0.132,
+          "net_cash_5th_percentile": -648.0,
+          "median_days_to_first_payout": 34.0,
+          "mean_fees": 431.405,
+          "mean_payouts": 97.550712,
+          "luck_mean_net_cash": -418.082981,
+          "luck_net_cash_90ci": [
+            -437.2396185,
+            -379.91514766666666
+          ],
+          "luck_chance_any_payout": 0.093,
+          "luck_mean_fees": 465.7775,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 4,
+          "menu_eval": 40,
+          "menu_funded": 4,
+          "mean_net_cash": -231.0725845,
+          "net_cash_90ci": [
+            -338.28219766666666,
+            -70.23711000000023
+          ],
+          "net_cash_minus_luck_90ci": [
+            55.56363566666666,
+            308.18665899999985
+          ],
+          "chance_any_payout": 0.247,
+          "chance_net_cash_positive": 0.1975,
+          "net_cash_5th_percentile": -648.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 455.203,
+          "mean_payouts": 224.13041549999997,
+          "luck_mean_net_cash": -389.368461,
+          "luck_net_cash_90ci": [
+            -414.45430300000004,
+            -322.13035800000006
+          ],
+          "luck_chance_any_payout": 0.147,
+          "luck_mean_fees": 505.101,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 6,
+          "menu_eval": 40,
+          "menu_funded": 6,
+          "mean_net_cash": -170.81690575,
+          "net_cash_90ci": [
+            -344.353301,
+            33.644960249999635
+          ],
+          "net_cash_minus_luck_90ci": [
+            58.84922933333333,
+            374.20870141666654
+          ],
+          "chance_any_payout": 0.2195,
+          "chance_net_cash_positive": 0.1985,
+          "net_cash_5th_percentile": -695.0,
+          "median_days_to_first_payout": 31.0,
+          "mean_fees": 489.01,
+          "mean_payouts": 318.19309425,
+          "luck_mean_net_cash": -376.578921,
+          "luck_net_cash_90ci": [
+            -421.37573366666663,
+            -292.8732238333333
+          ],
+          "luck_chance_any_payout": 0.13,
+          "luck_mean_fees": 530.2785,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        }
+      ],
+      "pick": {
+        "eval": 16,
+        "funded": 6,
+        "menu_eval": 16,
+        "menu_funded": 6
+      },
+      "test": {
+        "mean_net_cash": 320.9430170000001,
+        "net_cash_90ci": [
+          -10.885770333333296,
+          714.63662025
+        ],
+        "net_cash_minus_luck_90ci": [
+          93.06143050000003,
+          757.7940628333333
+        ],
+        "chance_any_payout": 0.3305,
+        "chance_net_cash_positive": 0.3265,
+        "net_cash_5th_percentile": -748.0,
+        "median_days_to_first_payout": 30.0,
+        "mean_fees": 497.8015,
+        "mean_payouts": 818.744517,
+        "luck_mean_net_cash": -58.808593249999966,
+        "luck_net_cash_90ci": [
+          -189.2137275,
+          46.61145966666669
+        ],
+        "luck_chance_any_payout": 0.2305,
+        "luck_mean_fees": 536.9345,
+        "luck_positive_flag": false,
+        "resolved": {
+          "eval": {
+            "size": 16,
+            "stop": 1485.0000000000002,
+            "dll": 1000,
+            "walk": false
+          },
+          "funded": {
+            "size": 6,
+            "stop": null,
+            "dll": 1000,
+            "walk": false
+          },
+          "notes": []
+        },
+        "gate": "fail"
+      },
+      "confirm": null
+    },
+    {
+      "firm_file": "brain/_system/prop/firms/topstep_50k_standard.json",
+      "firm_sha256": "4d38417cbe65ae225c19c7413460e94364f8dc6d577eb2e72a462ed242307e8d",
+      "variant": "consistency",
+      "selectable": true,
+      "caps": {
+        "eval": 50,
+        "funded": 20
+      },
+      "train_grid": [
+        {
+          "eval": 12,
+          "funded": 2,
+          "menu_eval": 12,
+          "menu_funded": 2,
+          "mean_net_cash": -242.42331,
+          "net_cash_90ci": [
+            -302.4653906666667,
+            -163.16246400000006
+          ],
+          "net_cash_minus_luck_90ci": [
+            4.072426999999977,
+            152.4178606666666
+          ],
+          "chance_any_payout": 0.12,
+          "chance_net_cash_positive": 0.1105,
+          "net_cash_5th_percentile": -501.0,
+          "median_days_to_first_payout": 33.0,
+          "mean_fees": 324.7275,
+          "mean_payouts": 82.30418999999999,
+          "luck_mean_net_cash": -314.0222465,
+          "luck_net_cash_90ci": [
+            -337.64469533333335,
+            -286.48000833333333
+          ],
+          "luck_chance_any_payout": 0.08,
+          "luck_mean_fees": 364.232,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 12,
+          "funded": 4,
+          "menu_eval": 12,
+          "menu_funded": 4,
+          "mean_net_cash": -53.329141,
+          "net_cash_90ci": [
+            -230.69136266666663,
+            141.6097379999999
+          ],
+          "net_cash_minus_luck_90ci": [
+            67.40278733333336,
+            415.350718
+          ],
+          "chance_any_payout": 0.212,
+          "chance_net_cash_positive": 0.2105,
+          "net_cash_5th_percentile": -503.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 350.1145,
+          "mean_payouts": 296.78535899999997,
+          "luck_mean_net_cash": -267.37011,
+          "luck_net_cash_90ci": [
+            -318.2472563333333,
+            -234.45759533333336
+          ],
+          "luck_chance_any_payout": 0.1035,
+          "luck_mean_fees": 404.5725,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 12,
+          "funded": 6,
+          "menu_eval": 12,
+          "menu_funded": 6,
+          "mean_net_cash": 216.56606600000006,
+          "net_cash_90ci": [
+            -34.09214483333331,
+            564.9955918333333
+          ],
+          "net_cash_minus_luck_90ci": [
+            213.77508016666664,
+            757.5845586666667
+          ],
+          "chance_any_payout": 0.334,
+          "chance_net_cash_positive": 0.334,
+          "net_cash_5th_percentile": -550.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 366.874,
+          "mean_payouts": 583.440066,
+          "luck_mean_net_cash": -210.55021999999997,
+          "luck_net_cash_90ci": [
+            -297.41560899999996,
+            -128.01399166666667
+          ],
+          "luck_chance_any_payout": 0.1345,
+          "luck_mean_fees": 430.1585,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 2,
+          "menu_eval": 16,
+          "menu_funded": 2,
+          "mean_net_cash": -233.764206,
+          "net_cash_90ci": [
+            -318.2859886666667,
+            -170.45756150000003
+          ],
+          "net_cash_minus_luck_90ci": [
+            7.776107333333347,
+            171.230322
+          ],
+          "chance_any_payout": 0.133,
+          "chance_net_cash_positive": 0.122,
+          "net_cash_5th_percentile": -501.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 336.7995,
+          "mean_payouts": 103.035294,
+          "luck_mean_net_cash": -334.68632299999996,
+          "luck_net_cash_90ci": [
+            -355.20634816666666,
+            -310.5676055
+          ],
+          "luck_chance_any_payout": 0.0795,
+          "luck_mean_fees": 385.9445,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 4,
+          "menu_eval": 16,
+          "menu_funded": 4,
+          "mean_net_cash": -62.327208,
+          "net_cash_90ci": [
+            -225.19881466666664,
+            148.70322333333328
+          ],
+          "net_cash_minus_luck_90ci": [
+            81.54736266666669,
+            429.0233109999999
+          ],
+          "chance_any_payout": 0.2095,
+          "chance_net_cash_positive": 0.209,
+          "net_cash_5th_percentile": -550.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 364.242,
+          "mean_payouts": 301.914792,
+          "luck_mean_net_cash": -290.263833,
+          "luck_net_cash_90ci": [
+            -340.596186,
+            -255.5587866666667
+          ],
+          "luck_chance_any_payout": 0.111,
+          "luck_mean_fees": 431.1765,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 6,
+          "menu_eval": 16,
+          "menu_funded": 6,
+          "mean_net_cash": 208.1828995,
+          "net_cash_90ci": [
+            -80.5173138333333,
+            467.67765633333323
+          ],
+          "net_cash_minus_luck_90ci": [
+            175.60834433333335,
+            701.6085455833334
+          ],
+          "chance_any_payout": 0.339,
+          "chance_net_cash_positive": 0.339,
+          "net_cash_5th_percentile": -552.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 384.6575,
+          "mean_payouts": 592.8403995000001,
+          "luck_mean_net_cash": -224.69061549999998,
+          "luck_net_cash_90ci": [
+            -291.3839028333333,
+            -161.13091741666668
+          ],
+          "luck_chance_any_payout": 0.147,
+          "luck_mean_fees": 461.515,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 2,
+          "menu_eval": 20,
+          "menu_funded": 2,
+          "mean_net_cash": -253.5356225,
+          "net_cash_90ci": [
+            -334.78953366666667,
+            -204.16167166666673
+          ],
+          "net_cash_minus_luck_90ci": [
+            10.24359616666669,
+            150.3052433333333
+          ],
+          "chance_any_payout": 0.133,
+          "chance_net_cash_positive": 0.123,
+          "net_cash_5th_percentile": -501.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 353.0135,
+          "mean_payouts": 99.47787749999999,
+          "luck_mean_net_cash": -355.055562,
+          "luck_net_cash_90ci": [
+            -365.2509025,
+            -328.7561628333333
+          ],
+          "luck_chance_any_payout": 0.077,
+          "luck_mean_fees": 401.715,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 4,
+          "menu_eval": 20,
+          "menu_funded": 4,
+          "mean_net_cash": -80.60183500000002,
+          "net_cash_90ci": [
+            -267.7378386666667,
+            103.82892999999996
+          ],
+          "net_cash_minus_luck_90ci": [
+            54.94102699999992,
+            380.05845933333325
+          ],
+          "chance_any_payout": 0.209,
+          "chance_net_cash_positive": 0.2085,
+          "net_cash_5th_percentile": -550.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 379.435,
+          "mean_payouts": 298.83316499999995,
+          "luck_mean_net_cash": -320.293996,
+          "luck_net_cash_90ci": [
+            -351.07806466666665,
+            -273.9094406666666
+          ],
+          "luck_chance_any_payout": 0.1055,
+          "luck_mean_fees": 449.7775,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 6,
+          "menu_eval": 20,
+          "menu_funded": 6,
+          "mean_net_cash": 160.45205625,
+          "net_cash_90ci": [
+            -92.879331,
+            459.0563609166665
+          ],
+          "net_cash_minus_luck_90ci": [
+            181.85925233333336,
+            680.8965576666665
+          ],
+          "chance_any_payout": 0.321,
+          "chance_net_cash_positive": 0.321,
+          "net_cash_5th_percentile": -552.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 402.2595,
+          "mean_payouts": 562.7115562500001,
+          "luck_mean_net_cash": -242.65630050000001,
+          "luck_net_cash_90ci": [
+            -318.31926483333336,
+            -176.17792491666665
+          ],
+          "luck_chance_any_payout": 0.1525,
+          "luck_mean_fees": 481.389,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 2,
+          "menu_eval": 30,
+          "menu_funded": 2,
+          "mean_net_cash": -292.85137199999997,
+          "net_cash_90ci": [
+            -358.175255,
+            -189.66744383333332
+          ],
+          "net_cash_minus_luck_90ci": [
+            31.553967666666654,
+            174.11540149999996
+          ],
+          "chance_any_payout": 0.1175,
+          "chance_net_cash_positive": 0.103,
+          "net_cash_5th_percentile": -550.0,
+          "median_days_to_first_payout": 33.0,
+          "mean_fees": 375.222,
+          "mean_payouts": 82.370628,
+          "luck_mean_net_cash": -390.197177,
+          "luck_net_cash_90ci": [
+            -413.2450461666666,
+            -362.60169033333335
+          ],
+          "luck_chance_any_payout": 0.077,
+          "luck_mean_fees": 434.8745,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 4,
+          "menu_eval": 30,
+          "menu_funded": 4,
+          "mean_net_cash": -138.699296,
+          "net_cash_90ci": [
+            -289.86497533333335,
+            43.142115333333265
+          ],
+          "net_cash_minus_luck_90ci": [
+            70.80549433333333,
+            381.8346613333331
+          ],
+          "chance_any_payout": 0.19,
+          "chance_net_cash_positive": 0.1895,
+          "net_cash_5th_percentile": -599.0,
+          "median_days_to_first_payout": 34.0,
+          "mean_fees": 406.952,
+          "mean_payouts": 268.252704,
+          "luck_mean_net_cash": -368.151666,
+          "luck_net_cash_90ci": [
+            -415.1316323333333,
+            -319.2438963333334
+          ],
+          "luck_chance_any_payout": 0.0965,
+          "luck_mean_fees": 476.5695,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 6,
+          "menu_eval": 30,
+          "menu_funded": 6,
+          "mean_net_cash": 29.61445450000002,
+          "net_cash_90ci": [
+            -137.0707463333333,
+            321.65895933333326
+          ],
+          "net_cash_minus_luck_90ci": [
+            170.42877433333334,
+            604.9884553333334
+          ],
+          "chance_any_payout": 0.281,
+          "chance_net_cash_positive": 0.281,
+          "net_cash_5th_percentile": -648.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 431.7305,
+          "mean_payouts": 461.3449545,
+          "luck_mean_net_cash": -304.12201775,
+          "luck_net_cash_90ci": [
+            -364.84521183333334,
+            -257.71269866666677
+          ],
+          "luck_chance_any_payout": 0.1325,
+          "luck_mean_fees": 505.2335,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 2,
+          "menu_eval": 40,
+          "menu_funded": 2,
+          "mean_net_cash": -368.65109750000005,
+          "net_cash_90ci": [
+            -417.07122000000004,
+            -297.5917168333334
+          ],
+          "net_cash_minus_luck_90ci": [
+            23.113561999999977,
+            116.15678116666668
+          ],
+          "chance_any_payout": 0.087,
+          "chance_net_cash_positive": 0.075,
+          "net_cash_5th_percentile": -648.0,
+          "median_days_to_first_payout": 33.0,
+          "mean_fees": 429.89,
+          "mean_payouts": 61.238902499999995,
+          "luck_mean_net_cash": -430.88987799999995,
+          "luck_net_cash_90ci": [
+            -449.45186100000006,
+            -394.50290616666666
+          ],
+          "luck_chance_any_payout": 0.0645,
+          "luck_mean_fees": 467.1055,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 4,
+          "menu_eval": 40,
+          "menu_funded": 4,
+          "mean_net_cash": -256.28690600000004,
+          "net_cash_90ci": [
+            -389.1405523333333,
+            -110.21609900000004
+          ],
+          "net_cash_minus_luck_90ci": [
+            36.51132133333336,
+            283.03457033333325
+          ],
+          "chance_any_payout": 0.1335,
+          "chance_net_cash_positive": 0.131,
+          "net_cash_5th_percentile": -648.0,
+          "median_days_to_first_payout": 33.0,
+          "mean_fees": 449.0405,
+          "mean_payouts": 192.753594,
+          "luck_mean_net_cash": -412.603784,
+          "luck_net_cash_90ci": [
+            -450.5636243333334,
+            -361.389371
+          ],
+          "luck_chance_any_payout": 0.0795,
+          "luck_mean_fees": 500.8445,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 6,
+          "menu_eval": 40,
+          "menu_funded": 6,
+          "mean_net_cash": -150.18283674999998,
+          "net_cash_90ci": [
+            -262.3488203333333,
+            104.78908783333334
+          ],
+          "net_cash_minus_luck_90ci": [
+            79.05852566666674,
+            472.226791
+          ],
+          "chance_any_payout": 0.196,
+          "chance_net_cash_positive": 0.196,
+          "net_cash_5th_percentile": -650.0,
+          "median_days_to_first_payout": 31.0,
+          "mean_fees": 474.157,
+          "mean_payouts": 323.97416325000006,
+          "luck_mean_net_cash": -376.31831200000005,
+          "luck_net_cash_90ci": [
+            -410.8030838333333,
+            -305.97430758333337
+          ],
+          "luck_chance_any_payout": 0.101,
+          "luck_mean_fees": 525.337,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1485.0000000000002,
+              "dll": 1000,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": 1080.0,
+              "dll": 1000,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        }
+      ],
+      "pick": {
+        "eval": 12,
+        "funded": 6,
+        "menu_eval": 12,
+        "menu_funded": 6
+      },
+      "test": {
+        "mean_net_cash": 397.77787275000003,
+        "net_cash_90ci": [
+          77.4932716666667,
+          850.7574093749998
+        ],
+        "net_cash_minus_luck_90ci": [
+          199.77607541666666,
+          1020.6557020416667
+        ],
+        "chance_any_payout": 0.406,
+        "chance_net_cash_positive": 0.406,
+        "net_cash_5th_percentile": -699.0,
+        "median_days_to_first_payout": 25.0,
+        "mean_fees": 485.274,
+        "mean_payouts": 883.0518727500001,
+        "luck_mean_net_cash": -137.234385,
+        "luck_net_cash_90ci": [
+          -197.24990566666668,
+          -26.883827166666624
+        ],
+        "luck_chance_any_payout": 0.2145,
+        "luck_mean_fees": 516.8115,
+        "luck_positive_flag": false,
+        "resolved": {
+          "eval": {
+            "size": 12,
+            "stop": 1485.0000000000002,
+            "dll": 1000,
+            "walk": false
+          },
+          "funded": {
+            "size": 6,
+            "stop": 1080.0,
+            "dll": 1000,
+            "walk": false
+          },
+          "notes": []
+        },
+        "gate": "pass"
+      },
+      "confirm": {
+        "mean_net_cash": 416.436029,
+        "net_cash_90ci": [
+          -36.15674849999996,
+          918.9752681250001
+        ],
+        "net_cash_minus_luck_90ci": [
+          54.32411625000003,
+          1015.0568756666662
+        ],
+        "chance_any_payout": 0.4125,
+        "chance_net_cash_positive": 0.4125,
+        "net_cash_5th_percentile": -701.0,
+        "median_days_to_first_payout": 25.0,
+        "mean_fees": 485.5285,
+        "mean_payouts": 901.9645290000001,
+        "luck_mean_net_cash": -131.56492737499997,
+        "luck_net_cash_90ci": [
+          -189.39544049999995,
+          -7.016823791666709
+        ],
+        "luck_chance_any_payout": 0.213,
+        "luck_mean_fees": 513.7505,
+        "luck_positive_flag": false,
+        "resolved": {
+          "eval": {
+            "size": 12,
+            "stop": 1485.0000000000002,
+            "dll": 1000,
+            "walk": false
+          },
+          "funded": {
+            "size": 6,
+            "stop": 1080.0,
+            "dll": 1000,
+            "walk": false
+          },
+          "notes": []
+        },
+        "gate": "fail"
+      }
+    },
+    {
+      "firm_file": "brain/_system/prop/firms_indicative/lucid_flex_50k.json",
+      "firm_sha256": "bb9a90c5e7e3bdbdcdfdab337b1c544b83cb0af615062ea1dd9cca5b58f35701",
+      "variant": "default",
+      "selectable": false,
+      "caps": {
+        "eval": 40,
+        "funded": 20
+      },
+      "train_grid": [
+        {
+          "eval": 12,
+          "funded": 2,
+          "menu_eval": 12,
+          "menu_funded": 2,
+          "mean_net_cash": -294.7990410000012,
+          "net_cash_90ci": [
+            -427.38091800000046,
+            -179.9002290000015
+          ],
+          "net_cash_minus_luck_90ci": [
+            170.30976399999977,
+            457.9691484999988
+          ],
+          "chance_any_payout": 0.2005,
+          "chance_net_cash_positive": 0.1865,
+          "net_cash_5th_percentile": -990.0,
+          "median_days_to_first_payout": 34.0,
+          "mean_fees": 440.7975,
+          "mean_payouts": 145.9984589999988,
+          "luck_mean_net_cash": -619.5815445000005,
+          "luck_net_cash_90ci": [
+            -685.9977075000004,
+            -571.4518320000004
+          ],
+          "luck_chance_any_payout": 0.0985,
+          "luck_mean_fees": 689.9475,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1080.0,
+              "dll": null,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": null,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 12,
+          "funded": 4,
+          "menu_eval": 12,
+          "menu_funded": 4,
+          "mean_net_cash": -214.19633999999806,
+          "net_cash_90ci": [
+            -399.77910999999824,
+            -7.921884999997751
+          ],
+          "net_cash_minus_luck_90ci": [
+            234.32698900000048,
+            636.0824910000016
+          ],
+          "chance_any_payout": 0.333,
+          "chance_net_cash_positive": 0.2915,
+          "net_cash_5th_percentile": -990.0,
+          "median_days_to_first_payout": 31.0,
+          "mean_fees": 527.34,
+          "mean_payouts": 313.14366000000194,
+          "luck_mean_net_cash": -641.7961649999988,
+          "luck_net_cash_90ci": [
+            -740.4726879999993,
+            -585.910899999999
+          ],
+          "luck_chance_any_payout": 0.1895,
+          "luck_mean_fees": 839.2725,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1080.0,
+              "dll": null,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": null,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 12,
+          "funded": 6,
+          "menu_eval": 12,
+          "menu_funded": 6,
+          "mean_net_cash": -172.8037379999994,
+          "net_cash_90ci": [
+            -444.69061899999946,
+            92.37843850000078
+          ],
+          "net_cash_minus_luck_90ci": [
+            250.8691240000002,
+            784.4721800000003
+          ],
+          "chance_any_payout": 0.326,
+          "chance_net_cash_positive": 0.3065,
+          "net_cash_5th_percentile": -1155.0,
+          "median_days_to_first_payout": 31.0,
+          "mean_fees": 604.3125,
+          "mean_payouts": 431.5087620000006,
+          "luck_mean_net_cash": -684.4523759999997,
+          "luck_net_cash_90ci": [
+            -778.5293224999998,
+            -611.4044979999998
+          ],
+          "luck_chance_any_payout": 0.178,
+          "luck_mean_fees": 927.8775,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 12,
+              "stop": 1080.0,
+              "dll": null,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": null,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 2,
+          "menu_eval": 16,
+          "menu_funded": 2,
+          "mean_net_cash": -308.6688255000014,
+          "net_cash_90ci": [
+            -443.63866100000064,
+            -125.28144300000228
+          ],
+          "net_cash_minus_luck_90ci": [
+            222.89270549999966,
+            529.9924444999981
+          ],
+          "chance_any_payout": 0.241,
+          "chance_net_cash_positive": 0.2135,
+          "net_cash_5th_percentile": -1155.0,
+          "median_days_to_first_payout": 33.0,
+          "mean_fees": 484.44,
+          "mean_payouts": 175.77117449999864,
+          "luck_mean_net_cash": -669.6262890000007,
+          "luck_net_cash_90ci": [
+            -717.9526780000006,
+            -610.2996135000003
+          ],
+          "luck_chance_any_payout": 0.118,
+          "luck_mean_fees": 752.895,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1080.0,
+              "dll": null,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": null,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 4,
+          "menu_eval": 16,
+          "menu_funded": 4,
+          "mean_net_cash": -199.70244899999756,
+          "net_cash_90ci": [
+            -418.99216999999834,
+            66.41347600000353
+          ],
+          "net_cash_minus_luck_90ci": [
+            331.6088150000011,
+            784.5339870000023
+          ],
+          "chance_any_payout": 0.4035,
+          "chance_net_cash_positive": 0.3365,
+          "net_cash_5th_percentile": -1155.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 597.7125,
+          "mean_payouts": 398.0100510000025,
+          "luck_mean_net_cash": -718.9242179999986,
+          "luck_net_cash_90ci": [
+            -788.6992129999987,
+            -626.1540369999985
+          ],
+          "luck_chance_any_payout": 0.216,
+          "luck_mean_fees": 936.375,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1080.0,
+              "dll": null,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": null,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 16,
+          "funded": 6,
+          "menu_eval": 16,
+          "menu_funded": 6,
+          "mean_net_cash": -152.95664999999926,
+          "net_cash_90ci": [
+            -405.97447749999935,
+            215.15148600000097
+          ],
+          "net_cash_minus_luck_90ci": [
+            352.74790050000024,
+            982.4268340000006
+          ],
+          "chance_any_payout": 0.3965,
+          "chance_net_cash_positive": 0.361,
+          "net_cash_5th_percentile": -1320.0,
+          "median_days_to_first_payout": 29.0,
+          "mean_fees": 695.8875,
+          "mean_payouts": 542.9308500000008,
+          "luck_mean_net_cash": -758.3932469999996,
+          "luck_net_cash_90ci": [
+            -857.3944459999998,
+            -663.8091564999995
+          ],
+          "luck_chance_any_payout": 0.216,
+          "luck_mean_fees": 1046.595,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 16,
+              "stop": 1080.0,
+              "dll": null,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": null,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 2,
+          "menu_eval": 20,
+          "menu_funded": 2,
+          "mean_net_cash": -291.06098250000167,
+          "net_cash_90ci": [
+            -417.23785000000083,
+            -157.76024900000172
+          ],
+          "net_cash_minus_luck_90ci": [
+            241.10873950000044,
+            506.92815649999847
+          ],
+          "chance_any_payout": 0.257,
+          "chance_net_cash_positive": 0.2185,
+          "net_cash_5th_percentile": -1155.0,
+          "median_days_to_first_payout": 33.0,
+          "mean_fees": 483.6975,
+          "mean_payouts": 192.63651749999832,
+          "luck_mean_net_cash": -660.4479075000007,
+          "luck_net_cash_90ci": [
+            -715.9251235000006,
+            -588.7184290000006
+          ],
+          "luck_chance_any_payout": 0.133,
+          "luck_mean_fees": 752.8125,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1080.0,
+              "dll": null,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": null,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 4,
+          "menu_eval": 20,
+          "menu_funded": 4,
+          "mean_net_cash": -172.66070699999716,
+          "net_cash_90ci": [
+            -363.3283859999974,
+            106.89900900000366
+          ],
+          "net_cash_minus_luck_90ci": [
+            356.07821800000085,
+            784.547082000002
+          ],
+          "chance_any_payout": 0.429,
+          "chance_net_cash_positive": 0.3395,
+          "net_cash_5th_percentile": -1155.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 605.88,
+          "mean_payouts": 433.21929300000284,
+          "luck_mean_net_cash": -718.3891139999985,
+          "luck_net_cash_90ci": [
+            -796.0552789999991,
+            -617.5040879999982
+          ],
+          "luck_chance_any_payout": 0.2395,
+          "luck_mean_fees": 960.63,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1080.0,
+              "dll": null,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": null,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 20,
+          "funded": 6,
+          "menu_eval": 20,
+          "menu_funded": 6,
+          "mean_net_cash": -134.61756449999925,
+          "net_cash_90ci": [
+            -379.7212684999993,
+            210.9753780000008
+          ],
+          "net_cash_minus_luck_90ci": [
+            337.6553850000003,
+            920.2706320000003
+          ],
+          "chance_any_payout": 0.4145,
+          "chance_net_cash_positive": 0.3695,
+          "net_cash_5th_percentile": -1320.0,
+          "median_days_to_first_payout": 29.0,
+          "mean_fees": 726.99,
+          "mean_payouts": 592.3724355000007,
+          "luck_mean_net_cash": -772.2923204999997,
+          "luck_net_cash_90ci": [
+            -881.7757279999996,
+            -671.0988824999996
+          ],
+          "luck_chance_any_payout": 0.2355,
+          "luck_mean_fees": 1089.66,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 20,
+              "stop": 1080.0,
+              "dll": null,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": null,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 2,
+          "menu_eval": 30,
+          "menu_funded": 2,
+          "mean_net_cash": -347.4472275000017,
+          "net_cash_90ci": [
+            -520.9547385000012,
+            -196.23321550000284
+          ],
+          "net_cash_minus_luck_90ci": [
+            235.85404149999928,
+            508.80269499999895
+          ],
+          "chance_any_payout": 0.2725,
+          "chance_net_cash_positive": 0.226,
+          "net_cash_5th_percentile": -1320.0,
+          "median_days_to_first_payout": 33.0,
+          "mean_fees": 553.1625,
+          "mean_payouts": 205.7152724999982,
+          "luck_mean_net_cash": -747.6103575000009,
+          "luck_net_cash_90ci": [
+            -821.9726675000005,
+            -641.3439840000007
+          ],
+          "luck_chance_any_payout": 0.141,
+          "luck_mean_fees": 843.975,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1080.0,
+              "dll": null,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": null,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 4,
+          "menu_eval": 30,
+          "menu_funded": 4,
+          "mean_net_cash": -264.74747699999716,
+          "net_cash_90ci": [
+            -535.3827659999977,
+            28.99776900000366
+          ],
+          "net_cash_minus_luck_90ci": [
+            345.1215600000003,
+            766.4840180000023
+          ],
+          "chance_any_payout": 0.41,
+          "chance_net_cash_positive": 0.3125,
+          "net_cash_5th_percentile": -1485.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 702.075,
+          "mean_payouts": 437.3275230000028,
+          "luck_mean_net_cash": -835.1838449999983,
+          "luck_net_cash_90ci": [
+            -926.3642309999989,
+            -690.4914884999984
+          ],
+          "luck_chance_any_payout": 0.253,
+          "luck_mean_fees": 1090.98,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1080.0,
+              "dll": null,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": null,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 30,
+          "funded": 6,
+          "menu_eval": 30,
+          "menu_funded": 6,
+          "mean_net_cash": -267.87973499999936,
+          "net_cash_90ci": [
+            -607.8601714999995,
+            160.500394000001
+          ],
+          "net_cash_minus_luck_90ci": [
+            308.4471465,
+            975.6673995000006
+          ],
+          "chance_any_payout": 0.387,
+          "chance_net_cash_positive": 0.3235,
+          "net_cash_5th_percentile": -1650.0,
+          "median_days_to_first_payout": 29.0,
+          "mean_fees": 842.7375,
+          "mean_payouts": 574.8577650000008,
+          "luck_mean_net_cash": -913.9143149999996,
+          "luck_net_cash_90ci": [
+            -999.5782864999994,
+            -750.4349069999995
+          ],
+          "luck_chance_any_payout": 0.24,
+          "luck_mean_fees": 1242.2025,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 30,
+              "stop": 1080.0,
+              "dll": null,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": null,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 2,
+          "menu_eval": 40,
+          "menu_funded": 2,
+          "mean_net_cash": -339.8345115000019,
+          "net_cash_90ci": [
+            -495.90423200000123,
+            -198.57343050000256
+          ],
+          "net_cash_minus_luck_90ci": [
+            238.15540899999942,
+            483.26554899999866
+          ],
+          "chance_any_payout": 0.303,
+          "chance_net_cash_positive": 0.2375,
+          "net_cash_5th_percentile": -1320.0,
+          "median_days_to_first_payout": 32.0,
+          "mean_fees": 555.225,
+          "mean_payouts": 215.39048849999813,
+          "luck_mean_net_cash": -737.9708955000009,
+          "luck_net_cash_90ci": [
+            -814.5765995000006,
+            -656.8950915000014
+          ],
+          "luck_chance_any_payout": 0.1475,
+          "luck_mean_fees": 836.1375,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1080.0,
+              "dll": null,
+              "walk": false
+            },
+            "funded": {
+              "size": 2,
+              "stop": null,
+              "dll": null,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 4,
+          "menu_eval": 40,
+          "menu_funded": 4,
+          "mean_net_cash": -288.001538999997,
+          "net_cash_90ci": [
+            -474.6213059999975,
+            -1.3645229999965465
+          ],
+          "net_cash_minus_luck_90ci": [
+            314.28728300000097,
+            772.3836050000025
+          ],
+          "chance_any_payout": 0.4285,
+          "chance_net_cash_positive": 0.3235,
+          "net_cash_5th_percentile": -1650.0,
+          "median_days_to_first_payout": 30.0,
+          "mean_fees": 732.105,
+          "mean_payouts": 444.103461000003,
+          "luck_mean_net_cash": -834.1413329999982,
+          "luck_net_cash_90ci": [
+            -899.5938959999984,
+            -692.3560204999983
+          ],
+          "luck_chance_any_payout": 0.256,
+          "luck_mean_fees": 1089.9075,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1080.0,
+              "dll": null,
+              "walk": false
+            },
+            "funded": {
+              "size": 4,
+              "stop": null,
+              "dll": null,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        },
+        {
+          "eval": 40,
+          "funded": 6,
+          "menu_eval": 40,
+          "menu_funded": 6,
+          "mean_net_cash": -258.96958499999926,
+          "net_cash_90ci": [
+            -573.6508319999996,
+            116.75978300000091
+          ],
+          "net_cash_minus_luck_90ci": [
+            337.40694700000023,
+            963.0944860000003
+          ],
+          "chance_any_payout": 0.4205,
+          "chance_net_cash_positive": 0.3595,
+          "net_cash_5th_percentile": -1815.0,
+          "median_days_to_first_payout": 29.0,
+          "mean_fees": 868.6425,
+          "mean_payouts": 609.6729150000008,
+          "luck_mean_net_cash": -918.7213724999996,
+          "luck_net_cash_90ci": [
+            -1024.6042784999995,
+            -770.6959059999997
+          ],
+          "luck_chance_any_payout": 0.2545,
+          "luck_mean_fees": 1260.5175,
+          "luck_positive_flag": false,
+          "resolved": {
+            "eval": {
+              "size": 40,
+              "stop": 1080.0,
+              "dll": null,
+              "walk": false
+            },
+            "funded": {
+              "size": 6,
+              "stop": null,
+              "dll": null,
+              "walk": false
+            },
+            "notes": []
+          },
+          "gate": "fail"
+        }
+      ],
+      "pick": {
+        "eval": 20,
+        "funded": 4,
+        "menu_eval": 20,
+        "menu_funded": 4
+      },
+      "test": {
+        "mean_net_cash": -154.66918499999733,
+        "net_cash_90ci": [
+          -367.34340099999764,
+          274.04532100000364
+        ],
+        "net_cash_minus_luck_90ci": [
+          288.87820600000066,
+          940.3155425000011
+        ],
+        "chance_any_payout": 0.4715,
+        "chance_net_cash_positive": 0.391,
+        "net_cash_5th_percentile": -1650.0,
+        "median_days_to_first_payout": 29.0,
+        "mean_fees": 822.195,
+        "mean_payouts": 667.5258150000027,
+        "luck_mean_net_cash": -655.7292029999984,
+        "luck_net_cash_90ci": [
+          -757.7030789999981,
+          -558.2743509999983
+        ],
+        "luck_chance_any_payout": 0.344,
+        "luck_mean_fees": 1155.0,
+        "luck_positive_flag": false,
+        "resolved": {
+          "eval": {
+            "size": 20,
+            "stop": 1080.0,
+            "dll": null,
+            "walk": false
+          },
+          "funded": {
+            "size": 4,
+            "stop": null,
+            "dll": null,
+            "walk": false
+          },
+          "notes": []
+        },
+        "gate": "fail"
+      },
+      "confirm": null
+    }
+  ],
+  "per_file_pick": {
+    "topstep_50k (adapter)": {
+      "variant": "standard/consistency",
+      "train_net_lo": 23.90785516666669
+    },
+    "brain/_system/prop/firms/topstep_50k_standard.json": {
+      "variant": "consistency",
+      "train_net_lo": -34.09214483333331
+    },
+    "brain/_system/prop/firms_indicative/lucid_flex_50k.json": {
+      "variant": "default",
+      "train_net_lo": -363.3283859999974
+    }
+  },
+  "final": {
+    "firm_file": "topstep_50k (adapter)",
+    "variant": "standard/consistency",
+    "pick": {
+      "eval": 12,
+      "funded": 6,
+      "menu_eval": 12,
+      "menu_funded": 6
+    }
+  },
+  "trials": {
+    "train": 105,
+    "test": 7,
+    "confirm": 5
+  }
+}

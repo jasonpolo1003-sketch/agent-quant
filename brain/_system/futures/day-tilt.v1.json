@@ -1,0 +1,29 @@
+{
+  "schema_version": "day-tilt-1",
+  "id": "SC-FUT-0005-TILT-v1",
+  "status": "frozen",
+  "frozen_at": "2026-10-28",
+  "approved_by": "Jason 2026-10-28 (\"Can we determine what a good week will look like and what a bad week will look like ... trade bigger on good days, smaller on bad\")",
+  "written_before": "any per-bucket result. Known before: SC-FUT-0005 is right-skewed (best 20 days = 76% of profit) and stronger in volatile years (by-year table in the independent review).",
+  "question": "Does anything known before the open tell SC-FUT-0005's good days from its bad days well enough that sizing up/down on it improves profit per contract out of sample?",
+  "strategy": "workbench trial 266777ef (SC-FUT-0005, MNQ, practice 2019-05..2024-12), net of L3 costs, 1 contract; luck = mean of the matched random-direction control draws per day",
+  "predictors": {
+    "fed": "FOMC statement day (brain/_system/futures/fomc_statement_days_2019_2024.csv): yes / no",
+    "vol": "today's 14-prior-true-range sum ranked against the previous 250 sessions' values (min 60): low (< 1/3), mid, high (> 2/3)",
+    "streak5": "the strategy's own net P&L over the previous 5 sessions: > 0 / <= 0",
+    "weekday": "Mon..Fri"
+  },
+  "not_included": "CPI / jobs-report days (need the FRED key; added later as a separate addendum) and the overnight gap (needs a data rebuild)",
+  "split": {"train_years": [2019, 2021, 2023], "test_years": [2020, 2022, 2024]},
+  "selection_on_train": "for each predictor, the best and worst bucket by mean net $/day; pick the ONE predictor with the largest t-statistic of (best - worst)",
+  "rules": {
+    "tilt": "contracts x 1.5 in the best bucket, x 0.5 in the worst, x 1 otherwise; rescaled so the average weight over train days is 1 (same average size as untilted)",
+    "skip": "contracts x 0 in the worst bucket, x 1 otherwise; rescaled the same way"
+  },
+  "test": {
+    "measure": "improvement = mean(weight x net) - mean(net) per day on test days, and the change in daily Sharpe",
+    "gate": "one-sided permutation p < 0.05: bucket labels shuffled across test days 5,000 times (seed 20261028); both rules reported (2 trials)",
+    "sanity": "the same weights applied to the luck series should show no improvement"
+  },
+  "next_if_pass": "a frozen prop-simulator run of P4 with the day weights; nothing traded on this result alone"
+}

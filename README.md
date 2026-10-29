@@ -32,3 +32,7 @@ uv run python scripts/live_research_executor.py --research-id RQ-xxxx --run-id R
 ```
 
 Experimental dashboard URL: `http://127.0.0.1:8765`
+
+## Data notice
+
+This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.

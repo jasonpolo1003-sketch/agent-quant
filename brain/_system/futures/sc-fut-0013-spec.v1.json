@@ -1,0 +1,51 @@
+{
+  "schema_version": "sc-fut-0013-1",
+  "card_id": "SC-FUT-0013",
+  "status": "frozen",
+  "frozen": true,
+  "frozen_at": "2026-10-29",
+  "approved_by": "Jason 2026-10-29 autonomous mandate (\"run a loop, do tests, do research, do whatever you need\")",
+  "written_before": "any code or result for this rule on our data. Source: brain/sources/edge_scout_2026-10-29.md, candidates #1 and #2 (tested together because both come from month-end flows).",
+  "workbench_family": "month_end",
+  "name": "Month-end rebalancing flow and turn of the month (RTH only)",
+  "source": [
+    "Harvey, Mazzoleni & Melone (2025), The unintended consequences of rebalancing, NBER w33554",
+    "McConnell & Xu (2008); Etula, Rinne, Suominen & Vaittinen (2020, RFS), turn-of-the-month"
+  ],
+  "market": "MES (MNQ reported as a diagnostic only)",
+  "bond": "ZN (10-year note futures) from the hash-checked multi_2019-05-01_2024-12-31 file, volume roll; used only for the signal",
+  "roll": "volume",
+  "data": {
+    "practice_inclusive": ["2019-05-01", "2024-12-31"],
+    "exam": "2025-01-01..2026-10-21 locked; only via the proctor, with Jason's OK (the exam period is after the paper's sample: the real out-of-sample test)"
+  },
+  "calendar": "NYSE sessions (frozen session-calendar.v1.csv); month = calendar month; L = the last session of the month, L-1, L-2 the two before it; F1..F3 the first three sessions of the next month",
+  "rule": {
+    "T1_rebalance": {
+      "signal": "at the RTH close of session L-3 (last bar before the regular close): rel = MES month-to-date return - ZN month-to-date return, each from the previous month's L RTH close (same rule) to L-3's RTH close, each on its own front contract by volume roll (a roll inside the month chains returns across the roll at the roll day's closes)",
+      "trade": "on each of L-2, L-1 and L: short 1 MES if rel > 0, long 1 MES if rel < 0, from the open of the 08:30 CT bar to the open of the 15:00 CT bar (early closes: to the open of the 12:00 CT bar); rel == 0 or missing -> no trade",
+      "trades_per_month": 3
+    },
+    "T2_turn_of_month": {
+      "trade": "long 1 MES on each of L, F1, F2 and F3, from the open of the 08:30 CT bar to the open of the 15:00 CT bar (early closes: 12:00)",
+      "trades_per_month": 4
+    },
+    "other_days": "no trade ($0) and not evaluable for the per-trade statistics; the $/day floor is computed per calendar session of the full practice period (all sessions, zeros included)",
+    "stop": "none"
+  },
+  "costs": "L3 = Topstep fees + 4 ticks per round trip (MES 622 cents); L1-L4 reported",
+  "luck": "matched control: the same trade days and bars with a random direction (500 draws/day, numpy PCG64 seeded [20261029, root(MES=2,MNQ=1), yyyymmdd, 13]); daily control = mean of draws",
+  "diagnostics": [
+    "T2 vs always-long MES on all other sessions (is the turn of the month special?)",
+    "per-year net; MNQ on the same rules; the hit rate of T1 by sign of rel"
+  ],
+  "gates": {
+    "beats_luck": "one-sided paired stationary bootstrap vs the matched control over trade days (workbench inference), at the family Sidak bar for 2 trials: alpha = 0.0253 each",
+    "floor": "net >= $1.00 per calendar session at L3 averaged over all sessions (a sparse rule: equivalent to >= ~$7 per trade day for T1, ~$5.5 for T2), AND net per trade >= $5.00",
+    "sharpe": "not gated (sparse); reported",
+    "advance": "a pass is a candidate for exam check #2 (after-publication data), only with Jason's OK; no prop-simulator claim from 2019-2024 alone",
+    "no_retuning": "no other parameters; failures are recorded as is"
+  },
+  "caveat_known_in_advance": "2019-2024 lies mostly inside the papers' samples, so practice is a replication, not out-of-sample. About 200 trade days per trial: low power. T2 also earns market beta (2019-2024 rose).",
+  "honesty": "2 distinct workbench trials on MES (+ MNQ diagnostics, not gated)"
+}

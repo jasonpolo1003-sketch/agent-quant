@@ -49,7 +49,10 @@ def multi_loader(data_dir: Path) -> engine.Loader:
     return load
 
 
-def dev_loader(data_dir: Path) -> engine.Loader:
+def dev_loader(data_dir: Path, *, evening: bool = False, overnight: bool = False) -> engine.Loader:
+    """MNQ / MES days from the hash-checked dev file. `evening=True` (SC-FUT-0011) gives each
+    trade date's 17:00-20:30 CT evening bars (bars.build_evenings) instead of the RTH day;
+    `overnight=True` (SC-FUT-0012) its 17:00-08:29 CT overnight (bars.build_overnights)."""
     manifest = data_dir / "manifest.json"
     listed = json.loads(manifest.read_text(encoding="utf-8"))["ohlcv"]
     expected = next(r["output_sha256"] for r in listed if r["output"] == runner.DEV_BARS)
@@ -62,13 +65,13 @@ def dev_loader(data_dir: Path) -> engine.Loader:
     calendar = read_calendar(PROJECT_ROOT / runner.CALENDAR)
 
     def load(market: str, start: date, end: date, roll_column: str):
-        from quant_brain.futures.bars import build_days
+        from quant_brain.futures.bars import build_days, build_evenings, build_overnights
 
         rolls = PROJECT_ROOT / (
             VOLUME_ROLLS if roll_column == "volume_roll_date" else runner.ROLL_CSV
         )
         return list(
-            build_days(
+            (build_overnights if overnight else build_evenings if evening else build_days)(
                 frame,
                 mappings,
                 rolls,
@@ -81,6 +84,12 @@ def dev_loader(data_dir: Path) -> engine.Loader:
         )
 
     return load
+
+
+def month_end_loader(data_dir: Path, multi_dir: Path) -> engine.Loader:
+    from quant_brain.workbench import month_end
+
+    return month_end.loader(data_dir, multi_dir)
 
 
 def main() -> int:
@@ -108,13 +117,22 @@ def main() -> int:
         return 0
 
     strategy = make(args.family, json.loads(args.settings))
+    session = getattr(strategy, "session", "rth")
+    evening, overnight = session == "evening", session == "overnight"
+    if (evening or overnight) and args.market not in ("MNQ", "MES"):
+        raise SystemExit("evening and overnight families run on MNQ / MES only")
     loader = (
-        dev_loader(args.data_dir)
+        # SC-FUT-0013: MES / MNQ days with month positions and the MES-minus-ZN signal attached
+        month_end_loader(args.data_dir, MULTI_DIR)
+        if session == "month_end"
+        else dev_loader(args.data_dir, evening=evening, overnight=overnight)
         if args.market in ("MNQ", "MES")
         else multi_loader(MULTI_DIR)
     )
     table, record, cached = engine.run(PROJECT_ROOT, strategy, args.market, args.roll, loader)
     result = analysis.summary(PROJECT_ROOT, table, record)
+    if hasattr(strategy, "spec_verdict"):  # sparse cards gate on their own spec (SC-FUT-0013)
+        result["spec_verdict"] = strategy.spec_verdict(table, args.market)
     out = PROJECT_ROOT / RESULTS / f"{record['fingerprint']}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(result, indent=2, default=float) + "\n", encoding="utf-8")

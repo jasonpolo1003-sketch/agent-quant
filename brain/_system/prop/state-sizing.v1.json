@@ -1,0 +1,55 @@
+{
+  "schema_version": "state-sizing-1",
+  "id": "PROP-STATE-SIZING-v1",
+  "status": "frozen",
+  "frozen_at": "2026-10-28",
+  "approved_by": "Jason 2026-10-28 (\"Yeah, run a test\")",
+  "written_before": "any result of state-dependent sizing. Known before: the 88-cell fixed-size grid (best P4 12/4 Topstep 50K +$74-132, luck negative everywhere) and JJ Simon's claims (brain/sources/practitioner_leads/jj_simon_prop_firm_method_2026-10-28.md).",
+  "questions": [
+    "Q1: does SC-FUT-0005 with size set from the account's cushion beat the fixed P4 play and pass the gate out of sample?",
+    "Q2 (JJ's claim): does a zero-edge strategy (the matched random-direction control) become positive net cash with the best state-dependent size?",
+    "Q3: a $500 live account, 1 MNQ: chance of +10% ($50) before the broker liquidates it, and the chance of losing it over a year."
+  ],
+  "strategy": {
+    "workbench_trial": "266777ef (SC-FUT-0005 noise-area, MNQ, practice 2019-05..2024-12)",
+    "cost_level": "L3",
+    "luck": "the trial's matched random-direction control, one draw per day, identical sizing"
+  },
+  "firms": [
+    "brain/_system/prop/firms/topstep_50k_standard.json (all payout-path variants; includes the $29/mo API fee)",
+    "brain/_system/prop/firms/tradeify_growth_50k.json (only if a NinjaTrader route is built; Tradeify forbids the same bot at two firms)"
+  ],
+  "sizing_rule": {
+    "formula": "contracts today = clamp(floor(a x cushion / R), 1, the firm's max micros for the phase); cushion = equity - loss floor at the open (from the simulator state)",
+    "R_usd": 329,
+    "R_source": "1% worst day at 1 MNQ (SC-FUT-0005 independent review); a risk number, not tuned on profit",
+    "a_eval": [0.5, 1.0, 1.5, 2.0],
+    "a_funded": [0.25, 0.5, 1.0, 1.5],
+    "other": "firm soft daily loss as before; stop at the eval target; no profit stops; the optional firm DLL taken"
+  },
+  "split": {
+    "train_years": [2019, 2021, 2023],
+    "test_years": [2020, 2022, 2024],
+    "why": "alternating years so both halves hold calm and volatile years; resampling stays inside the half"
+  },
+  "selection": {
+    "Q1": "on train, per firm variant, the (a_eval, a_funded) with the highest strategy mean net cash",
+    "Q2": "on train, per firm variant, the (a_eval, a_funded) with the highest LUCK mean net cash (selected for luck on its own)",
+    "baseline": "fixed P4 (12 / 4) re-run on the test half for comparison"
+  },
+  "gates_on_test": {
+    "Q1": "mean net cash lower 90% bound > $0 AND (net - luck) lower 90% bound > $0; a pass is a candidate and needs a confirmation run (fresh seed, outer 200, lowest resample) per the grid addendum",
+    "Q2": "zero-edge claim supported if the luck-selected policy's luck mean net cash lower 90% bound > $0; any such result is first treated as a possible simulator or rules error"
+  },
+  "settings": {"horizon_days": 42, "paths": 2000, "outer": 40, "inner": 300},
+  "live_500": {
+    "account_usd": 500,
+    "contracts": 1,
+    "liquidation": "broker flattens when intraday equity falls to $50 (day-margin floor assumption); loss = $450 + 2 ticks",
+    "goal": "+$50 at a close, then stop",
+    "horizons_days": [42, 252],
+    "days": "all practice days (no selection involved)",
+    "costs": "L3 (Topstep fees + 4 ticks), close to retail micro commissions"
+  },
+  "honesty": "prop trials: 16 train cells x 2 selections share runs; test cells counted one each; all logged to prop_trials.jsonl with kind state_sizing"
+}

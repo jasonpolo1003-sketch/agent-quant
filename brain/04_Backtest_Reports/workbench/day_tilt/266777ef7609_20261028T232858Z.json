@@ -1,0 +1,147 @@
+{
+  "spec_sha256": "b40469c3c42fe5ab514283593caab8c70c0491850f09007dc042b4a9365bedbb",
+  "workbench_trial": "266777ef7609d8dfaf36d02ea3a9e4a5dc970fe6c756c88dd6665d097f8db400",
+  "train": {
+    "fed": {
+      "buckets": {
+        "no": {
+          "days": 648,
+          "net_per_day": 8.529938271604937,
+          "luck_per_day": -2.6951913580246925,
+          "test_days": 733,
+          "test_net_per_day": 12.406684856753065
+        },
+        "yes": {
+          "days": 21,
+          "net_per_day": -0.8304761904761917,
+          "luck_per_day": -3.5918095238095256,
+          "test_days": 23,
+          "test_net_per_day": 76.61565217391303
+        }
+      },
+      "best": "no",
+      "worst": "yes",
+      "t": 0.4236708446085159
+    },
+    "vol": {
+      "buckets": {
+        "high": {
+          "days": 121,
+          "net_per_day": 16.23289256198347,
+          "luck_per_day": -2.909421487603308,
+          "test_days": 459,
+          "test_net_per_day": 11.717603485838776
+        },
+        "low": {
+          "days": 356,
+          "net_per_day": 5.890561797752806,
+          "luck_per_day": -2.6719662921348326,
+          "test_days": 91,
+          "test_net_per_day": 4.7292307692307665
+        },
+        "mid": {
+          "days": 132,
+          "net_per_day": 10.591212121212122,
+          "luck_per_day": -2.8993181818181837,
+          "test_days": 206,
+          "test_net_per_day": 24.502524271844663
+        }
+      },
+      "best": "high",
+      "worst": "low",
+      "t": 0.9080167568133259
+    },
+    "streak5": {
+      "buckets": {
+        "down": {
+          "days": 313,
+          "net_per_day": 8.426453674121404,
+          "luck_per_day": -2.8723386581469668,
+          "test_days": 323,
+          "test_net_per_day": 38.56916408668731
+        },
+        "up": {
+          "days": 351,
+          "net_per_day": 8.183703703703705,
+          "luck_per_day": -2.629259259259261,
+          "test_days": 433,
+          "test_net_per_day": -3.698799076212475
+        }
+      },
+      "best": "down",
+      "worst": "up",
+      "t": 0.02951695223610749
+    },
+    "weekday": {
+      "buckets": {
+        "Fri": {
+          "days": 135,
+          "net_per_day": 5.249629629629626,
+          "luck_per_day": -2.0946074074074095,
+          "test_days": 151,
+          "test_net_per_day": 18.97682119205298
+        },
+        "Mon": {
+          "days": 125,
+          "net_per_day": 4.988799999999997,
+          "luck_per_day": -3.540336000000002,
+          "test_days": 141,
+          "test_net_per_day": 4.709219858156024
+        },
+        "Thu": {
+          "days": 134,
+          "net_per_day": 19.4344776119403,
+          "luck_per_day": -2.5934776119403002,
+          "test_days": 153,
+          "test_net_per_day": 8.859999999999996
+        },
+        "Tue": {
+          "days": 138,
+          "net_per_day": 2.377391304347826,
+          "luck_per_day": -2.670260869565219,
+          "test_days": 157,
+          "test_net_per_day": 13.543312101910823
+        },
+        "Wed": {
+          "days": 137,
+          "net_per_day": 9.090218978102188,
+          "luck_per_day": -2.777927007299271,
+          "test_days": 154,
+          "test_net_per_day": 24.966753246753246
+        }
+      },
+      "best": "Thu",
+      "worst": "Tue",
+      "t": 1.2273685743480167
+    }
+  },
+  "chosen": {
+    "predictor": "weekday",
+    "best": "Thu",
+    "worst": "Tue"
+  },
+  "test": {
+    "tilt": {
+      "untilted_net_per_day": 14.36013227513227,
+      "tilted_net_per_day": 13.891927250660384,
+      "improvement_per_day": -0.46820502447188694,
+      "permutation_p": 0.5954,
+      "sharpe_untilted": 1.3902716665834394,
+      "sharpe_tilted": 1.2418254517975127,
+      "luck_improvement_per_day": -0.06494954110246542,
+      "mean_weight_test": 1.0003450655624566,
+      "gate": "fail"
+    },
+    "skip": {
+      "untilted_net_per_day": 14.36013227513227,
+      "tilted_net_per_day": 14.548628523600273,
+      "improvement_per_day": 0.1884962484680024,
+      "permutation_p": 0.483,
+      "sharpe_untilted": 1.3902716665834394,
+      "sharpe_tilted": 1.2299032244649146,
+      "luck_improvement_per_day": -0.005664873105551305,
+      "mean_weight_test": 0.9982438047409801,
+      "gate": "fail"
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "schema_version": "sc-fut-0012-1",
+  "card_id": "SC-FUT-0012",
+  "status": "frozen",
+  "frozen": true,
+  "frozen_at": "2026-10-29",
+  "approved_by": "Jason 2026-10-29 autonomous mandate (\"run a loop, do tests, do research, do whatever you need ... statistically beating the prop firms or finding an edge\")",
+  "written_before": "any code or result for this rule on our data. Known before: the published papers below; all failed same-day RTH cards (ORB, late momentum, shock reversal, fade band, gap fill, evening reversion); SC-FUT-0005 exam check #1 FAIL.",
+  "workbench_family": "overnight_drift",
+  "name": "Overnight drift (Globex session hold)",
+  "source": [
+    "Lou, Polk & Skouras (2019), A tug of war: overnight versus intraday expected returns, JFE 134(1)",
+    "Boyarchenko, Larsen & Whelan (2023), The overnight drift, RFS 36(9): index-futures returns concentrate overnight around the European open and are larger after a down US session"
+  ],
+  "market": "MNQ (MES reported as a diagnostic only)",
+  "roll": "volume",
+  "data": {
+    "practice_inclusive": ["2019-05-01", "2024-12-31"],
+    "exam": "2025-01-01..2026-10-21 locked; only via the proctor, with Jason's OK"
+  },
+  "prop_fit": "the position opens at the 17:00 CT Globex reopen and closes before the 08:30 RTH open: inside one CME/Topstep trading day (17:00-16:00 CT), flat long before the 15:10 CT cut-off",
+  "rule": {
+    "session": "for each NYSE session D in the calendar: the overnight that ends at D's 08:30 CT open (starts at the previous calendar evening's 17:00 CT reopen; Sunday's for Monday)",
+    "entry": "long 1 contract at the open of the 17:00 CT bar",
+    "exit": "at the open of the 08:29 CT bar of D (flat before the RTH open)",
+    "stop": "none (the account's own loss limits only)",
+    "trials": {
+      "T1_unconditional": "trade every overnight",
+      "T2_after_down_day": "trade only if the previous NYSE session's RTH return (close of the last bar before its regular close minus open of its 08:30 bar) is < 0; otherwise no trade ($0)"
+    },
+    "missing": "a missing entry or exit bar -> non-evaluable day; a calendar gap (holiday) between the evening and D -> skip ($0)"
+  },
+  "costs": "L3 = Topstep fees + 4 ticks per round trip (MNQ 322 cents); L1-L4 reported",
+  "luck": "matched control: the same entry and exit bars with a random direction (500 draws/day, numpy PCG64 seeded [20261029, root(MNQ=1,MES=2), yyyymmdd, 12]); daily control = mean of draws",
+  "diagnostics": [
+    "always-long RTH (08:30 open -> 15:00 close) on the same sessions: where the drift lives",
+    "per-year results; MES on the same rule"
+  ],
+  "gates": {
+    "beats_luck": "one-sided paired stationary bootstrap vs the matched control (workbench inference), at the family Sidak bar for 2 trials: alpha = 1 - 0.95^(1/2) = 0.0253 each",
+    "floor": "net >= $5.00/day at L3 averaged over all evaluable sessions (GRADING floor)",
+    "sharpe": "annual Sharpe of daily L3 net >= 1.0",
+    "advance": "a passing trial goes to the prop simulator (frozen menu) on practice data; exam check #2 only with Jason's OK",
+    "no_retuning": "no other parameters; failures are recorded as is"
+  },
+  "caveat_known_in_advance": "a long-only hold also earns plain market beta; 2019-2024 Nasdaq rose. The random-direction control tests drift > 0, not skill. The RTH diagnostic shows whether the premium is specific to the overnight window.",
+  "honesty": "2 distinct workbench trials on MNQ (+ MES diagnostics, not gated)"
+}

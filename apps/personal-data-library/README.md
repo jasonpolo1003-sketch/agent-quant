@@ -129,3 +129,7 @@ Known limits: local-only hosting, no authentication/public exposure, scheduler a
 The parent independently reran all 18 tests and the offline verifier, then launched the dashboard bound to 127.0.0.1:8501. Headless Microsoft Edge acceptance checked all three chart panels, search, visible date-segment editing, the official source link, a real downloaded UNRATE CSV with all 12 months of 2020, the April 2020 chart hover value (14.8), and no-match search state, with no browser page errors. Both screens were visually inspected. Evidence is saved in `reports/browser-acceptance.json`, `reports/dashboard-snapshot.png`, and `reports/dashboard-library.png`.
 
 Reproduce with the server running: `uv run --with playwright python scripts/browser_acceptance.py`. This acceptance driver uses the existing Edge executable and an isolated temporary Playwright dependency, not your browser profile or a paid service. A user walkthrough remains optional; automated/browser checks do not establish point-in-time backtest suitability.
+
+## Data notice
+
+This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.
