@@ -1,4 +1,5 @@
-"""SC-FUT-0009 / 0010 / 0011 hand-worked fixtures (bracket trades: target + stop + flatten).
+"""SC-FUT-0009 / 0010 / 0011 hand-worked fixtures (bracket trades: target + stop + flatten),
+plus SC-FUT-0012 (overnight drift: a long hold 17:00 -> 08:29 CT) at the end.
 
 Synthetic MNQ days (50 cents/tick, L3 322). Unlisted minutes are flat at the previous bar's
 close. Shared fills (spec `fills`): decision on the close of the bar ending at the check, entry
@@ -15,7 +16,14 @@ import pandas as pd
 import pytest
 from futures_day_builder import make_day, t
 
-from quant_brain.futures.bars import CalendarDay, build_days, build_evenings
+from quant_brain.futures.bars import (
+    OVERNIGHT_EXIT,
+    OVERNIGHT_OPEN,
+    CalendarDay,
+    build_days,
+    build_evenings,
+    build_overnights,
+)
 from quant_brain.futures.orb import DayInput
 from quant_brain.prop import paths
 from quant_brain.workbench import engine
@@ -27,6 +35,7 @@ from quant_brain.workbench.bracket import (
     run_bracket,
     to_tick,
 )
+from quant_brain.workbench.overnight import NIGHT, OvernightDrift
 from quant_brain.workbench.strategies import DESCRIPTIONS, GRADING, REGISTRY, make
 
 
@@ -642,3 +651,265 @@ TRADED = {"fade_band": 0, "gap_fill": 0, "evening_revert": 0}
 
 def test_zz_the_look_ahead_check_saw_trades_in_every_family():
     assert all(n > 0 for n in TRADED.values()), TRADED
+
+
+# ---------------------------------------------------------------- SC-FUT-0012 overnight drift
+# Long 1 at the 17:00 CT reopen, out at D's 08:29 open (spec v1 + addendum 1).
+T1 = OvernightDrift("T1_unconditional")
+T2 = OvernightDrift("T2_after_down_day")
+NIGHT_DAY = date(2021, 1, 7)
+
+
+def nday(listed=None, *, missing=(), down=True, gap=False, root="MNQ", flat=1_000):
+    """A synthetic overnight 17:00..08:29; unlisted minutes flat at the previous close."""
+    bars, prev = {}, flat
+    for minute in NIGHT:
+        bar = (listed or {}).get(minute.strftime("%H:%M"), (prev,) * 4)
+        if minute.strftime("%H:%M") not in missing:
+            bars[minute] = bar
+        prev = bar[3]
+    return DayInput(
+        trade_date=NIGHT_DAY,
+        root=root,
+        bars=bars,
+        exit_minute=OVERNIGHT_EXIT,
+        stop_ticks=None,
+        context={
+            "previous_session": date(2021, 1, 6),
+            "holiday_gap": gap,
+            "previous_rth": (1_000, 999 if down else 1_001),
+        },
+    )
+
+
+def test_o1_long_at_the_1700_open_out_at_the_0829_open():
+    d = nday(
+        {
+            "17:00": (1_000, 1_003, 998, 1_002),
+            "02:00": (1_001, 1_002, 980, 990),
+            "08:28": (1_009, 1_030, 1_008, 1_010),
+            "08:29": (1_010, 1_012, 1_009, 1_011),
+        }
+    )
+    r = T1.simulate(d)
+    assert r.status == "traded" and len(r.trades) == 1
+    x = r.trades[0]
+    assert (x.side, x.entry_minute, x.entry_ticks, x.exit_minute, x.exit_ticks) == (
+        1,
+        time(17, 0),
+        1_000,
+        time(8, 29),
+        1_010,
+    )
+    assert (x.gross_cents, x.net_cents) == (500, 500 - 322)  # 10 ticks x 50c, L3 322
+    # the equity path walks across midnight: the 02:00 low (-20 ticks) is the day's low
+    low, records = T1.equity_path(d.bars, r.trades, 50)
+    assert low == -1_000 and min(lo for lo, _ in records) == -1_000
+    assert max(hi for _, hi in records) == 1_500  # 08:28 high 1030; the exit bar gives its open
+
+
+def test_o2_missing_entry_or_exit_bar_is_non_evaluable_in_both_trials():
+    for gone in ("17:00", "08:29"):
+        for s in (T1, T2):
+            assert s.simulate(nday(missing=(gone,))).status == "non_evaluable"
+    assert T1.simulate(nday(missing=("23:00", "03:00"))).status == "traded"  # inner gaps: nothing
+    assert T1.simulate(dataclasses.replace(nday(), bars={})).status == "ineligible"
+
+
+def test_o3_holiday_between_the_previous_session_and_d_skips_at_zero():
+    for s in (T1, T2):
+        r = s.simulate(nday(gap=True))
+        assert (r.status, r.net_cents, r.trades) == ("no_trade", 0, [])
+    # the skip comes before the missing-bar rule (addendum 1 item 2)
+    assert T1.simulate(nday(gap=True, missing=("17:00",))).status == "no_trade"
+
+
+def test_o4_t2_trades_only_after_a_down_previous_session():
+    assert T2.simulate(nday(down=True)).status == "traded"
+    assert T2.simulate(nday(down=False)).status == "no_trade"
+    flat = dataclasses.replace(nday(), context={**nday().context, "previous_rth": (1_000, 1_000)})
+    assert T2.simulate(flat).status == "no_trade"  # strictly < 0
+    for unknown in ((None, 999), (1_000, None)):
+        d = dataclasses.replace(nday(), context={**nday().context, "previous_rth": unknown})
+        assert T2.simulate(d).status == "no_trade"
+        assert T1.simulate(d).status == "traded"
+
+
+def _signs(root_code, stamp, n=500):
+    import numpy as np
+
+    rng = np.random.Generator(np.random.PCG64([20261029, root_code, stamp, 12]))
+    return [int(s) for s in rng.integers(0, 2, size=n) * 2 - 1]
+
+
+def test_o5_control_is_the_same_hold_in_a_seeded_random_direction():
+    d = nday({"08:29": (1_010,) * 4})
+    r = T1.simulate(d)
+    gross, taken, lows, recs = T1.matched_control(d, r, 500)
+    assert gross == [s * 500 for s in _signs(1, 20210107)] and taken == [1] * 500
+    assert set(lows) == {0, -500} and T1.matched_control(d, r, 500)[0] == gross
+    for g, rec, low in zip(gross, recs, lows, strict=True):
+        assert min([0, g] + [lo for lo, _ in rec]) == low
+    mes = dataclasses.replace(d, root="MES")
+    assert T1.matched_control(mes, T1.simulate(mes), 500)[0] == [
+        s * 10 * 125 for s in _signs(2, 20210107)
+    ]
+    later = dataclasses.replace(d, trade_date=date(2021, 1, 8))
+    assert T1.matched_control(later, T1.simulate(later), 500)[0] != gross
+    # T2 uses the same seed; untraded days give 0 in every draw
+    assert T2.matched_control(d, T2.simulate(d), 500)[0] == gross
+    assert T2.matched_control(d, T2.simulate(nday(down=False)), 3) == (
+        [0] * 3,
+        [0] * 3,
+        [0] * 3,
+        [[]] * 3,
+    )
+
+
+def test_o6_costs_l1_to_l4_on_the_engine_table():
+    from quant_brain.workbench import analysis
+
+    days = [nday({"08:29": (1_010,) * 4}), nday(down=False, missing=("08:29",)), nday(gap=True)]
+    table = engine.simulate(T1, days, draws=16)
+    assert list(table.status) == ["traded", "non_evaluable", "no_trade"]
+    assert list(table.evaluable) == [True, False, True]
+    for level, cost in (("L1", 172), ("L2", 222), ("L3", 322), ("L4", 522)):
+        assert analysis.COSTS[level]["MNQ"] == cost
+        net, ctrl = analysis._nets(table, "MNQ", level)
+        assert list(net) == [500 - cost, 0, 0]
+        assert set(ctrl[0]) <= {500 - cost, -500 - cost} and set(ctrl[2]) == {0}
+
+
+def test_o7_registered_with_two_fixed_trials_and_a_split_bar(tmp_path):
+    import json
+
+    from quant_brain.workbench import analysis
+
+    assert REGISTRY["overnight_drift"] is OvernightDrift and DESCRIPTIONS["overnight_drift"]
+    assert GRADING["overnight_drift"] == GRADING["noise_area"]
+    assert make("overnight_drift").trial == "T1_unconditional"
+    assert make("overnight_drift").session == "overnight"
+    with pytest.raises(ValueError):
+        make("overnight_drift", {"trial": "T3"})
+    with pytest.raises(TypeError):
+        make("overnight_drift", {"stop": 10})  # no free parameters
+    assert T1.settings() != T2.settings()
+    assert "src/quant_brain/workbench/overnight.py" in engine.CODE_FILES
+    ledger = tmp_path / engine.LEDGER
+    ledger.parent.mkdir(parents=True)
+    row = {
+        "family": "overnight_drift",
+        "settings": T1.settings(),
+        "market": "MNQ",
+        "roll": "volume",
+    }
+    ledger.write_text(json.dumps(row) + "\n", encoding="utf-8")
+    assert round(analysis.honesty(tmp_path, "overnight_drift")["alpha"], 4) == 0.0253
+
+
+# ------------------------------------------------- overnight day builder (bars.build_overnights)
+MLK = date(2021, 1, 18)  # a real NYSE holiday inside DAYS; CME still trades its overnight
+EARLY = date(2021, 1, 14)  # made an early-close day (12:15) in this synthetic calendar
+RTH = {  # (date, minute) -> bar; the default RTH bar (1000, 1010, 990, 1000) is a 0 return
+    (date(2021, 1, 6), "14:59"): (1_000, 1_000, 995, 995),  # Wed down -> Thu T2 trades
+    (date(2021, 1, 6), "15:00"): (1_100, 1_100, 1_100, 1_100),  # at the close: ignored
+    (date(2021, 1, 7), "15:05"): (900, 900, 900, 900),  # Thu flat at 14:59 -> Fri no T2
+    (EARLY, "12:14"): (1_000, 1_000, 990, 990),  # early close: down at 12:14 ...
+    (EARLY, "14:59"): (1_020, 1_020, 1_020, 1_020),  # ... although up at 14:59
+}
+
+
+def _night_frame():
+    rows = []
+    for d in DAYS:
+        for minute in pd.date_range(f"{d} 08:30", f"{d} 15:10", freq="min", tz=CT):
+            bar = RTH.get((d, minute.strftime("%H:%M")), (1_000, 1_010, 990, 1_000))
+            rows.append((7, minute, d, *bar))
+    for i, d in enumerate(DAYS[1:], start=1):
+        before = d - timedelta(days=1)  # the calendar evening before: Sunday for Monday
+        base = 2_000 + 10 * i
+        for minute in pd.date_range(f"{before} 16:59", f"{d} 08:29", freq="min", tz=CT):
+            price = base + 4 if minute.strftime("%H:%M") == "08:29" else base
+            rows.append((7, minute, (minute + pd.Timedelta(hours=7)).date(), *(price,) * 4))
+    for minute in pd.date_range("2021-01-08 17:00", "2021-01-08 17:10", freq="min", tz=CT):
+        rows.append((7, minute, date(2021, 1, 9), *(9_999,) * 4))  # Friday evening: not Monday's
+    return pd.DataFrame(
+        rows, columns=["instrument_id", "minute", "trade_date", "open", "high", "low", "close"]
+    )
+
+
+def _night_calendar():
+    return [
+        CalendarDay(d, time(12, 12) if d == EARLY else time(15, 7), d == EARLY)
+        for d in DAYS
+        if d != MLK
+    ]
+
+
+def _night_days(tmp_path):
+    kw = {"root": "MNQ", "start": DAYS[0], "end": DAYS[-1]}
+    frame, calendar = _night_frame(), _night_calendar()
+    nights = list(build_overnights(frame, MAPPINGS, _roll(tmp_path), calendar, **kw))
+    rth = list(build_days(frame, MAPPINGS, _roll(tmp_path), calendar, **kw))
+    return {d.trade_date: d for d in nights}, rth
+
+
+def test_o8_build_overnights_gives_1700_to_0829_and_leaves_build_days_alone(tmp_path):
+    nights, rth = _night_days(tmp_path)
+    assert list(nights) == [d.trade_date for d in rth] and MLK not in nights
+    assert [d.atr_tr_sum for d in nights.values()] == [d.atr_tr_sum for d in rth]
+    assert [d.prev_close for d in nights.values()] == [d.prev_close for d in rth]
+    assert nights[DAYS[0]].bars == {}  # no overnight before the first day in the frame
+    thu = nights[date(2021, 1, 7)]
+    assert len(thu.bars) == 930 and thu.exit_minute == OVERNIGHT_EXIT and thu.stop_ticks is None
+    assert set(thu.bars) == set(NIGHT) and time(16, 59) not in thu.bars
+    assert thu.bars[OVERNIGHT_OPEN] == (2_030,) * 4 and thu.bars[OVERNIGHT_EXIT] == (2_034,) * 4
+    x = T1.simulate(thu).trades[0]
+    assert (x.entry_ticks, x.exit_ticks, x.gross_cents) == (2_030, 2_034, 200)
+    # the overnight bars do not change what build_days returns for RTH
+    plain = _night_frame()
+    plain = plain[plain["minute"].dt.hour.between(8, 15) & (plain["minute"].dt.time >= time(8, 30))]
+    kw = {"root": "MNQ", "start": DAYS[0], "end": DAYS[-1]}
+    again = list(build_days(plain, MAPPINGS, _roll(tmp_path), _night_calendar(), **kw))
+    assert [(d.bars, d.prev_close) for d in again] == [(d.bars, d.prev_close) for d in rth]
+
+
+def test_o9_sunday_evening_belongs_to_monday_and_friday_evening_does_not(tmp_path):
+    nights, _ = _night_days(tmp_path)
+    monday = nights[date(2021, 1, 11)]
+    base = 2_000 + 10 * DAYS.index(date(2021, 1, 11))
+    assert monday.bars[OVERNIGHT_OPEN] == (base,) * 4  # Sunday 17:00, not Friday's 9999
+    assert len(monday.bars) == 930 and all(bar[0] != 9_999 for bar in monday.bars.values())
+    assert monday.context["previous_session"] == date(2021, 1, 8)
+    assert monday.context["holiday_gap"] is False  # a weekend alone never skips
+    assert T1.simulate(monday).status == "traded"
+
+
+def test_o10_holiday_between_the_sessions_skips_the_next_night(tmp_path):
+    nights, _ = _night_days(tmp_path)
+    tue = nights[date(2021, 1, 19)]  # after MLK Monday: Monday 17:00 -> Tuesday 08:29
+    assert tue.context["previous_session"] == date(2021, 1, 15)
+    assert tue.context["holiday_gap"] is True and len(tue.bars) == 930
+    for s in (T1, T2):
+        r = s.simulate(tue)
+        assert (r.status, r.net_cents) == ("no_trade", 0)
+    assert nights[date(2021, 1, 20)].context["holiday_gap"] is False
+
+
+def test_o11_t2_reads_the_last_bar_before_the_regular_close_and_the_0830_open(tmp_path):
+    nights, _ = _night_days(tmp_path)
+    thu, fri = nights[date(2021, 1, 7)], nights[date(2021, 1, 8)]
+    assert thu.context["previous_rth"] == (1_000, 995)  # Wed 14:59 close, not the 15:00 bar
+    assert T2.simulate(thu).status == "traded"
+    assert fri.context["previous_rth"] == (1_000, 1_000)  # Thu: 0 return; 15:05 ignored
+    assert T2.simulate(fri).status == "no_trade"
+    assert T1.simulate(fri).status == "traded"
+
+
+def test_o12_early_close_previous_session_uses_its_1214_bar(tmp_path):
+    nights, _ = _night_days(tmp_path)
+    fri = nights[date(2021, 1, 15)]  # P = Thu 14 Jan, an early close (12:15)
+    assert fri.context["previous_rth"] == (1_000, 990)  # 12:14 close, not 14:59's 1020
+    assert T2.simulate(fri).status == "traded"
+    early = nights[EARLY]  # the night into the early-close day itself is a normal night
+    assert early.context["holiday_gap"] is False and T1.simulate(early).status == "traded"

@@ -29,7 +29,9 @@ REGIME_LOOKBACK = 250
 GRID_REPLICATES = 1_999
 # Families frozen as one batch share a Sidak split of the 5% bar (spec `gates.beats_luck`):
 # SC-FUT-0009/0010/0011 -> 1 - 0.95^(1/3) = 0.0170 each for their first trial.
-FAMILY_SPLIT = {"fade_band": 3, "gap_fill": 3, "evening_revert": 3}
+# SC-FUT-0012 freezes 2 trials in one family -> 1 - 0.95^(1/2) = 0.0253 each.
+# SC-FUT-0013 (month_end) likewise: 2 trials, 0.0253 each.
+FAMILY_SPLIT = {"fade_band": 3, "gap_fill": 3, "evening_revert": 3, "overnight_drift": 2, "month_end": 2}
 
 
 def honesty(root: Path, family: str) -> dict[str, Any]:

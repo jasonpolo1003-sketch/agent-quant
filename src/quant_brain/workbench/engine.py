@@ -43,6 +43,8 @@ CODE_FILES = (
     "src/quant_brain/workbench/noise.py",
     "src/quant_brain/futures/multi.py",
     "src/quant_brain/workbench/bracket.py",
+    "src/quant_brain/workbench/overnight.py",
+    "src/quant_brain/workbench/month_end.py",
 )
 EVALUABLE = ("traded", "no_trade", "void_range")
 
