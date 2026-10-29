@@ -1,0 +1,15 @@
+{
+  "id": "SC-FUT-0005-FORWARD-v1",
+  "frozen_at": "2026-10-28",
+  "approved_by": "Jason 2026-10-28 (\"keep on doing what you need to do ... figure it out\")",
+  "written_after": "5 forward days were logged (2026-10-22..28: +$697.90 on 1 MNQ). Those days count toward the checkpoints like any other; the rule below does not depend on them.",
+  "data": "scripts/forward_log.py: Yahoo NQ=F 1-minute bars, RTH sessions from 2026-10-22, frozen SC-FUT-0005 rule, L3 costs, 1 MNQ, matched random-direction control (500 draws)",
+  "decision_checkpoints_scored_days": [60, 120, 250],
+  "test": "workbench paired test (stationary bootstrap, one-sided) of daily net vs the control mean, all scored days so far",
+  "alpha_per_checkpoint": [0.003, 0.018, 0.044],
+  "alpha_note": "O'Brien-Fleming-style spending, about 0.05 in total across the three looks",
+  "pass": "p below that checkpoint's alpha AND mean net per day > 0: the edge is confirmed on fresh data; real-money prop attempts become reasonable",
+  "stop_for_harm": "at any checkpoint, mean net per day <= -$5 (L3): stop treating SC-FUT-0005 as a candidate",
+  "between_checkpoints": "running totals may be shown, but no decision (buy, stop, resize) is taken on them",
+  "caveat": "Yahoo's continuous contract and data gaps differ slightly from the MNQ volume-roll backtest; days with fewer than 300 RTH bars are reported separately"
+}
