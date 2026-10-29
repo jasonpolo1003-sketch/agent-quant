@@ -465,6 +465,28 @@ def test_registered_with_fixed_settings_and_noise_area_grading():
     assert "src/quant_brain/workbench/bracket.py" in engine.CODE_FILES
 
 
+def test_the_three_cards_share_one_sidak_split_of_the_honesty_bar(tmp_path):
+    """Spec gates.beats_luck: alpha = 1 - 0.95^(1/3) = 0.0170 each for the first trial (QA fix)."""
+    import json
+
+    from quant_brain.workbench import analysis
+
+    ledger = tmp_path / engine.LEDGER
+    ledger.parent.mkdir(parents=True)
+    rows = [
+        {"family": f, "settings": make(f).settings(), "market": "MNQ", "roll": "volume"}
+        for f in ("fade_band", "gap_fill", "evening_revert", "noise_area")
+    ]
+    ledger.write_text("".join(json.dumps(r, default=str) + "\n" for r in rows), encoding="utf-8")
+    for family in ("fade_band", "gap_fill", "evening_revert"):
+        bar = analysis.honesty(tmp_path, family)
+        assert bar["trials"] == 1 and round(bar["alpha"], 4) == 0.0170
+    assert analysis.honesty(tmp_path, "noise_area")["alpha"] == pytest.approx(0.05)  # unchanged
+    with ledger.open("a", encoding="utf-8") as handle:  # a second distinct trial tightens it
+        handle.write(json.dumps({**rows[1], "market": "MES"}) + "\n")
+    assert analysis.honesty(tmp_path, "gap_fill")["alpha"] == pytest.approx(1 - 0.95 ** (1 / 6))
+
+
 def test_engine_runs_each_family_on_synthetic_days():
     fade = [fday({**UP, "09:10": (107, 107, 104, 104)}), fday(), fday(UP, missing=("15:00",))]
     gap = [gday({"09:00": (104, 104, 94, 94)}), gday(prev_close=None)]
