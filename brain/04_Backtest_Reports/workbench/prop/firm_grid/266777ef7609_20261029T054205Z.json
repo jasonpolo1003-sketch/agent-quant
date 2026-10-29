@@ -1,0 +1,1079 @@
+{
+  "menu": "brain/_system/prop/account-play-menu.v1.json",
+  "menu_sha256": "3dc4c2d7d43fb2f7615ccd33c416520a237dca5187c7bf0d30d670331f546033",
+  "workbench_trial": {
+    "at": "2026-10-28T16:29:59+00:00",
+    "code": "73e3747466348ed00ea1d90916d794196b4f8869eba2446491da2d93ca039d2c",
+    "days": 1425,
+    "family": "noise_area",
+    "fingerprint": "266777ef7609d8dfaf36d02ea3a9e4a5dc970fe6c756c88dd6665d097f8db400",
+    "market": "MNQ",
+    "roll": "volume",
+    "settings": {
+      "lookback_sessions": 14,
+      "size": 1,
+      "stop": "band_or_vwap"
+    }
+  },
+  "settings": {
+    "paths": 2000,
+    "outer": 40,
+    "inner": 300
+  },
+  "firms_glob": "brain/_system/prop/firms_indicative/*.json",
+  "skipped": [],
+  "invalid": [
+    {
+      "firm_file": "brain/_system/prop/firms_indicative/lucid_direct_50k.json",
+      "error": "lucid_direct_50k.funded: missing required field 'payout_share_of_profit' (or 'payout_share_of_balance', or a buffer to pay everything above)"
+    }
+  ],
+  "luck_positive_cells": [],
+  "cells": [
+    {
+      "firm_file": "brain/_system/prop/firms_indicative/lucid_flex_50k.json",
+      "firm_sha256": "bb9a90c5e7e3bdbdcdfdab337b1c544b83cb0af615062ea1dd9cca5b58f35701",
+      "variant": "default",
+      "policy": "P1_steady",
+      "play": {
+        "name": "P1_steady",
+        "combine_size": 2,
+        "funded_size": 2,
+        "combine_profit_stop": "consistency_safe",
+        "funded_profit_stop": null,
+        "daily_loss_stop": null,
+        "stop_at_target": true,
+        "optional_daily_loss": true
+      },
+      "resolved": {
+        "eval": {
+          "size": 2,
+          "stop": 1080.0,
+          "dll": null,
+          "walk": false
+        },
+        "funded": {
+          "size": 2,
+          "stop": null,
+          "dll": null,
+          "walk": false
+        },
+        "notes": []
+      },
+      "firm": {
+        "name": "lucid_flex_50k",
+        "evaluation": {
+          "target": 3000,
+          "max_loss": 2000,
+          "drawdown": "eod_trailing",
+          "lock": 100,
+          "daily_loss": null,
+          "daily_loss_kind": null,
+          "consistency": 0.4,
+          "min_days": 3,
+          "start": 50000,
+          "breach_intraday": true
+        },
+        "funded": {
+          "max_loss": 2000,
+          "payout_share": 0.5,
+          "cap": 2000,
+          "min_payout": 500,
+          "split": 0.9,
+          "drawdown": "eod_trailing",
+          "lock": 100,
+          "daily_loss": null,
+          "daily_loss_kind": null,
+          "floor_after_payout": 100,
+          "winning_days": 5,
+          "winning_day_min": 150,
+          "trading_days": 0,
+          "consistency": null,
+          "needs_profit": "always",
+          "min_profit": null,
+          "buffer": 0.0,
+          "max_payouts": 5,
+          "start": 50000,
+          "breach_intraday": true,
+          "cap_schedule": null,
+          "min_profit_schedule": null,
+          "consistency_schedule": null,
+          "consistency_scope": "cycle",
+          "payout_base": "balance",
+          "min_balance": null,
+          "max_cycle_multiple": null
+        },
+        "fees": {
+          "billing": "one_time",
+          "price": 165,
+          "reset": null,
+          "activation": 0,
+          "platform_per_month": 0,
+          "days_per_month": 21
+        },
+        "optional_daily_loss": null,
+        "cap_with_optional_daily_loss": null,
+        "max_micros": 40,
+        "funded_max_micros": 40,
+        "automation_eval": true,
+        "automation_funded": true
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -170.97143250000005,
+        "median_net_cash": -165.0,
+        "chance_net_cash_positive": 0.0205,
+        "net_cash_5th_percentile": -330.0,
+        "mean_payouts": 15.808567499999931,
+        "mean_fees": 186.78,
+        "chance_any_payout": 0.0205,
+        "median_days_to_first_payout": 36.0,
+        "mean_xfas_closed": 0.0165
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -246.75873600000003,
+        "median_net_cash": -165.0,
+        "chance_net_cash_positive": 0.0065,
+        "net_cash_5th_percentile": -495.0,
+        "mean_payouts": 5.608763999999983,
+        "mean_fees": 252.3675,
+        "chance_any_payout": 0.0065,
+        "median_days_to_first_payout": 34.0,
+        "mean_xfas_closed": 0.0275
+      },
+      "net_cash_90ci": [
+        -190.59371000000004,
+        -156.6490430000001
+      ],
+      "net_cash_minus_luck_90ci": [
+        46.034771500000076,
+        104.2705329999998
+      ],
+      "luck_net_cash_90ci": [
+        -268.2376710000001,
+        -228.01247300000003
+      ],
+      "luck_positive_flag": false,
+      "gate": "fail"
+    },
+    {
+      "firm_file": "brain/_system/prop/firms_indicative/lucid_flex_50k.json",
+      "firm_sha256": "bb9a90c5e7e3bdbdcdfdab337b1c544b83cb0af615062ea1dd9cca5b58f35701",
+      "variant": "default",
+      "policy": "P2_pass_fast",
+      "play": {
+        "name": "P2_pass_fast",
+        "combine_size": 6,
+        "funded_size": 2,
+        "combine_profit_stop": "consistency_safe",
+        "funded_profit_stop": null,
+        "daily_loss_stop": null,
+        "stop_at_target": true,
+        "optional_daily_loss": true
+      },
+      "resolved": {
+        "eval": {
+          "size": 6,
+          "stop": 1080.0,
+          "dll": null,
+          "walk": false
+        },
+        "funded": {
+          "size": 2,
+          "stop": null,
+          "dll": null,
+          "walk": false
+        },
+        "notes": []
+      },
+      "firm": {
+        "name": "lucid_flex_50k",
+        "evaluation": {
+          "target": 3000,
+          "max_loss": 2000,
+          "drawdown": "eod_trailing",
+          "lock": 100,
+          "daily_loss": null,
+          "daily_loss_kind": null,
+          "consistency": 0.4,
+          "min_days": 3,
+          "start": 50000,
+          "breach_intraday": true
+        },
+        "funded": {
+          "max_loss": 2000,
+          "payout_share": 0.5,
+          "cap": 2000,
+          "min_payout": 500,
+          "split": 0.9,
+          "drawdown": "eod_trailing",
+          "lock": 100,
+          "daily_loss": null,
+          "daily_loss_kind": null,
+          "floor_after_payout": 100,
+          "winning_days": 5,
+          "winning_day_min": 150,
+          "trading_days": 0,
+          "consistency": null,
+          "needs_profit": "always",
+          "min_profit": null,
+          "buffer": 0.0,
+          "max_payouts": 5,
+          "start": 50000,
+          "breach_intraday": true,
+          "cap_schedule": null,
+          "min_profit_schedule": null,
+          "consistency_schedule": null,
+          "consistency_scope": "cycle",
+          "payout_base": "balance",
+          "min_balance": null,
+          "max_cycle_multiple": null
+        },
+        "fees": {
+          "billing": "one_time",
+          "price": 165,
+          "reset": null,
+          "activation": 0,
+          "platform_per_month": 0,
+          "days_per_month": 21
+        },
+        "optional_daily_loss": null,
+        "cap_with_optional_daily_loss": null,
+        "max_micros": 40,
+        "funded_max_micros": 40,
+        "automation_eval": true,
+        "automation_funded": true
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -195.8713455000009,
+        "median_net_cash": -330.0,
+        "chance_net_cash_positive": 0.18,
+        "net_cash_5th_percentile": -660.0,
+        "mean_payouts": 156.9811544999991,
+        "mean_fees": 352.8525,
+        "chance_any_payout": 0.1885,
+        "median_days_to_first_payout": 34.0,
+        "mean_xfas_closed": 0.1255
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -491.84876400000036,
+        "median_net_cash": -495.0,
+        "chance_net_cash_positive": 0.0865,
+        "net_cash_5th_percentile": -1155.0,
+        "mean_payouts": 84.41373599999963,
+        "mean_fees": 576.2625,
+        "chance_any_payout": 0.104,
+        "median_days_to_first_payout": 32.0,
+        "mean_xfas_closed": 0.1825
+      },
+      "net_cash_90ci": [
+        -278.63351200000074,
+        -63.393776500001614
+      ],
+      "net_cash_minus_luck_90ci": [
+        214.1603860000001,
+        430.10911549999867
+      ],
+      "luck_net_cash_90ci": [
+        -534.9012945000006,
+        -444.82345700000053
+      ],
+      "luck_positive_flag": false,
+      "gate": "fail"
+    },
+    {
+      "firm_file": "brain/_system/prop/firms_indicative/lucid_flex_50k.json",
+      "firm_sha256": "bb9a90c5e7e3bdbdcdfdab337b1c544b83cb0af615062ea1dd9cca5b58f35701",
+      "variant": "default",
+      "policy": "P3_sprint",
+      "play": {
+        "name": "P3_sprint",
+        "combine_size": 12,
+        "funded_size": 2,
+        "combine_profit_stop": "consistency_safe",
+        "funded_profit_stop": null,
+        "daily_loss_stop": null,
+        "stop_at_target": true,
+        "optional_daily_loss": true
+      },
+      "resolved": {
+        "eval": {
+          "size": 12,
+          "stop": 1080.0,
+          "dll": null,
+          "walk": false
+        },
+        "funded": {
+          "size": 2,
+          "stop": null,
+          "dll": null,
+          "walk": false
+        },
+        "notes": []
+      },
+      "firm": {
+        "name": "lucid_flex_50k",
+        "evaluation": {
+          "target": 3000,
+          "max_loss": 2000,
+          "drawdown": "eod_trailing",
+          "lock": 100,
+          "daily_loss": null,
+          "daily_loss_kind": null,
+          "consistency": 0.4,
+          "min_days": 3,
+          "start": 50000,
+          "breach_intraday": true
+        },
+        "funded": {
+          "max_loss": 2000,
+          "payout_share": 0.5,
+          "cap": 2000,
+          "min_payout": 500,
+          "split": 0.9,
+          "drawdown": "eod_trailing",
+          "lock": 100,
+          "daily_loss": null,
+          "daily_loss_kind": null,
+          "floor_after_payout": 100,
+          "winning_days": 5,
+          "winning_day_min": 150,
+          "trading_days": 0,
+          "consistency": null,
+          "needs_profit": "always",
+          "min_profit": null,
+          "buffer": 0.0,
+          "max_payouts": 5,
+          "start": 50000,
+          "breach_intraday": true,
+          "cap_schedule": null,
+          "min_profit_schedule": null,
+          "consistency_schedule": null,
+          "consistency_scope": "cycle",
+          "payout_base": "balance",
+          "min_balance": null,
+          "max_cycle_multiple": null
+        },
+        "fees": {
+          "billing": "one_time",
+          "price": 165,
+          "reset": null,
+          "activation": 0,
+          "platform_per_month": 0,
+          "days_per_month": 21
+        },
+        "optional_daily_loss": null,
+        "cap_with_optional_daily_loss": null,
+        "max_micros": 40,
+        "funded_max_micros": 40,
+        "automation_eval": true,
+        "automation_funded": true
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -291.91925250000145,
+        "median_net_cash": -330.0,
+        "chance_net_cash_positive": 0.2405,
+        "net_cash_5th_percentile": -1155.0,
+        "mean_payouts": 232.5332474999985,
+        "mean_fees": 524.4525,
+        "chance_any_payout": 0.2835,
+        "median_days_to_first_payout": 32.0,
+        "mean_xfas_closed": 0.1635
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -612.3719400000007,
+        "median_net_cash": -660.0,
+        "chance_net_cash_positive": 0.119,
+        "net_cash_5th_percentile": -1650.0,
+        "mean_payouts": 141.8430599999992,
+        "mean_fees": 754.215,
+        "chance_any_payout": 0.172,
+        "median_days_to_first_payout": 31.0,
+        "mean_xfas_closed": 0.297
+      },
+      "net_cash_90ci": [
+        -385.20765500000147,
+        -102.6167175000024
+      ],
+      "net_cash_minus_luck_90ci": [
+        187.20617449999946,
+        496.52264149999877
+      ],
+      "luck_net_cash_90ci": [
+        -657.5900655000011,
+        -548.6676490000011
+      ],
+      "luck_positive_flag": false,
+      "gate": "fail"
+    },
+    {
+      "firm_file": "brain/_system/prop/firms_indicative/lucid_flex_50k.json",
+      "firm_sha256": "bb9a90c5e7e3bdbdcdfdab337b1c544b83cb0af615062ea1dd9cca5b58f35701",
+      "variant": "default",
+      "policy": "P4_sprint_both",
+      "play": {
+        "name": "P4_sprint_both",
+        "combine_size": 12,
+        "funded_size": 4,
+        "combine_profit_stop": "consistency_safe",
+        "funded_profit_stop": "funded_consistency_safe",
+        "daily_loss_stop": null,
+        "stop_at_target": true,
+        "optional_daily_loss": true
+      },
+      "resolved": {
+        "eval": {
+          "size": 12,
+          "stop": 1080.0,
+          "dll": null,
+          "walk": false
+        },
+        "funded": {
+          "size": 4,
+          "stop": null,
+          "dll": null,
+          "walk": false
+        },
+        "notes": []
+      },
+      "firm": {
+        "name": "lucid_flex_50k",
+        "evaluation": {
+          "target": 3000,
+          "max_loss": 2000,
+          "drawdown": "eod_trailing",
+          "lock": 100,
+          "daily_loss": null,
+          "daily_loss_kind": null,
+          "consistency": 0.4,
+          "min_days": 3,
+          "start": 50000,
+          "breach_intraday": true
+        },
+        "funded": {
+          "max_loss": 2000,
+          "payout_share": 0.5,
+          "cap": 2000,
+          "min_payout": 500,
+          "split": 0.9,
+          "drawdown": "eod_trailing",
+          "lock": 100,
+          "daily_loss": null,
+          "daily_loss_kind": null,
+          "floor_after_payout": 100,
+          "winning_days": 5,
+          "winning_day_min": 150,
+          "trading_days": 0,
+          "consistency": null,
+          "needs_profit": "always",
+          "min_profit": null,
+          "buffer": 0.0,
+          "max_payouts": 5,
+          "start": 50000,
+          "breach_intraday": true,
+          "cap_schedule": null,
+          "min_profit_schedule": null,
+          "consistency_schedule": null,
+          "consistency_scope": "cycle",
+          "payout_base": "balance",
+          "min_balance": null,
+          "max_cycle_multiple": null
+        },
+        "fees": {
+          "billing": "one_time",
+          "price": 165,
+          "reset": null,
+          "activation": 0,
+          "platform_per_month": 0,
+          "days_per_month": 21
+        },
+        "optional_daily_loss": null,
+        "cap_with_optional_daily_loss": null,
+        "max_micros": 40,
+        "funded_max_micros": 40,
+        "automation_eval": true,
+        "automation_funded": true
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -218.90072699999803,
+        "median_net_cash": -495.0,
+        "chance_net_cash_positive": 0.3215,
+        "net_cash_5th_percentile": -1320.0,
+        "mean_payouts": 432.766773000002,
+        "mean_fees": 651.6675,
+        "chance_any_payout": 0.3555,
+        "median_days_to_first_payout": 31.0,
+        "mean_xfas_closed": 0.5395
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -660.0386909999987,
+        "median_net_cash": -825.0,
+        "chance_net_cash_positive": 0.174,
+        "net_cash_5th_percentile": -1815.0,
+        "mean_payouts": 283.1013090000012,
+        "mean_fees": 943.14,
+        "chance_any_payout": 0.227,
+        "median_days_to_first_payout": 30.0,
+        "mean_xfas_closed": 0.7145
+      },
+      "net_cash_90ci": [
+        -358.1233449999985,
+        76.67249500000257
+      ],
+      "net_cash_minus_luck_90ci": [
+        232.36973000000046,
+        818.3679740000017
+      ],
+      "luck_net_cash_90ci": [
+        -740.1345109999988,
+        -567.9284569999986
+      ],
+      "luck_positive_flag": false,
+      "gate": "fail"
+    },
+    {
+      "firm_file": "brain/_system/prop/firms_indicative/lucid_pro_50k.json",
+      "firm_sha256": "5653c07acef6a19fe69356dcdaa112c3e8569688d79c662aeeaaa2228f9c7cbc",
+      "variant": "default",
+      "policy": "P1_steady",
+      "play": {
+        "name": "P1_steady",
+        "combine_size": 2,
+        "funded_size": 2,
+        "combine_profit_stop": "consistency_safe",
+        "funded_profit_stop": null,
+        "daily_loss_stop": null,
+        "stop_at_target": true,
+        "optional_daily_loss": true
+      },
+      "resolved": {
+        "eval": {
+          "size": 2,
+          "stop": null,
+          "dll": 1200,
+          "walk": false
+        },
+        "funded": {
+          "size": 2,
+          "stop": null,
+          "dll": 1200,
+          "walk": false
+        },
+        "notes": []
+      },
+      "firm": {
+        "name": "lucid_pro_50k",
+        "evaluation": {
+          "target": 3000,
+          "max_loss": 2000,
+          "drawdown": "eod_trailing",
+          "lock": 100,
+          "daily_loss": 1200,
+          "daily_loss_kind": "soft_pause",
+          "consistency": null,
+          "min_days": 1,
+          "start": 50000,
+          "breach_intraday": true
+        },
+        "funded": {
+          "max_loss": 2000,
+          "payout_share": 1.0,
+          "cap": null,
+          "min_payout": 500,
+          "split": 0.9,
+          "drawdown": "eod_trailing",
+          "lock": 100,
+          "daily_loss": 1200,
+          "daily_loss_kind": "soft_pause",
+          "floor_after_payout": 100,
+          "winning_days": 0,
+          "winning_day_min": 0.0,
+          "trading_days": 0,
+          "consistency": 0.4,
+          "needs_profit": "always",
+          "min_profit": 500,
+          "buffer": 2100,
+          "max_payouts": null,
+          "start": 50000,
+          "breach_intraday": true,
+          "cap_schedule": [
+            2000,
+            2500
+          ],
+          "min_profit_schedule": null,
+          "consistency_schedule": null,
+          "consistency_scope": "cycle",
+          "payout_base": "balance",
+          "min_balance": null,
+          "max_cycle_multiple": null
+        },
+        "fees": {
+          "billing": "one_time",
+          "price": 192,
+          "reset": null,
+          "activation": 0,
+          "platform_per_month": 0,
+          "days_per_month": 21
+        },
+        "optional_daily_loss": null,
+        "cap_with_optional_daily_loss": null,
+        "max_micros": 40,
+        "funded_max_micros": 40,
+        "automation_eval": true,
+        "automation_funded": true
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -216.36025200000006,
+        "median_net_cash": -192.0,
+        "chance_net_cash_positive": 0.004,
+        "net_cash_5th_percentile": -384.0,
+        "mean_payouts": 3.3837479999999425,
+        "mean_fees": 219.744,
+        "chance_any_payout": 0.004,
+        "median_days_to_first_payout": 39.5,
+        "mean_xfas_closed": 0.0175
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -292.738716,
+        "median_net_cash": -192.0,
+        "chance_net_cash_positive": 0.0005,
+        "net_cash_5th_percentile": -576.0,
+        "mean_payouts": 0.445283999999992,
+        "mean_fees": 293.184,
+        "chance_any_payout": 0.0005,
+        "median_days_to_first_payout": 40.0,
+        "mean_xfas_closed": 0.0275
+      },
+      "net_cash_90ci": [
+        -242.656,
+        -207.25592200000003
+      ],
+      "net_cash_minus_luck_90ci": [
+        56.15150600000006,
+        103.29319199999985
+      ],
+      "luck_net_cash_90ci": [
+        -332.14309399999996,
+        -277.504
+      ],
+      "luck_positive_flag": false,
+      "gate": "fail"
+    },
+    {
+      "firm_file": "brain/_system/prop/firms_indicative/lucid_pro_50k.json",
+      "firm_sha256": "5653c07acef6a19fe69356dcdaa112c3e8569688d79c662aeeaaa2228f9c7cbc",
+      "variant": "default",
+      "policy": "P2_pass_fast",
+      "play": {
+        "name": "P2_pass_fast",
+        "combine_size": 6,
+        "funded_size": 2,
+        "combine_profit_stop": "consistency_safe",
+        "funded_profit_stop": null,
+        "daily_loss_stop": null,
+        "stop_at_target": true,
+        "optional_daily_loss": true
+      },
+      "resolved": {
+        "eval": {
+          "size": 6,
+          "stop": null,
+          "dll": 1200,
+          "walk": false
+        },
+        "funded": {
+          "size": 2,
+          "stop": null,
+          "dll": 1200,
+          "walk": false
+        },
+        "notes": []
+      },
+      "firm": {
+        "name": "lucid_pro_50k",
+        "evaluation": {
+          "target": 3000,
+          "max_loss": 2000,
+          "drawdown": "eod_trailing",
+          "lock": 100,
+          "daily_loss": 1200,
+          "daily_loss_kind": "soft_pause",
+          "consistency": null,
+          "min_days": 1,
+          "start": 50000,
+          "breach_intraday": true
+        },
+        "funded": {
+          "max_loss": 2000,
+          "payout_share": 1.0,
+          "cap": null,
+          "min_payout": 500,
+          "split": 0.9,
+          "drawdown": "eod_trailing",
+          "lock": 100,
+          "daily_loss": 1200,
+          "daily_loss_kind": "soft_pause",
+          "floor_after_payout": 100,
+          "winning_days": 0,
+          "winning_day_min": 0.0,
+          "trading_days": 0,
+          "consistency": 0.4,
+          "needs_profit": "always",
+          "min_profit": 500,
+          "buffer": 2100,
+          "max_payouts": null,
+          "start": 50000,
+          "breach_intraday": true,
+          "cap_schedule": [
+            2000,
+            2500
+          ],
+          "min_profit_schedule": null,
+          "consistency_schedule": null,
+          "consistency_scope": "cycle",
+          "payout_base": "balance",
+          "min_balance": null,
+          "max_cycle_multiple": null
+        },
+        "fees": {
+          "billing": "one_time",
+          "price": 192,
+          "reset": null,
+          "activation": 0,
+          "platform_per_month": 0,
+          "days_per_month": 21
+        },
+        "optional_daily_loss": null,
+        "cap_with_optional_daily_loss": null,
+        "max_micros": 40,
+        "funded_max_micros": 40,
+        "automation_eval": true,
+        "automation_funded": true
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -346.97206800000043,
+        "median_net_cash": -384.0,
+        "chance_net_cash_positive": 0.038,
+        "net_cash_5th_percentile": -768.0,
+        "mean_payouts": 35.49193199999952,
+        "mean_fees": 382.464,
+        "chance_any_payout": 0.038,
+        "median_days_to_first_payout": 35.5,
+        "mean_xfas_closed": 0.0835
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -553.1480580000002,
+        "median_net_cash": -576.0,
+        "chance_net_cash_positive": 0.0235,
+        "net_cash_5th_percentile": -1152.0,
+        "mean_payouts": 23.04394199999985,
+        "mean_fees": 576.192,
+        "chance_any_payout": 0.0265,
+        "median_days_to_first_payout": 33.0,
+        "mean_xfas_closed": 0.1885
+      },
+      "net_cash_90ci": [
+        -389.8388040000004,
+        -273.376678000001
+      ],
+      "net_cash_minus_luck_90ci": [
+        130.98080000000007,
+        294.87511399999903
+      ],
+      "luck_net_cash_90ci": [
+        -581.7385480000002,
+        -516.5891060000006
+      ],
+      "luck_positive_flag": false,
+      "gate": "fail"
+    },
+    {
+      "firm_file": "brain/_system/prop/firms_indicative/lucid_pro_50k.json",
+      "firm_sha256": "5653c07acef6a19fe69356dcdaa112c3e8569688d79c662aeeaaa2228f9c7cbc",
+      "variant": "default",
+      "policy": "P3_sprint",
+      "play": {
+        "name": "P3_sprint",
+        "combine_size": 12,
+        "funded_size": 2,
+        "combine_profit_stop": "consistency_safe",
+        "funded_profit_stop": null,
+        "daily_loss_stop": null,
+        "stop_at_target": true,
+        "optional_daily_loss": true
+      },
+      "resolved": {
+        "eval": {
+          "size": 12,
+          "stop": null,
+          "dll": 1200,
+          "walk": false
+        },
+        "funded": {
+          "size": 2,
+          "stop": null,
+          "dll": 1200,
+          "walk": false
+        },
+        "notes": []
+      },
+      "firm": {
+        "name": "lucid_pro_50k",
+        "evaluation": {
+          "target": 3000,
+          "max_loss": 2000,
+          "drawdown": "eod_trailing",
+          "lock": 100,
+          "daily_loss": 1200,
+          "daily_loss_kind": "soft_pause",
+          "consistency": null,
+          "min_days": 1,
+          "start": 50000,
+          "breach_intraday": true
+        },
+        "funded": {
+          "max_loss": 2000,
+          "payout_share": 1.0,
+          "cap": null,
+          "min_payout": 500,
+          "split": 0.9,
+          "drawdown": "eod_trailing",
+          "lock": 100,
+          "daily_loss": 1200,
+          "daily_loss_kind": "soft_pause",
+          "floor_after_payout": 100,
+          "winning_days": 0,
+          "winning_day_min": 0.0,
+          "trading_days": 0,
+          "consistency": 0.4,
+          "needs_profit": "always",
+          "min_profit": 500,
+          "buffer": 2100,
+          "max_payouts": null,
+          "start": 50000,
+          "breach_intraday": true,
+          "cap_schedule": [
+            2000,
+            2500
+          ],
+          "min_profit_schedule": null,
+          "consistency_schedule": null,
+          "consistency_scope": "cycle",
+          "payout_base": "balance",
+          "min_balance": null,
+          "max_cycle_multiple": null
+        },
+        "fees": {
+          "billing": "one_time",
+          "price": 192,
+          "reset": null,
+          "activation": 0,
+          "platform_per_month": 0,
+          "days_per_month": 21
+        },
+        "optional_daily_loss": null,
+        "cap_with_optional_daily_loss": null,
+        "max_micros": 40,
+        "funded_max_micros": 40,
+        "automation_eval": true,
+        "automation_funded": true
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -384.90072600000093,
+        "median_net_cash": -384.0,
+        "chance_net_cash_positive": 0.068,
+        "net_cash_5th_percentile": -960.0,
+        "mean_payouts": 58.235273999999045,
+        "mean_fees": 443.136,
+        "chance_any_payout": 0.07,
+        "median_days_to_first_payout": 33.0,
+        "mean_xfas_closed": 0.107
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -594.6320820000003,
+        "median_net_cash": -576.0,
+        "chance_net_cash_positive": 0.036,
+        "net_cash_5th_percentile": -1344.0,
+        "mean_payouts": 39.73591799999966,
+        "mean_fees": 634.368,
+        "chance_any_payout": 0.0425,
+        "median_days_to_first_payout": 34.0,
+        "mean_xfas_closed": 0.2975
+      },
+      "net_cash_90ci": [
+        -451.94178400000027,
+        -291.1795920000018
+      ],
+      "net_cash_minus_luck_90ci": [
+        129.69943199999997,
+        336.3759219999987
+      ],
+      "luck_net_cash_90ci": [
+        -645.0016740000004,
+        -544.2771380000004
+      ],
+      "luck_positive_flag": false,
+      "gate": "fail"
+    },
+    {
+      "firm_file": "brain/_system/prop/firms_indicative/lucid_pro_50k.json",
+      "firm_sha256": "5653c07acef6a19fe69356dcdaa112c3e8569688d79c662aeeaaa2228f9c7cbc",
+      "variant": "default",
+      "policy": "P4_sprint_both",
+      "play": {
+        "name": "P4_sprint_both",
+        "combine_size": 12,
+        "funded_size": 4,
+        "combine_profit_stop": "consistency_safe",
+        "funded_profit_stop": "funded_consistency_safe",
+        "daily_loss_stop": null,
+        "stop_at_target": true,
+        "optional_daily_loss": true
+      },
+      "resolved": {
+        "eval": {
+          "size": 12,
+          "stop": null,
+          "dll": 1200,
+          "walk": false
+        },
+        "funded": {
+          "size": 4,
+          "stop": 180.0,
+          "dll": 1200,
+          "walk": false
+        },
+        "notes": []
+      },
+      "firm": {
+        "name": "lucid_pro_50k",
+        "evaluation": {
+          "target": 3000,
+          "max_loss": 2000,
+          "drawdown": "eod_trailing",
+          "lock": 100,
+          "daily_loss": 1200,
+          "daily_loss_kind": "soft_pause",
+          "consistency": null,
+          "min_days": 1,
+          "start": 50000,
+          "breach_intraday": true
+        },
+        "funded": {
+          "max_loss": 2000,
+          "payout_share": 1.0,
+          "cap": null,
+          "min_payout": 500,
+          "split": 0.9,
+          "drawdown": "eod_trailing",
+          "lock": 100,
+          "daily_loss": 1200,
+          "daily_loss_kind": "soft_pause",
+          "floor_after_payout": 100,
+          "winning_days": 0,
+          "winning_day_min": 0.0,
+          "trading_days": 0,
+          "consistency": 0.4,
+          "needs_profit": "always",
+          "min_profit": 500,
+          "buffer": 2100,
+          "max_payouts": null,
+          "start": 50000,
+          "breach_intraday": true,
+          "cap_schedule": [
+            2000,
+            2500
+          ],
+          "min_profit_schedule": null,
+          "consistency_schedule": null,
+          "consistency_scope": "cycle",
+          "payout_base": "balance",
+          "min_balance": null,
+          "max_cycle_multiple": null
+        },
+        "fees": {
+          "billing": "one_time",
+          "price": 192,
+          "reset": null,
+          "activation": 0,
+          "platform_per_month": 0,
+          "days_per_month": 21
+        },
+        "optional_daily_loss": null,
+        "cap_with_optional_daily_loss": null,
+        "max_micros": 40,
+        "funded_max_micros": 40,
+        "automation_eval": true,
+        "automation_funded": true
+      },
+      "horizon_days": 42,
+      "cost_level": "L3",
+      "strategy": {
+        "attempts": 2000,
+        "mean_net_cash": -481.49021999999997,
+        "median_net_cash": -384.0,
+        "chance_net_cash_positive": 0.017,
+        "net_cash_5th_percentile": -1152.0,
+        "mean_payouts": 13.197780000000035,
+        "mean_fees": 494.688,
+        "chance_any_payout": 0.02,
+        "median_days_to_first_payout": 37.5,
+        "mean_xfas_closed": 0.2235
+      },
+      "luck": {
+        "attempts": 2000,
+        "mean_net_cash": -708.6472560000001,
+        "median_net_cash": -576.0,
+        "chance_net_cash_positive": 0.015,
+        "net_cash_5th_percentile": -1344.0,
+        "mean_payouts": 11.928744000000028,
+        "mean_fees": 720.576,
+        "chance_any_payout": 0.0175,
+        "median_days_to_first_payout": 35.0,
+        "mean_xfas_closed": 0.5205
+      },
+      "net_cash_90ci": [
+        -550.9785639999999,
+        -395.36552800000004
+      ],
+      "net_cash_minus_luck_90ci": [
+        171.21200399999978,
+        326.8267200000002
+      ],
+      "luck_net_cash_90ci": [
+        -766.7539519999999,
+        -661.738788
+      ],
+      "luck_positive_flag": false,
+      "gate": "fail"
+    }
+  ],
+  "selected": null
+}

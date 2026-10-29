@@ -12,6 +12,10 @@ skipped. Yahoo keeps ~30 days of 1-minute bars, so a missed run is caught up lat
 
 Warm-up: sigma needs the previous 14 sessions' moves. Sessions before 2026-10-22 are used
 for that only; no profit or loss is computed or shown for them.
+Sessions: only NYSE sessions in the session calendar (live/calendar.py; source
+https://www.nyse.com/markets/hours-calendars), with the calendar's early closes, as the
+backtest builds them: CME-only holiday bars (e.g. Thanksgiving to 12:00 CT) are neither
+scored nor used for sigma or the previous close. A date past the calendar's end is skipped.
 Caveats: NQ=F is Yahoo's continuous front month (its roll date can differ from our volume
 roll); Yahoo minute bars can have gaps (logged as missing bars).
 """
@@ -27,6 +31,7 @@ import pandas as pd
 
 from quant_brain.config import PROJECT_ROOT
 from quant_brain.futures.orb import L3_ROUND_TRIP_CENTS, DayInput
+from quant_brain.live.calendar import sessions
 from quant_brain.workbench.noise import NoiseArea
 
 FIRST_FORWARD = date(2026, 10, 22)
@@ -84,15 +89,17 @@ def fetch() -> pd.DataFrame:
     return pd.concat([*cached, df]).sort_index() if cached else df
 
 
-def build_days(df: pd.DataFrame) -> list[DayInput]:
+def build_days(df: pd.DataFrame, calendar=None) -> list[DayInput]:
+    calendar = sessions() if calendar is None else calendar
     rth = df[(df.index.time >= time(8, 30)) & (df.index.time <= time(15, 0))]
     days, prev_close = [], None
     now = datetime.now(tz=df.index.tz)
     for d, g in rth.groupby(rth.index.date):
-        if d.weekday() >= 5:
-            continue
-        last = g.index.max().time()
-        early = last < time(12, 15)
+        if d not in calendar:
+            if d.weekday() < 5 and d > max(calendar):
+                print(f"  {d}: past the session calendar's end; skipped")
+            continue  # weekends, NYSE holidays (CME may still trade)
+        early = calendar[d].early_close
         exit_minute = time(12, 0) if early else time(15, 0)
         complete = now >= datetime.combine(d, exit_minute, tzinfo=df.index.tz) + timedelta(
             minutes=5
@@ -102,14 +109,23 @@ def build_days(df: pd.DataFrame) -> list[DayInput]:
             ticks = [int(round(r[k] * 4)) for k in ("Open", "High", "Low", "Close")]
             bars[ts.time()] = tuple(ticks)
             vols[ts.time()] = int(r["Volume"]) if not np.isnan(r["Volume"]) else 0
+        # as futures/bars.build_days: the day's bars stop at the calendar's exit minute (12:12
+        # on an early close; no effect on a regular day, whose bars stop at 15:00 here) ...
+        cap = calendar[d].exit_minute
+        day_bars = {m: x for m, x in bars.items() if m <= cap}
+        day_vols = {m: v for m, v in vols.items() if m <= cap}
         if complete:
             days.append(
                 (
-                    DayInput(d, "MNQ", bars, exit_minute, None, None, prev_close, None, vols),
+                    DayInput(
+                        d, "MNQ", day_bars, exit_minute, None, None, prev_close, None, day_vols
+                    ),
                     early,
                 )
             )
-        before_close = [t for t in bars if t < exit_minute]
+        # ... and the next day's previous close is the last bar of the whole day before the
+        # regular close (bars._sessions: 15:00, or 12:15 on an early close)
+        before_close = [t for t in bars if t < calendar[d].regular_close]
         prev_close = bars[max(before_close)][3] if before_close else prev_close
     return days
 
