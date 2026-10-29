@@ -48,9 +48,9 @@ def funded(G, days_left):
         floor = locked_floor if locked_floor is not None else min(START, peak - MAXLOSS)
         cushion = bal - floor
         if wins == 0:
-            pnl, won = bracket(G, cushion, 10, 10)
+            pnl, _ = bracket(G, cushion, 10, 10)
         else:
-            pnl, won = bracket(150, min(150, cushion), 5, 5)
+            pnl, _ = bracket(150, min(150, cushion), 5, 5)
         d += 1
         if pnl <= -cushion:
             return cash, d

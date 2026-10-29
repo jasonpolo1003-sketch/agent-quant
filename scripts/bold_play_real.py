@@ -21,7 +21,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import workbench as wb  # noqa: E402
+import workbench as wb
 
 TICK_USD = 5.0  # NQ
 RT = 4.5

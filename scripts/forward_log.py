@@ -106,7 +106,7 @@ def build_days(df: pd.DataFrame, calendar=None) -> list[DayInput]:
         )
         bars, vols = {}, {}
         for ts, r in g.iterrows():
-            ticks = [int(round(r[k] * 4)) for k in ("Open", "High", "Low", "Close")]
+            ticks = [round(r[k] * 4) for k in ("Open", "High", "Low", "Close")]
             bars[ts.time()] = tuple(ticks)
             vols[ts.time()] = int(r["Volume"]) if not np.isnan(r["Volume"]) else 0
         # as futures/bars.build_days: the day's bars stop at the calendar's exit minute (12:12

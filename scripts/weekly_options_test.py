@@ -112,8 +112,12 @@ def main() -> int:
     idx = {d: i for i, d in enumerate(dates)}
     pre = [idx[d] - 1 for d in sorted(ev) if d in idx and idx[d] >= 1]
     quiet = [i for i in range(len(dates) - 1) if dates[i] >= date(2019, 5, 1) and dates[i + 1] not in ev]
-    move = lambda ids: np.mean([abs(lr[i]) for i in ids if i < len(lr)])
-    imp = lambda ids: np.mean([iv[i] / 100 / sqrt(252) * sqrt(2 / np.pi) for i in ids])
+    def move(ids):
+        return np.mean([abs(lr[i]) for i in ids if i < len(lr)])
+
+    def imp(ids):
+        return np.mean([iv[i] / 100 / sqrt(252) * sqrt(2 / np.pi) for i in ids])
+
     print(f"\nCPI/FOMC days 2019-2024 ({len(pre)}): avg |move| {move(pre):.2%} vs VXN-implied {imp(pre):.2%}; "
           f"other days {move(quiet):.2%} vs {imp(quiet):.2%}")
     print("1-day options bought the evening before CPI/FOMC (flat VXN pricing = no event premium):")
