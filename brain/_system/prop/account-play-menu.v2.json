@@ -1,0 +1,28 @@
+{
+  "id": "PROP-PLAY-v2",
+  "status": "frozen",
+  "frozen_at": "2026-10-29",
+  "approved_by": "Jason 2026-10-29 autonomous mandate (\"statistically beating the prop firms\")",
+  "written_before": "any result for these sizes. Known before: the v1 grid (P4 12/4 Topstep 50K +$74-132 over 42 days, gate not met; 'results point at larger Combine sizes than 12 MNQ', flagged post hoc), state sizing FAIL, and LucidFlex negative at its indicative price.",
+  "strategy": "SC-FUT-0005, MNQ, workbench trial 266777ef, L3",
+  "question": "Does a larger evaluation size (and a larger funded size where the rules allow it) give positive net cash that beats luck out of sample?",
+  "policies": {
+    "eval_sizes_mnq": [12, 16, 20, 30, 40],
+    "funded_sizes_mnq": [2, 4, 6],
+    "profit_stops": "as v1: combine consistency_safe; funded funded_consistency_safe",
+    "caps": "sizes above a phase's max micros (or the scaling plan's start size, if the firm file states one) are cut to the cap; a policy whose cut duplicates another is reported once"
+  },
+  "firms": [
+    "Topstep 50K standard: the 4 adapter variants (--topstep) and brain/_system/prop/firms/topstep_50k_standard.json (incl. $29/mo API)",
+    "LucidFlex 50K at indicative $165: brain/_system/prop/firms_indicative/lucid_flex_50k.json (reported, not selectable: price unverified)"
+  ],
+  "split": {
+    "train_years": [2019, 2021, 2023],
+    "test_years": [2020, 2022, 2024],
+    "why": "same alternating split as PROP-STATE-SIZING-v1; resampling stays inside the half"
+  },
+  "selection": "on train only: per firm file, the (eval, funded) size pair with the highest lower 90% bound of mean net cash",
+  "gate_on_test": "the selected pair: mean net cash lower 90% bound > $0 AND (net - luck) lower 90% bound > $0; a pass then needs a confirmation run on test with a fresh seed and outer 200",
+  "settings": {"horizon_days": 42, "paths": 2000, "outer": 40, "inner": 300, "luck": "the trial's matched random-direction control with the same sizes"},
+  "honesty": "every train cell is a prop trial; logged to prop_trials.jsonl with kind menu_v2; the test half is used once per firm file"
+}
