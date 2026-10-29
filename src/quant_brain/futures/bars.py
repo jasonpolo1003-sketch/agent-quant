@@ -11,7 +11,7 @@ from __future__ import annotations
 import csv
 import struct
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, time
 from pathlib import Path
 
@@ -203,3 +203,70 @@ def load_days(
             end=end,
         )
     )
+
+
+EVENING_OPEN = time(17, 0)
+EVENING_END = time(20, 30)
+
+
+def _evenings(frame: pd.DataFrame) -> dict[tuple[int, date], tuple[dict, dict]]:
+    """(bars, volumes) of the 17:00..20:30 CT minutes per (instrument, trade date).
+
+    Those minutes fall on the calendar day before their trade date (trade date = CT + 7h).
+    """
+    minute_of_day = frame["minute"].dt.hour * 60 + frame["minute"].dt.minute
+    lo = EVENING_OPEN.hour * 60 + EVENING_OPEN.minute
+    hi = EVENING_END.hour * 60 + EVENING_END.minute
+    evening = frame[(minute_of_day >= lo) & (minute_of_day <= hi)]
+    out = {}
+    for (iid, day), group in evening.groupby(["instrument_id", "trade_date"], sort=False):
+        bars = {
+            m.time(): (int(o), int(h), int(low), int(c))
+            for m, o, h, low, c in zip(
+                group["minute"],
+                group["open"],
+                group["high"],
+                group["low"],
+                group["close"],
+                strict=True,
+            )
+        }
+        volumes = (
+            {m.time(): int(v) for m, v in zip(group["minute"], group["volume"], strict=True)}
+            if "volume" in group
+            else {}
+        )
+        out[(int(iid), day)] = (bars, volumes)
+    return out
+
+
+def build_evenings(
+    frame: pd.DataFrame,
+    mappings: dict,
+    roll_csv: Path,
+    calendar: list[CalendarDay],
+    *,
+    root: str,
+    start: date,
+    end: date,
+    roll_column: str = "roll_trade_date",
+) -> Iterator[DayInput]:
+    """`build_days`, but each day's bars (and volumes) are the 17:00..20:30 CT evening that
+    starts its trade date (the previous calendar evening; Sunday's for Monday), from the same
+    contract `build_days` picks for that trade date. exit_minute is 20:30; ATR and the previous
+    regular close are build_days' own. build_days itself is untouched (SC-FUT-0011)."""
+    evenings = _evenings(frame)
+    schedule = selected_contracts(roll_csv, root, roll_column)
+    for day in build_days(
+        frame,
+        mappings,
+        roll_csv,
+        calendar,
+        root=root,
+        start=start,
+        end=end,
+        roll_column=roll_column,
+    ):
+        iid = instrument_for(mappings, contract_on(schedule, day.trade_date), day.trade_date)
+        bars, volumes = evenings.get((iid, day.trade_date), ({}, {}))
+        yield replace(day, bars=bars, volumes=volumes, exit_minute=EVENING_END, stop_ticks=None)

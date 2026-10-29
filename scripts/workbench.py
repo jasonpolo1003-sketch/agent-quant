@@ -49,7 +49,9 @@ def multi_loader(data_dir: Path) -> engine.Loader:
     return load
 
 
-def dev_loader(data_dir: Path) -> engine.Loader:
+def dev_loader(data_dir: Path, *, evening: bool = False) -> engine.Loader:
+    """MNQ / MES days from the hash-checked dev file. `evening=True` (SC-FUT-0011) gives each
+    trade date's 17:00-20:30 CT evening bars (bars.build_evenings) instead of the RTH day."""
     manifest = data_dir / "manifest.json"
     listed = json.loads(manifest.read_text(encoding="utf-8"))["ohlcv"]
     expected = next(r["output_sha256"] for r in listed if r["output"] == runner.DEV_BARS)
@@ -62,13 +64,13 @@ def dev_loader(data_dir: Path) -> engine.Loader:
     calendar = read_calendar(PROJECT_ROOT / runner.CALENDAR)
 
     def load(market: str, start: date, end: date, roll_column: str):
-        from quant_brain.futures.bars import build_days
+        from quant_brain.futures.bars import build_days, build_evenings
 
         rolls = PROJECT_ROOT / (
             VOLUME_ROLLS if roll_column == "volume_roll_date" else runner.ROLL_CSV
         )
         return list(
-            build_days(
+            (build_evenings if evening else build_days)(
                 frame,
                 mappings,
                 rolls,
@@ -108,8 +110,11 @@ def main() -> int:
         return 0
 
     strategy = make(args.family, json.loads(args.settings))
+    evening = getattr(strategy, "session", "rth") == "evening"
+    if evening and args.market not in ("MNQ", "MES"):
+        raise SystemExit("evening-session families run on MNQ / MES only")
     loader = (
-        dev_loader(args.data_dir)
+        dev_loader(args.data_dir, evening=evening)
         if args.market in ("MNQ", "MES")
         else multi_loader(MULTI_DIR)
     )

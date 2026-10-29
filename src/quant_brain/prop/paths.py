@@ -8,7 +8,8 @@ loss limit, so we need each day's lowest point, not just its close. Rules for
   high for shorts) and their favourable extreme;
 - the exit bar contributes the exit fill price as its adverse point: a stop
   fills at the stop (or the gap open), a flatten at the bar open, so price
-  beyond the fill is never suffered;
+  beyond the fill is never suffered; a target filled inside a bar (resting
+  limit) also counts that bar's adverse extreme, which may have come first;
 - missing bars contribute nothing (the engine's stress bound covers them);
 - with several trades, earlier realised P&L carries into later open P&L.
 """
@@ -28,8 +29,16 @@ def _minute_points(bars: Mapping[time, Bar], trade: Trade):
         if minute == trade.exit_minute:
             adverse = trade.exit_ticks
             bar = bars.get(minute)
-            if trade.exit_reason in ("flatten", "close", "gap_stop", "signal_exit") or bar is None:
+            if (
+                trade.exit_reason in ("flatten", "close", "gap_stop", "signal_exit", "gap_target")
+                or bar is None
+            ):
                 favourable = trade.exit_ticks  # out at the bar open
+            elif trade.exit_reason == "target":
+                # limit filled inside this bar: its adverse extreme may have come first
+                worst = bar[2] if side > 0 else bar[1]
+                adverse = worst if side * (worst - trade.exit_ticks) < 0 else trade.exit_ticks
+                favourable = trade.exit_ticks
             else:  # stopped inside this bar: its favourable extreme may have come first
                 favourable = bar[1] if side > 0 else bar[2]
         else:
@@ -109,7 +118,9 @@ def book_records(
     return out
 
 
-def book_path(bars: Mapping[time, Bar], trades: Sequence[Trade], tick_cents: int) -> tuple[int, int]:
+def book_path(
+    bars: Mapping[time, Bar], trades: Sequence[Trade], tick_cents: int
+) -> tuple[int, int]:
     """(lowest equity, closing P&L) for units held at the same time; low <= close."""
     close = sum(x.gross_cents for x in trades)
     low = min([0] + [lo for lo, _ in book_records(bars, trades, tick_cents)])

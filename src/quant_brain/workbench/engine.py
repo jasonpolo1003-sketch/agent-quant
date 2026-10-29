@@ -42,6 +42,7 @@ CODE_FILES = (
     "src/quant_brain/workbench/shock.py",
     "src/quant_brain/workbench/noise.py",
     "src/quant_brain/futures/multi.py",
+    "src/quant_brain/workbench/bracket.py",
 )
 EVALUABLE = ("traded", "no_trade", "void_range")
 
@@ -172,9 +173,7 @@ def simulate(strategy: Strategy, days: list[DayInput], *, draws: int = DRAWS) ->
         rows["atr"].append(day.atr_tr_sum or 0)
         rows["orb_side"].append(result.trades[0].side if result.trades else 0)
         rows["orb_gross"].append(sum(t.gross_cents for t in result.trades))
-        rows["orb_low"].append(
-            min(path_low, result.stress_net_cents + cost * len(result.trades))
-        )
+        rows["orb_low"].append(min(path_low, result.stress_net_cents + cost * len(result.trades)))
         rows["orb_stress_gross"].append(result.stress_net_cents + cost * len(result.trades))
         rows["orb_trades"].append(len(result.trades))
         rows["entry_bar_stops"].append(sum(t.entry_bar_stop for t in result.trades))
